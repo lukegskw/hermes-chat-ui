@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { Copy, Check, Bot, User, Sparkles } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
+import { ChatWindowMessage } from './ChatWindow';
 
-export default function MessageBubble({ message }) {
+export interface MessageBubbleProps {
+  message: ChatWindowMessage;
+}
+
+export default function MessageBubble({ message }: MessageBubbleProps) {
   const { role, content, timestamp } = message;
   const isUser = role === 'user';
   const [copied, setCopied] = useState(false);
@@ -17,7 +22,7 @@ export default function MessageBubble({ message }) {
     }
   };
 
-  const formatTime = (timeStr) => {
+  const formatTime = (timeStr?: string) => {
     if (!timeStr) return '';
     try {
       const date = new Date(timeStr);
@@ -83,7 +88,6 @@ export default function MessageBubble({ message }) {
             : 'hsl(var(--border-subtle))',
           boxShadow: isUser ? 'none' : '0 4px 15px rgba(0,0,0,0.15)',
           padding: '0.88rem 1.1rem',
-          group: 'true',
         }}
       >
         {/* Role label / Action header */}

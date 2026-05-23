@@ -1,6 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Square, Sparkles, Terminal, ArrowRight, ShieldCheck, HelpCircle, Menu } from 'lucide-react';
+import { Send, Square, Sparkles, Terminal, ArrowRight, ShieldCheck, Menu } from 'lucide-react';
 import MessageBubble from './MessageBubble';
+import { ChatMessage } from '../utils/api';
+
+export interface ChatWindowMessage extends ChatMessage {
+  id: string;
+}
+
+export interface ChatWindowProps {
+  onToggleSidebar: () => void;
+  messages: ChatWindowMessage[];
+  isGenerating: boolean;
+  onSendMessage: (text: string) => void;
+  onStopGeneration: () => void;
+  selectedModel: string;
+}
 
 const SUGGESTIONS = [
   {
@@ -32,10 +46,10 @@ export default function ChatWindow({
   onSendMessage,
   onStopGeneration,
   selectedModel,
-}) {
+}: ChatWindowProps) {
   const [input, setInput] = useState('');
-  const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
@@ -54,14 +68,14 @@ export default function ChatWindow({
     }
   }, [input]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || isGenerating) return;
     onSendMessage(input.trim());
     setInput('');
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();

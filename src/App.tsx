@@ -1,42 +1,67 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Sidebar from './components/Sidebar';
-import ChatWindow from './components/ChatWindow';
-import { fetchModels, selectModel, sendChatMessageStream } from './utils/api';
+import Sidebar, { Conversation, Settings } from './components/Sidebar';
+import ChatWindow, { ChatWindowMessage } from './components/ChatWindow';
+import { fetchModels, selectModel, sendChatMessageStream, Model } from './utils/api';
 
-const DEFAULT_SETTINGS = {
-  endpoint: 'http://localhost:8642',
-  apiKey: 'hermes-secure-api-key-2026',
+interface AppConfig {
+  HERMES_API_URL?: string;
+  HERMES_API_KEY?: string;
+}
+
+declare global {
+  interface Window {
+    APP_CONFIG?: AppConfig;
+  }
+}
+
+const getInitialEndpoint = (): string => {
+  if (window.APP_CONFIG?.HERMES_API_URL) {
+    return window.APP_CONFIG.HERMES_API_URL;
+  }
+  return 'http://localhost:8642';
+};
+
+const getInitialApiKey = (): string => {
+  if (window.APP_CONFIG?.HERMES_API_KEY) {
+    return window.APP_CONFIG.HERMES_API_KEY;
+  }
+  return 'hermes-secure-api-key-2026';
+};
+
+const DEFAULT_SETTINGS: Settings = {
+  endpoint: getInitialEndpoint(),
+  apiKey: getInitialApiKey(),
   systemPrompt: 'Você é o Hermes, um assistente autônomo de inteligência artificial poderoso e prestativo. Responda em Português do Brasil.',
 };
 
 export default function App() {
   // --- States ---
-  const [settings, setSettings] = useState(() => {
+  const [settings, setSettings] = useState<Settings>(() => {
     const saved = localStorage.getItem('hermes_settings');
     return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
   });
 
-  const [conversations, setConversations] = useState(() => {
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
     const saved = localStorage.getItem('hermes_conversations');
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [activeConversationId, setActiveConversationId] = useState(() => {
+  const [activeConversationId, setActiveConversationId] = useState<string>(() => {
     const saved = localStorage.getItem('hermes_active_conv_id');
     return saved || '';
   });
 
-  const [models, setModels] = useState([]);
-  const [selectedModel, setSelectedModel] = useState(() => {
+  const [models, setModels] = useState<Model[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
     const saved = localStorage.getItem('hermes_selected_model');
     return saved || 'hermes-agent';
   });
-  const [isConnected, setIsConnected] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   // --- Refs ---
-  const abortControllerRef = useRef(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // --- Persistence Side Effects ---
   useEffect(() => {
@@ -95,22 +120,21 @@ export default function App() {
   // --- User Actions ---
   const handleNewChat = () => {
     const newId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const newConv = {
+    const newConv: Conversation = {
       id: newId,
       title: 'Nova Conversa',
       messages: [],
-      createdAt: new Date().toISOString(),
     };
     
     setConversations(prev => [newConv, ...prev]);
     setActiveConversationId(newId);
   };
 
-  const handleSelectConversation = (id) => {
+  const handleSelectConversation = (id: string) => {
     setActiveConversationId(id);
   };
 
-  const handleDeleteConversation = (id) => {
+  const handleDeleteConversation = (id: string) => {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (activeConversationId === id) {
       // Find another active conversation if available
@@ -130,11 +154,11 @@ export default function App() {
     }
   };
 
-  const handleSaveSettings = (newSettings) => {
+  const handleSaveSettings = (newSettings: Settings) => {
     setSettings(newSettings);
   };
 
-  const handleSelectModel = async (modelId) => {
+  const handleSelectModel = async (modelId: string) => {
     setSelectedModel(modelId);
     try {
       await selectModel(settings.endpoint, settings.apiKey, modelId);
@@ -144,7 +168,7 @@ export default function App() {
   };
 
   // --- Streaming Chat Response Handling ---
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = async (text: string) => {
     if (!text.trim() || isGenerating) return;
 
     let convId = activeConversationId;
@@ -153,11 +177,10 @@ export default function App() {
     // 1. Create a conversation if none exists
     if (!convId || !activeConversation) {
       convId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const newConv = {
+      const newConv: Conversation = {
         id: convId,
         title: text.substring(0, 30) + (text.length > 30 ? '...' : ''),
         messages: [],
-        createdAt: new Date().toISOString(),
       };
       currentConversations = [newConv, ...currentConversations];
       setConversations(currentConversations);
@@ -165,18 +188,19 @@ export default function App() {
     }
 
     // 2. Add user message
-    const userMsg = {
+    const userMsg: ChatWindowMessage = {
       id: `msg_${Date.now()}`,
       role: 'user',
       content: text,
-      timestamp: new Date().toISOString(),
     };
 
     // Update state to render User message instantly
-    let updatedMessages = [...(currentConversations.find(c => c.id === convId).messages), userMsg];
+    const targetConv = currentConversations.find(c => c.id === convId);
+    const existingMessages = targetConv ? targetConv.messages : [];
+    const updatedMessages = [...existingMessages, userMsg];
     
     // Auto title update if it's the first message
-    let title = currentConversations.find(c => c.id === convId).title;
+    let title = targetConv ? targetConv.title : 'Nova Conversa';
     if (title === 'Nova Conversa') {
       title = text.substring(0, 30) + (text.length > 30 ? '...' : '');
     }
@@ -190,11 +214,10 @@ export default function App() {
 
     // 3. Prepare empty assistant message for streaming
     const assistantMsgId = `msg_${Date.now() + 1}`;
-    const assistantMsg = {
+    const assistantMsg: ChatWindowMessage = {
       id: assistantMsgId,
       role: 'assistant',
       content: '',
-      timestamp: new Date().toISOString(),
     };
 
     setConversations(prev => prev.map(c => {
@@ -214,7 +237,7 @@ export default function App() {
       apiKey: settings.apiKey,
       model: selectedModel,
       messages: updatedMessages,
-      systemPrompt: settings.systemPrompt,
+      systemPrompt: settings.systemPrompt || '',
       signal: controller.signal,
       onChunk: (chunk) => {
         setConversations(prev => prev.map(c => {

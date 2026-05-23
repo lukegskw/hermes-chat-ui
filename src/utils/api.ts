@@ -1,8 +1,32 @@
 /**
- * Hermes OpenAI-Compatible Client API
+ * Hermes OpenAI-Compatible Client API in TypeScript
  */
 
-export async function fetchModels(endpoint, apiKey) {
+export interface Model {
+  id: string;
+  object?: string;
+  created?: number;
+  owned_by?: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface SendChatMessageStreamOptions {
+  endpoint: string;
+  apiKey: string;
+  model: string;
+  messages: ChatMessage[];
+  systemPrompt: string;
+  onChunk: (chunk: string) => void;
+  onDone: () => void;
+  onError: (error: Error) => void;
+  signal?: AbortSignal;
+}
+
+export async function fetchModels(endpoint: string, apiKey: string): Promise<Model[]> {
   const url = `${endpoint.replace(/\/$/, '')}/v1/models`;
   const response = await fetch(url, {
     method: 'GET',
@@ -17,10 +41,10 @@ export async function fetchModels(endpoint, apiKey) {
   }
 
   const data = await response.json();
-  return data.data || [];
+  return (data.data || []) as Model[];
 }
 
-export async function selectModel(endpoint, apiKey, modelId) {
+export async function selectModel(endpoint: string, apiKey: string, modelId: string): Promise<any> {
   const url = `${endpoint.replace(/\/$/, '')}/v1/model/select`;
   const response = await fetch(url, {
     method: 'POST',
@@ -38,7 +62,6 @@ export async function selectModel(endpoint, apiKey, modelId) {
   return await response.json();
 }
 
-
 export async function sendChatMessageStream({
   endpoint,
   apiKey,
@@ -49,12 +72,12 @@ export async function sendChatMessageStream({
   onDone,
   onError,
   signal
-}) {
+}: SendChatMessageStreamOptions): Promise<void> {
   try {
     const url = `${endpoint.replace(/\/$/, '')}/v1/chat/completions`;
     
     // Prepare conversation messages payload
-    const payloadMessages = [];
+    const payloadMessages: ChatMessage[] = [];
     if (systemPrompt) {
       payloadMessages.push({ role: 'system', content: systemPrompt });
     }
@@ -86,6 +109,10 @@ export async function sendChatMessageStream({
       throw new Error(`API error (${response.status}): ${errorText || response.statusText}`);
     }
 
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
@@ -98,7 +125,8 @@ export async function sendChatMessageStream({
       const lines = buffer.split('\n');
       
       // Keep the last incomplete line in the buffer
-      buffer = lines.pop();
+      const lastLine = lines.pop();
+      buffer = lastLine !== undefined ? lastLine : '';
 
       for (const line of lines) {
         const trimmed = line.trim();
@@ -139,12 +167,12 @@ export async function sendChatMessageStream({
     }
 
     onDone();
-  } catch (error) {
+  } catch (error: any) {
     if (error.name === 'AbortError') {
       // User aborted stream, do not trigger error callback
       onDone();
     } else {
-      onError(error);
+      onError(error as Error);
     }
   }
 }

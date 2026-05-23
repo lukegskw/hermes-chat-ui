@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 
-const CodeBlock = ({ language, code }) => {
+interface CodeBlockProps {
+  language: string;
+  code: string;
+}
+
+const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -15,7 +20,7 @@ const CodeBlock = ({ language, code }) => {
   };
 
   // Simple, elegant syntax highlighting simulation
-  const highlightCode = (rawCode, lang) => {
+  const highlightCode = (rawCode: string, lang: string) => {
     if (!rawCode) return '';
     
     // Quick regex replacements for basic token highlighting (safe & fast)
@@ -25,7 +30,7 @@ const CodeBlock = ({ language, code }) => {
       .replace(/>/g, '&gt;');
       
     // Highlights keywords
-    const keywords = /\b(const|let|var|function|return|import|export|from|default|class|extends|if|else|for|while|try|catch|async|await|new|this|typeof|instanceof|true|false|null|undefined|import|from)\b/g;
+    const keywords = /\b(const|let|var|function|return|import|export|from|default|class|extends|if|else|for|while|try|catch|async|await|new|this|typeof|instanceof|true|false|null|undefined)\b/g;
     escaped = escaped.replace(keywords, '<span class="code-keyword">$1</span>');
     
     // Highlights strings
@@ -65,15 +70,25 @@ const CodeBlock = ({ language, code }) => {
   );
 };
 
-export default function MarkdownRenderer({ content = '' }) {
+interface Part {
+  type: 'markdown' | 'code';
+  language?: string;
+  value: string;
+}
+
+export interface MarkdownRendererProps {
+  content?: string;
+}
+
+export default function MarkdownRenderer({ content = '' }: MarkdownRendererProps) {
   if (!content) return null;
 
   // Split content by code blocks to separate code and text
-  const parts = [];
+  const parts: Part[] = [];
   const codeBlockRegex = /```(\w*)\n([\s\S]*?)(?:```|$)/g;
   
   let lastIndex = 0;
-  let match;
+  let match: RegExpExecArray | null;
 
   while ((match = codeBlockRegex.exec(content)) !== null) {
     const textBefore = content.substring(lastIndex, match.index);
@@ -105,15 +120,15 @@ export default function MarkdownRenderer({ content = '' }) {
     }
   }
 
-  const renderMarkdownText = (text) => {
+  const renderMarkdownText = (text: string) => {
     // Process markdown line by line
     const lines = text.split('\n');
     let insideList = false;
-    let listType = null; // 'ul' or 'ol'
-    let listItems = [];
-    const elements = [];
+    let listType: 'ul' | 'ol' | null = null;
+    let listItems: string[] = [];
+    const elements: React.ReactNode[] = [];
 
-    const flushList = (key) => {
+    const flushList = (key: number) => {
       if (listItems.length > 0) {
         const Tag = listType === 'ol' ? 'ol' : 'ul';
         elements.push(
@@ -129,29 +144,10 @@ export default function MarkdownRenderer({ content = '' }) {
     };
 
     // Helper to render bold, italics, inline code, and links
-    const renderInline = (str) => {
-      if (!str) return '';
+    const renderInline = (str: string): React.ReactNode[] => {
+      if (!str) return [];
       
-      const tokens = [];
-      let currentIdx = 0;
-      
-      // Inline token matchers
-      const inlineRegex = /(\*\*|__)(.*?)\1|(`)(.*?)\3|(!?\[)(.*?)( \] \( (.*?) \))/g; // formatted for safe parsing
-      // simpler regex for inline elements:
-      // Bold: \*\*(.*?)\*\*
-      // Code: `(.*?)`
-      // Link: \[(.*?)\]\((.*?)\)
-      const boldRegex = /\*\*(.*?)\*\*/g;
-      const codeRegex = /`(.*?)`/g;
-      const linkRegex = /\[(.*?)\]\((.*?)\)/g;
-
-      // Replace bold
-      let temp = str;
-      let boldMatch;
-      
-      // For simplicity, we can do safe string parsing by matching all tokens sequentially.
-      // Let's implement a robust inline parser:
-      const parts = [];
+      const parts: React.ReactNode[] = [];
       let i = 0;
       while (i < str.length) {
         // Check for inline code
@@ -180,7 +176,17 @@ export default function MarkdownRenderer({ content = '' }) {
             if (closeUrlIdx !== -1) {
               const text = str.substring(i + 1, closeTextIdx);
               const url = str.substring(closeTextIdx + 2, closeUrlIdx);
-              parts.push(<a key={`link-${i}`} href={url} target="_blank" rel="noopener noreferrer" style={{ color: 'hsl(var(--accent-primary))', textDecoration: 'none' }}>{text}</a>);
+              parts.push(
+                <a 
+                  key={`link-${i}`} 
+                  href={url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  style={{ color: 'hsl(var(--accent-primary))', textDecoration: 'none' }}
+                >
+                  {text}
+                </a>
+              );
               i = closeUrlIdx + 1;
               continue;
             }
@@ -188,9 +194,10 @@ export default function MarkdownRenderer({ content = '' }) {
         }
         
         // Accumulate plain characters
-        let plainChar = str[i];
-        if (parts.length > 0 && typeof parts[parts.length - 1] === 'string') {
-          parts[parts.length - 1] += plainChar;
+        const plainChar = str[i];
+        const lastPart = parts[parts.length - 1];
+        if (parts.length > 0 && typeof lastPart === 'string') {
+          parts[parts.length - 1] = lastPart + plainChar;
         } else {
           parts.push(plainChar);
         }
@@ -272,7 +279,7 @@ export default function MarkdownRenderer({ content = '' }) {
     <div className="prose">
       {parts.map((part, index) => {
         if (part.type === 'code') {
-          return <CodeBlock key={index} language={part.language} code={part.value} />;
+          return <CodeBlock key={index} language={part.language || ''} code={part.value} />;
         } else {
           return <React.Fragment key={index}>{renderMarkdownText(part.value)}</React.Fragment>;
         }

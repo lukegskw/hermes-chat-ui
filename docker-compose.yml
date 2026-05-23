@@ -2,15 +2,11 @@ version: '3.8'
 
 services:
   hermes-chat-ui:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${DOCKER_IMAGE:-ghcr.io/lucasgiglio/hermes-chat-ui:latest}
     container_name: hermes-chat-ui
-    restart: unless-stopped
     ports:
-      - "8643:80"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      - "${PORT:-5173}:80"
+    environment:
+      - HERMES_API_URL=${HERMES_API_URL:-http://localhost:8642}
+      - HERMES_API_KEY=${HERMES_API_KEY:-hermes-secure-api-key-2026}
+    restart: unless-stopped

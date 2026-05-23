@@ -1,8 +1,38 @@
 import React, { useState } from 'react';
 import { 
-  Bot, Plus, Trash2, Settings, MessageSquare, 
+  Bot, Plus, Trash2, Settings as SettingsIcon, MessageSquare, 
   Database, Wifi, WifiOff, Sparkles, X, Save 
 } from 'lucide-react';
+import { Model } from '../utils/api';
+
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: any[];
+}
+
+export interface Settings {
+  endpoint: string;
+  apiKey: string;
+  systemPrompt?: string;
+}
+
+export interface SidebarProps {
+  isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
+  conversations: Conversation[];
+  activeConversationId: string | null;
+  onSelectConversation: (id: string) => void;
+  onNewChat: () => void;
+  onDeleteConversation: (id: string) => void;
+  onClearAll: () => void;
+  models: Model[];
+  selectedModel: string;
+  onSelectModel: (modelId: string) => void;
+  isConnected: boolean;
+  settings: Settings;
+  onSaveSettings: (settings: Settings) => void;
+}
 
 export default function Sidebar({
   isSidebarOpen,
@@ -19,13 +49,13 @@ export default function Sidebar({
   isConnected,
   settings,
   onSaveSettings,
-}) {
+}: SidebarProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempEndpoint, setTempEndpoint] = useState(settings.endpoint);
   const [tempKey, setTempKey] = useState(settings.apiKey);
   const [tempSystemPrompt, setTempSystemPrompt] = useState(settings.systemPrompt || '');
 
-  const handleSaveSettings = (e) => {
+  const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveSettings({
       endpoint: tempEndpoint,
@@ -47,9 +77,12 @@ export default function Sidebar({
       position: 'relative',
       zIndex: 10,
     }}>
-      {/* Sidebar Header */}
+      {/* Sidebar Header with Notch Support */}
       <div style={{
-        padding: '1.25rem',
+        paddingLeft: '1.25rem',
+        paddingRight: '1.25rem',
+        paddingBottom: '1.25rem',
+        paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))',
         borderBottom: '1px solid hsl(var(--border-subtle))',
         display: 'flex',
         alignItems: 'center',
@@ -234,7 +267,6 @@ export default function Sidebar({
                   border: '1px solid',
                   borderColor: isActive ? 'hsl(var(--border-subtle))' : 'transparent',
                   cursor: 'pointer',
-                  group: 'true',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
@@ -263,7 +295,7 @@ export default function Sidebar({
                     border: 'none',
                     color: 'hsl(var(--text-muted))',
                     cursor: 'pointer',
-                    opacity: isActive ? 0.7 : 0, // only show delete button on hover/active in high-fi
+                    opacity: isActive ? 0.7 : 0,
                     transition: 'opacity 0.2s',
                     padding: '2px',
                     borderRadius: '4px',
@@ -344,7 +376,7 @@ export default function Sidebar({
               gap: '6px',
             }}
           >
-            <Settings size={14} />
+            <SettingsIcon size={14} />
             Ajustes
           </button>
           
@@ -423,7 +455,7 @@ export default function Sidebar({
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '700', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Settings size={16} className="text-secondary" />
+                <SettingsIcon size={16} className="text-secondary" />
                 Configurações da API
               </h3>
               <button 
