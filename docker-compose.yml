@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  hermes-chat-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hermes-chat-ui
+    restart: unless-stopped
+    ports:
+      - "8643:80"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

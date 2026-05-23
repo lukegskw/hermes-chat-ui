@@ -1,0 +1,19 @@
+{
+  "name": "Hermes Agent Console",
+  "short_name": "Hermes Chat",
+  "description": "Interface premium e segura para conversação e controle autônomo local com o seu Hermes Agent.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0b10",
+  "theme_color": "#0a0b10",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
