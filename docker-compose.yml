@@ -5,7 +5,7 @@ services:
     image: ${DOCKER_IMAGE:-ghcr.io/lucasgiglio/hermes-chat-ui:latest}
     container_name: hermes-chat-ui
     ports:
-      - "${PORT:-5173}:80"
+      - "${FRONTEND_PORT:-5173}:80"
     environment:
       - HERMES_API_URL=${HERMES_API_URL:-http://localhost:8642}
       - HERMES_API_KEY=${HERMES_API_KEY:-hermes-secure-api-key-2026}
