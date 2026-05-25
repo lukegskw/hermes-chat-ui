@@ -44,9 +44,10 @@ export default function App() {
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     const saved = localStorage.getItem('hermes_selected_model');
-    return saved || '';
+    return saved || 'hermes-agent';
   });
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isFetchingModels, setIsFetchingModels] = useState<boolean>(true);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
@@ -77,21 +78,24 @@ export default function App() {
   // --- Connection & Models Fetching ---
   const checkConnectionAndFetchModels = async () => {
     try {
+      setIsFetchingModels(true);
       const fetched = await fetchModels(HERMES_ENDPOINT, HERMES_API_KEY, HERMES_PROXY_PORT);
-      setModels(fetched);
+      setModels(fetched.models);
       setIsConnected(true);
       
-      // If current selected model isn't in the fetched list, select the first one
-      if (fetched.length > 0) {
-        const found = fetched.find(m => m.id === selectedModel);
+      // If current selected model isn't in the fetched list, select the default model from the proxy
+      if (fetched.models.length > 0) {
+        const found = fetched.models.find(m => m.id === selectedModel);
         if (!found) {
-          setSelectedModel(fetched[0].id);
+          setSelectedModel(fetched.defaultModel);
         }
       }
     } catch (err) {
       console.error('Failed to connect to Hermes API server:', err);
       setIsConnected(false);
       setModels([]);
+    } finally {
+      setIsFetchingModels(false);
     }
   };
 
@@ -411,6 +415,7 @@ export default function App() {
         selectedModel={selectedModel}
         onSelectModel={handleSelectModel}
         isConnected={isConnected}
+        isFetchingModels={isFetchingModels}
         settings={settings}
         onSaveSettings={handleSaveSettings}
       />
@@ -423,6 +428,7 @@ export default function App() {
         selectedModel={activeConversation?.modelId || selectedModel}
         models={models}
         onSelectModel={handleConversationModelChange}
+        isFetchingModels={isFetchingModels}
       />
     </div>
   );

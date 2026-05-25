@@ -108,6 +108,12 @@ def get_hermes_models():
         return {"error": str(e), "data": []}
 
 class HermesProxyHandler(BaseHTTPRequestHandler):
+    def handle(self):
+        try:
+            super().handle()
+        except (ConnectionResetError, BrokenPipeError):
+            pass # Client disconnected early, ignore
+
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')

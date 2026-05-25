@@ -29,6 +29,7 @@ export interface SidebarProps {
   selectedModel: string;
   onSelectModel: (modelId: string) => void;
   isConnected: boolean;
+  isFetchingModels?: boolean;
   settings: Settings;
   onSaveSettings: (settings: Settings) => void;
 }
@@ -46,6 +47,7 @@ export default function Sidebar({
   selectedModel,
   onSelectModel,
   isConnected,
+  isFetchingModels,
   settings,
   onSaveSettings,
 }: SidebarProps) {
@@ -172,6 +174,7 @@ export default function Sidebar({
       {/* Model Selection */}
       <div style={{ padding: '0.5rem 1rem 0.75rem 1rem' }}>
         <div style={{
+          position: 'relative',
           backgroundColor: 'hsl(var(--bg-deep) / 0.6)',
           border: '1px solid hsl(var(--border-subtle))',
           borderRadius: 'var(--border-radius-md)',
@@ -208,10 +211,12 @@ export default function Sidebar({
               appearance: 'none',
               paddingRight: '12px',
             }}
-            disabled={!isConnected || models.length === 0}
+            disabled={(!isConnected && !isFetchingModels) || models.length === 0}
           >
-            {models.length === 0 && isConnected ? (
-              <option value={selectedModel || ''}>{selectedModel || 'Carregando...'}</option>
+            {models.length === 0 && isFetchingModels ? (
+              <option value={selectedModel}>{selectedModel || 'Buscando Modelos...'}</option>
+            ) : models.length === 0 && isConnected ? (
+              <option value={selectedModel}>{selectedModel || 'Sem Modelos'}</option>
             ) : models.length === 0 && !isConnected ? (
               <option value="">Hermes desconectado</option>
             ) : (

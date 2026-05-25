@@ -44,7 +44,7 @@ export interface SendChatMessageStreamOptions {
  * Fetch models from hermes-agent's proxy endpoint (if available).
  * Falls back to /v1/models if the proxy is unreachable.
  */
-export async function fetchModels(endpoint: string, apiKey: string, proxyPort: string = '8643'): Promise<Model[]> {
+export async function fetchModels(endpoint: string, apiKey: string, proxyPort: string = '8643'): Promise<{models: Model[], defaultModel: string}> {
   const base = endpoint.replace(/\/$/, '');
   
   // Try to reach the Python proxy script first
@@ -62,7 +62,10 @@ export async function fetchModels(endpoint: string, apiKey: string, proxyPort: s
     if (proxyRes.ok) {
       const proxyData = await proxyRes.json();
       if (proxyData.data && Array.isArray(proxyData.data) && proxyData.data.length > 0) {
-        return proxyData.data as Model[];
+        return { 
+          models: proxyData.data as Model[],
+          defaultModel: proxyData.default_model || proxyData.data[0].id
+        };
       }
     }
   } catch (_e) {
@@ -87,7 +90,12 @@ export async function fetchModels(endpoint: string, apiKey: string, proxyPort: s
   const all = (data.data || []) as Model[];
   // Filter out the generic proxy alias if real provider models are present
   const real = all.filter(m => m.id !== 'hermes-agent');
-  return real.length > 0 ? real : all;
+  const finalModels = real.length > 0 ? real : all;
+  
+  return {
+    models: finalModels,
+    defaultModel: finalModels.length > 0 ? finalModels[0].id : 'hermes-agent'
+  };
 }
 
 export async function sendChatMessageStream({
