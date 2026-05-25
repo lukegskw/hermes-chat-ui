@@ -9,8 +9,7 @@ echo "  HERMES_API_URL: \"${HERMES_API_URL:-http://localhost:8642}\"," >> "$CONF
 echo "  HERMES_API_KEY: \"${HERMES_API_KEY:-hermes-secure-api-key-2026}\"" >> "$CONFIG_FILE"
 echo "};" >> "$CONFIG_FILE"
 
-echo "Runtime configuration generated successfully at $CONFIG_FILE:"
-cat "$CONFIG_FILE"
+echo "Runtime configuration generated successfully at $CONFIG_FILE"
 
 # Execute Nginx (CMD arguments)
 exec "$@"

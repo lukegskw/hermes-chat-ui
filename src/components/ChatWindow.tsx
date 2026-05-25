@@ -141,7 +141,7 @@ export default function ChatWindow({
             ))}
             
             {/* Thinking Indicator Bubble - Premium Neural Activity Breathing Animation */}
-            {isGenerating && messages[messages.length - 1]?.role === 'assistant' && !messages[messages.length - 1]?.content && !messages[messages.length - 1]?.reasoning_content && (!messages[messages.length - 1]?.tool_calls || messages[messages.length - 1].tool_calls.length === 0) && (
+            {isGenerating && messages[messages.length - 1]?.role === 'assistant' && !messages[messages.length - 1]?.content && (
               <div 
                 className="animate-fade"
                 style={{
