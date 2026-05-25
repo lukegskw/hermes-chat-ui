@@ -16,7 +16,17 @@ declare global {
 }
 
 // These come exclusively from Portainer ENV vars (via entrypoint.sh → window.APP_CONFIG)
-const HERMES_ENDPOINT = window.APP_CONFIG?.HERMES_API_URL || 'http://localhost:8642';
+const getApiUrl = () => {
+  let url = window.APP_CONFIG?.HERMES_API_URL || 'http://localhost:8642';
+  if (url.includes('localhost')) {
+    url = url.replace('localhost', window.location.hostname);
+  } else if (url.includes('127.0.0.1')) {
+    url = url.replace('127.0.0.1', window.location.hostname);
+  }
+  return url;
+};
+
+const HERMES_ENDPOINT = getApiUrl();
 const HERMES_API_KEY = window.APP_CONFIG?.HERMES_API_KEY || '';
 const HERMES_PROXY_PORT = window.APP_CONFIG?.HERMES_PROXY_PORT || '8643';
 
@@ -42,10 +52,7 @@ export default function App() {
   });
 
   const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>(() => {
-    const saved = localStorage.getItem('hermes_selected_model');
-    return saved || 'hermes-agent';
-  });
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isFetchingModels, setIsFetchingModels] = useState<boolean>(true);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -72,7 +79,9 @@ export default function App() {
   }, [activeConversationId]);
 
   useEffect(() => {
-    localStorage.setItem('hermes_selected_model', selectedModel);
+    if (selectedModel) {
+      localStorage.setItem('hermes_selected_model', selectedModel);
+    }
   }, [selectedModel]);
 
   // --- Connection & Models Fetching ---
@@ -83,12 +92,11 @@ export default function App() {
       setModels(fetched.models);
       setIsConnected(true);
       
-      // If current selected model isn't in the fetched list, select the default model from the proxy
-      if (fetched.models.length > 0) {
-        const found = fetched.models.find(m => m.id === selectedModel);
-        if (!found) {
-          setSelectedModel(fetched.defaultModel);
-        }
+      // Always sync the UI model with the CLI's default model on load
+      if (fetched.defaultModel) {
+        setSelectedModel(fetched.defaultModel);
+      } else if (fetched.models.length > 0) {
+        setSelectedModel(fetched.models[0].id);
       }
     } catch (err) {
       console.error('Failed to connect to Hermes API server:', err);
