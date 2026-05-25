@@ -36,8 +36,8 @@ def get_hermes_models():
         output = b""
         start_time = time.time()
         
-        # Read until we see the end of the prompt or timeout after 3 seconds
-        while time.time() - start_time < 3.0:
+        # Read until we see the end of the prompt or timeout after 5 seconds
+        while time.time() - start_time < 5.0:
             try:
                 # Use os.read with a non-blocking approach if needed, but simple read usually works
                 # Since we want to avoid blocking forever, we'll use a short timeout via select
@@ -51,9 +51,6 @@ def get_hermes_models():
                     # Break early if we see the last option of the menu
                     if b"Skip (keep current)" in output or b"Enter custom model name" in output:
                         break
-                else:
-                    # Timeout reached for this read
-                    break
             except OSError:
                 break
                 
