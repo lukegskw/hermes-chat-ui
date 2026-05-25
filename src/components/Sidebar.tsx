@@ -8,6 +8,7 @@ import { Model } from '../utils/api';
 export interface Conversation {
   id: string;
   title: string;
+  modelId?: string;
   messages: any[];
 }
 

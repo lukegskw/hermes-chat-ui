@@ -14,6 +14,8 @@ export interface ChatWindowProps {
   onSendMessage: (text: string) => void;
   onStopGeneration: () => void;
   selectedModel: string;
+  models: any[];
+  onSelectModel: (modelId: string) => void;
 }
 
 const SUGGESTIONS = [
@@ -46,6 +48,8 @@ export default function ChatWindow({
   onSendMessage,
   onStopGeneration,
   selectedModel,
+  models,
+  onSelectModel,
 }: ChatWindowProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -317,7 +321,27 @@ export default function ChatWindow({
             paddingBottom: '6px',
           }}>
             <Terminal size={11} style={{ color: 'hsl(var(--accent-primary))' }} />
-            EXECUTANDO COM: <span style={{ color: 'hsl(var(--text-secondary))', fontFamily: 'var(--font-mono)' }}>{selectedModel}</span>
+            EXECUTANDO COM: 
+            <select
+              value={selectedModel}
+              onChange={(e) => onSelectModel(e.target.value)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'hsl(var(--text-secondary))',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.68rem',
+                outline: 'none',
+                cursor: 'pointer',
+                marginLeft: '4px',
+              }}
+            >
+              {models.map((m) => (
+                <option key={m.id} value={m.id} style={{ background: 'hsl(var(--bg-surface))' }}>
+                  {m.id}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>

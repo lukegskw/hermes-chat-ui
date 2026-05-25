@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Bot, User, Sparkles } from 'lucide-react';
+import { Copy, Check, Bot, User, Sparkles, TerminalSquare, ChevronDown, ChevronRight, BrainCircuit } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 import { ChatWindowMessage } from './ChatWindow';
 
@@ -11,6 +11,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   const { role, content, timestamp } = message;
   const isUser = role === 'user';
   const [copied, setCopied] = useState(false);
+  const [showReasoning, setShowReasoning] = useState(false);
 
   const handleCopy = async () => {
     try {
@@ -142,6 +143,99 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
             </button>
           </div>
         </div>
+
+        {/* Reasoning and Tools rendering */}
+        {!isUser && (message.reasoning_content || (message.tool_calls && message.tool_calls.length > 0)) && (
+          <div style={{ marginBottom: '12px' }}>
+            {message.reasoning_content && (
+              <div 
+                style={{
+                  backgroundColor: 'hsl(var(--bg-deep) / 0.5)',
+                  border: '1px solid hsl(var(--border-subtle))',
+                  borderRadius: 'var(--border-radius-md)',
+                  marginBottom: '8px',
+                  overflow: 'hidden',
+                }}
+              >
+                <button
+                  onClick={() => setShowReasoning(!showReasoning)}
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: 'hsl(var(--text-muted))',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <BrainCircuit size={14} style={{ color: 'hsl(var(--accent-secondary))' }} />
+                  Processo de Raciocínio (Thoughts)
+                  <div style={{ marginLeft: 'auto' }}>
+                    {showReasoning ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </div>
+                </button>
+                {showReasoning && (
+                  <div style={{
+                    padding: '8px 12px 12px 12px',
+                    borderTop: '1px solid hsl(var(--border-subtle))',
+                    color: 'hsl(var(--text-secondary))',
+                    fontSize: '0.8rem',
+                    fontFamily: 'var(--font-sans)',
+                    lineHeight: '1.5',
+                    whiteSpace: 'pre-wrap',
+                    fontStyle: 'italic',
+                  }}>
+                    {message.reasoning_content}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {message.tool_calls && message.tool_calls.map((tc: any, i: number) => (
+              <div key={i} style={{
+                backgroundColor: 'hsl(var(--bg-deep) / 0.8)',
+                border: '1px dashed hsl(var(--accent-primary) / 0.5)',
+                borderRadius: 'var(--border-radius-sm)',
+                padding: '8px 12px',
+                marginBottom: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: 'hsl(var(--accent-primary))',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                }}>
+                  <TerminalSquare size={14} />
+                  🛠️ Executando Ferramenta: {tc.function?.name}
+                </div>
+                {tc.function?.arguments && (
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: 'hsl(var(--text-muted))',
+                    fontFamily: 'var(--font-mono)',
+                    backgroundColor: 'hsl(var(--bg-card))',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                  }}>
+                    {tc.function.arguments}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Message body */}
         <div style={{

@@ -9,9 +9,21 @@ export interface Model {
   owned_by?: string;
 }
 
+export interface ToolCall {
+  id: string;
+  type: string;
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
 export interface ChatMessage {
+  id?: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  reasoning_content?: string;
+  tool_calls?: ToolCall[];
 }
 
 export interface SendChatMessageStreamOptions {
@@ -21,6 +33,8 @@ export interface SendChatMessageStreamOptions {
   messages: ChatMessage[];
   systemPrompt: string;
   onChunk: (chunk: string) => void;
+  onReasoningChunk?: (chunk: string) => void;
+  onToolCallChunk?: (toolCallDelta: any) => void;
   onDone: () => void;
   onError: (error: Error) => void;
   signal?: AbortSignal;
@@ -69,6 +83,8 @@ export async function sendChatMessageStream({
   messages,
   systemPrompt,
   onChunk,
+  onReasoningChunk,
+  onToolCallChunk,
   onDone,
   onError,
   signal
@@ -141,9 +157,18 @@ export async function sendChatMessageStream({
 
           try {
             const parsed = JSON.parse(dataContent);
-            const content = parsed.choices?.[0]?.delta?.content || '';
-            if (content) {
-              onChunk(content);
+            const delta = parsed.choices?.[0]?.delta || {};
+            
+            if (delta.content) {
+              onChunk(delta.content);
+            }
+            if (delta.reasoning_content && onReasoningChunk) {
+              onReasoningChunk(delta.reasoning_content);
+            }
+            if (delta.tool_calls && onToolCallChunk) {
+              for (const tc of delta.tool_calls) {
+                onToolCallChunk(tc);
+              }
             }
           } catch (e) {
             // Ignore syntax errors for non-JSON or other formatting
@@ -158,9 +183,17 @@ export async function sendChatMessageStream({
       if (dataContent !== '[DONE]') {
         try {
           const parsed = JSON.parse(dataContent);
-          const content = parsed.choices?.[0]?.delta?.content || '';
-          if (content) {
-            onChunk(content);
+          const delta = parsed.choices?.[0]?.delta || {};
+          if (delta.content) {
+            onChunk(delta.content);
+          }
+          if (delta.reasoning_content && onReasoningChunk) {
+            onReasoningChunk(delta.reasoning_content);
+          }
+          if (delta.tool_calls && onToolCallChunk) {
+            for (const tc of delta.tool_calls) {
+              onToolCallChunk(tc);
+            }
           }
         } catch (e) {}
       }

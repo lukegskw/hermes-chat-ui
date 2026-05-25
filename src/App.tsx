@@ -232,10 +232,12 @@ export default function App() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    const actualModel = targetConv?.modelId || selectedModel;
+
     await sendChatMessageStream({
       endpoint: settings.endpoint,
       apiKey: settings.apiKey,
-      model: selectedModel,
+      model: actualModel,
       messages: updatedMessages,
       systemPrompt: settings.systemPrompt || '',
       signal: controller.signal,
@@ -247,6 +249,47 @@ export default function App() {
               messages: c.messages.map(m => {
                 if (m.id === assistantMsgId) {
                   return { ...m, content: m.content + chunk };
+                }
+                return m;
+              })
+            };
+          }
+          return c;
+        }));
+      },
+      onReasoningChunk: (chunk) => {
+        setConversations(prev => prev.map(c => {
+          if (c.id === convId) {
+            return {
+              ...c,
+              messages: c.messages.map(m => {
+                if (m.id === assistantMsgId) {
+                  return { ...m, reasoning_content: (m.reasoning_content || '') + chunk };
+                }
+                return m;
+              })
+            };
+          }
+          return c;
+        }));
+      },
+      onToolCallChunk: (tcDelta) => {
+        setConversations(prev => prev.map(c => {
+          if (c.id === convId) {
+            return {
+              ...c,
+              messages: c.messages.map(m => {
+                if (m.id === assistantMsgId) {
+                  const currentTools = [...(m.tool_calls || [])];
+                  const index = tcDelta.index || 0;
+                  if (!currentTools[index]) {
+                    currentTools[index] = { id: tcDelta.id, type: tcDelta.type, function: { name: tcDelta.function?.name || '', arguments: tcDelta.function?.arguments || '' } };
+                  } else {
+                    if (tcDelta.function?.arguments) {
+                      currentTools[index].function.arguments += tcDelta.function.arguments;
+                    }
+                  }
+                  return { ...m, tool_calls: currentTools };
                 }
                 return m;
               })
@@ -292,6 +335,13 @@ export default function App() {
     }
   };
 
+  const handleConversationModelChange = (modelId: string) => {
+    if (!activeConversationId) return;
+    setConversations(prev => prev.map(c => 
+      c.id === activeConversationId ? { ...c, modelId } : c
+    ));
+  };
+
   return (
     <div id="root">
       {/* Drawer overlay for mobile iPhones */}
@@ -327,7 +377,9 @@ export default function App() {
         isGenerating={isGenerating}
         onSendMessage={handleSendMessage}
         onStopGeneration={handleStopGeneration}
-        selectedModel={selectedModel}
+        selectedModel={activeConversation?.modelId || selectedModel}
+        models={models}
+        onSelectModel={handleConversationModelChange}
       />
     </div>
   );
