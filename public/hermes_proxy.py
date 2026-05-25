@@ -22,48 +22,8 @@ def get_hermes_models():
     active_model = "hermes-agent"
     provider = "github-copilot"
     
-    # ATTEMPT 1: Native Python imports (most robust, no screen scraping)
-    try:
-        import yaml
-        config_paths = [
-            "/opt/data/config.yaml",
-            "/opt/data/.hermes/config.yaml",
-            "/opt/hermes/.hermes/config.yaml",
-            "/home/hermes/.hermes/config.yaml",
-            os.path.expanduser("~/.hermes/config.yaml"),
-            "/root/.hermes/config.yaml"
-        ]
-        
-        for config_path in config_paths:
-            if os.path.exists(config_path):
-                with open(config_path, 'r') as f:
-                    config = yaml.safe_load(f) or {}
-                    provider = config.get("model", {}).get("provider", provider)
-                    active_model = config.get("model", {}).get("name", active_model)
-                break
-                
-        try:
-            from hermes_cli.models import provider_model_ids
-            m_ids = provider_model_ids(provider)
-            if m_ids:
-                models = [{"id": m, "label": str(m).replace("-", " ").title()} for m in m_ids]
-        except ImportError:
-            from hermes_cli.models import _PROVIDER_MODELS
-            m_data = _PROVIDER_MODELS.get(provider, [])
-            for m in m_data:
-                if isinstance(m, dict) and "id" in m:
-                    models.append({"id": m["id"], "label": m["id"].replace("-", " ").title()})
-                elif isinstance(m, str):
-                    models.append({"id": m, "label": m.replace("-", " ").title()})
-                    
-        if models:
-            return {
-                "active_provider": provider,
-                "default_model": active_model,
-                "data": models
-            }
-    except Exception as e:
-        print(f"Native import failed: {e}")
+    # Removed Native Python imports block to prevent reading stale config.yaml files.
+    # We will rely entirely on executing the CLI via PTY to ensure we see exactly what the user sees.
 
     # ATTEMPT 2: PTY Screen scraping with aggressive fallback
     try:
@@ -101,6 +61,17 @@ def get_hermes_models():
         found_models = set()
         for match in re.finditer(r'(gemini|claude|gpt|o1|o3|deepseek)[a-zA-Z0-9\-\.]+', clean_text.lower()):
             found_models.add(match.group(0))
+            
+        # Try to find the active model (usually indicated by * or > in the CLI)
+        for line in clean_text.splitlines():
+            line = line.strip()
+            if line.startswith('*') or line.startswith('>'):
+                parts = line.replace('*', '').replace('>', '').split()
+                for p in parts:
+                    if any(x in p.lower() for x in ['gemini', 'claude', 'gpt', 'o1', 'o3', 'deepseek']):
+                        active_model = p
+                        found_models.add(p)
+                        break
             
         for m in found_models:
             models.append({"id": m, "label": m.replace("-", " ").title()})

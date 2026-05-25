@@ -17,12 +17,22 @@ declare global {
 
 // These come exclusively from Portainer ENV vars (via entrypoint.sh → window.APP_CONFIG)
 const getApiUrl = () => {
-  let url = window.APP_CONFIG?.HERMES_API_URL || 'http://localhost:8642';
-  if (url.includes('localhost')) {
-    url = url.replace('localhost', window.location.hostname);
-  } else if (url.includes('127.0.0.1')) {
-    url = url.replace('127.0.0.1', window.location.hostname);
+  let url = window.APP_CONFIG?.HERMES_API_URL || '';
+  
+  // If the user explicitly sets 'AUTO' or leaves it empty/localhost
+  if (!url || url === 'AUTO' || url.includes('localhost') || url.includes('127.0.0.1')) {
+    return `${window.location.protocol}//${window.location.hostname}:8642`;
   }
+  
+  // If they hardcoded 192.168.x.x but are accessing via Tailscale, fix it dynamically!
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.hostname !== window.location.hostname) {
+      parsedUrl.hostname = window.location.hostname;
+      return parsedUrl.toString().replace(/\/$/, '');
+    }
+  } catch(e) {}
+  
   return url;
 };
 
