@@ -49,6 +49,7 @@ export default function Sidebar({
   settings,
   onSaveSettings,
 }: SidebarProps) {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempSystemPrompt, setTempSystemPrompt] = useState(settings.systemPrompt || '');
 
   const handleSaveSettings = (e: React.FormEvent) => {
