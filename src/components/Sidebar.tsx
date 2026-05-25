@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Bot, Plus, Trash2, Settings as SettingsIcon, MessageSquare, 
-  Database, Wifi, WifiOff, Sparkles, X, Save 
+  Sparkles, X, Save 
 } from 'lucide-react';
 import { Model } from '../utils/api';
 
@@ -13,8 +13,6 @@ export interface Conversation {
 }
 
 export interface Settings {
-  endpoint: string;
-  apiKey: string;
   systemPrompt?: string;
 }
 
@@ -51,16 +49,11 @@ export default function Sidebar({
   settings,
   onSaveSettings,
 }: SidebarProps) {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [tempEndpoint, setTempEndpoint] = useState(settings.endpoint);
-  const [tempKey, setTempKey] = useState(settings.apiKey);
   const [tempSystemPrompt, setTempSystemPrompt] = useState(settings.systemPrompt || '');
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveSettings({
-      endpoint: tempEndpoint,
-      apiKey: tempKey,
       systemPrompt: tempSystemPrompt,
     });
     setIsSettingsOpen(false);
@@ -199,10 +192,10 @@ export default function Sidebar({
             <Sparkles size={11} className="text-secondary" />
             Modelo Ativo
           </label>
-          <select 
+          <input
+            list="sidebar-models-list"
             value={selectedModel}
             onChange={(e) => onSelectModel(e.target.value)}
-            disabled={!isConnected}
             style={{
               width: '100%',
               background: 'transparent',
@@ -211,21 +204,16 @@ export default function Sidebar({
               fontSize: '0.82rem',
               fontWeight: '600',
               outline: 'none',
-              cursor: isConnected ? 'pointer' : 'not-allowed',
+              cursor: 'text',
             }}
-          >
-            {models.length > 0 ? (
-              models.map(m => (
-                <option key={m.id} value={m.id} style={{ background: 'hsl(var(--bg-surface))' }}>
-                  {m.id}
-                </option>
-              ))
-            ) : (
-              <option style={{ background: 'hsl(var(--bg-surface))' }}>
-                {isConnected ? 'Buscando modelos...' : 'Hermes desconectado'}
-              </option>
-            )}
-          </select>
+            placeholder={isConnected ? 'Digite ou selecione um modelo...' : 'Hermes desconectado'}
+            disabled={!isConnected}
+          />
+          <datalist id="sidebar-models-list">
+            {models.map(m => (
+              <option key={m.id} value={m.id} />
+            ))}
+          </datalist>
         </div>
       </div>
 
@@ -331,31 +319,6 @@ export default function Sidebar({
         flexDirection: 'column',
         gap: '10px',
       }}>
-        {/* Connection detail */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: '0.72rem',
-          color: 'hsl(var(--text-secondary) / 0.8)',
-          padding: '0 4px',
-        }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Database size={12} />
-            Hermes Host
-          </span>
-          <span style={{ 
-            fontWeight: '600', 
-            fontFamily: 'var(--font-mono)', 
-            maxWidth: '120px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
-            {settings.endpoint.replace(/^https?:\/\//, '')}
-          </span>
-        </div>
-
         {/* Buttons Row */}
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
@@ -466,50 +429,6 @@ export default function Sidebar({
               >
                 <X size={18} />
               </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: '600', color: 'hsl(var(--text-secondary))' }}>
-                API Endpoint URL
-              </label>
-              <input 
-                type="url"
-                required
-                value={tempEndpoint}
-                onChange={(e) => setTempEndpoint(e.target.value)}
-                style={{
-                  padding: '0.6rem 0.8rem',
-                  borderRadius: 'var(--border-radius-sm)',
-                  backgroundColor: 'hsl(var(--bg-deep))',
-                  border: '1px solid hsl(var(--border-subtle))',
-                  color: 'white',
-                  fontSize: '0.82rem',
-                  fontFamily: 'var(--font-mono)',
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: '600', color: 'hsl(var(--text-secondary))' }}>
-                API Key (Bearer)
-              </label>
-              <input 
-                type="password"
-                required
-                value={tempKey}
-                onChange={(e) => setTempKey(e.target.value)}
-                style={{
-                  padding: '0.6rem 0.8rem',
-                  borderRadius: 'var(--border-radius-sm)',
-                  backgroundColor: 'hsl(var(--bg-deep))',
-                  border: '1px solid hsl(var(--border-subtle))',
-                  color: 'white',
-                  fontSize: '0.82rem',
-                  fontFamily: 'var(--font-mono)',
-                  outline: 'none',
-                }}
-              />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

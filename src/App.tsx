@@ -14,23 +14,11 @@ declare global {
   }
 }
 
-const getInitialEndpoint = (): string => {
-  if (window.APP_CONFIG?.HERMES_API_URL) {
-    return window.APP_CONFIG.HERMES_API_URL;
-  }
-  return 'http://localhost:8642';
-};
-
-const getInitialApiKey = (): string => {
-  if (window.APP_CONFIG?.HERMES_API_KEY) {
-    return window.APP_CONFIG.HERMES_API_KEY;
-  }
-  return '';
-};
+// These come exclusively from Portainer ENV vars (via entrypoint.sh → window.APP_CONFIG)
+const HERMES_ENDPOINT = window.APP_CONFIG?.HERMES_API_URL || 'http://localhost:8642';
+const HERMES_API_KEY = window.APP_CONFIG?.HERMES_API_KEY || '';
 
 const DEFAULT_SETTINGS: Settings = {
-  endpoint: getInitialEndpoint(),
-  apiKey: getInitialApiKey(),
   systemPrompt: 'Você é o Hermes, um assistente autônomo de inteligência artificial poderoso e prestativo. Responda em Português do Brasil.',
 };
 
@@ -38,17 +26,7 @@ export default function App() {
   // --- States ---
   const [settings, setSettings] = useState<Settings>(() => {
     const saved = localStorage.getItem('hermes_settings');
-    let parsed = saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
-    
-    // Always enforce Portainer environment variables (injected via entrypoint.sh into window.APP_CONFIG)
-    if (window.APP_CONFIG?.HERMES_API_URL) {
-      parsed.endpoint = window.APP_CONFIG.HERMES_API_URL;
-    }
-    if (window.APP_CONFIG?.HERMES_API_KEY) {
-      parsed.apiKey = window.APP_CONFIG.HERMES_API_KEY;
-    }
-    
-    return parsed;
+    return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
   });
 
   const [conversations, setConversations] = useState<Conversation[]>(() => {
@@ -97,7 +75,7 @@ export default function App() {
   // --- Connection & Models Fetching ---
   const checkConnectionAndFetchModels = async () => {
     try {
-      const fetched = await fetchModels(settings.endpoint, settings.apiKey);
+      const fetched = await fetchModels(HERMES_ENDPOINT, HERMES_API_KEY);
       setModels(fetched);
       setIsConnected(true);
       
@@ -121,7 +99,7 @@ export default function App() {
     // Periodically poll connection status every 15 seconds
     const interval = setInterval(checkConnectionAndFetchModels, 15000);
     return () => clearInterval(interval);
-  }, [settings.endpoint, settings.apiKey, selectedModel]);
+  }, []);
 
   // --- Helper: Get active conversation ---
   const activeConversation = conversations.find(c => c.id === activeConversationId);
@@ -171,7 +149,7 @@ export default function App() {
   const handleSelectModel = async (modelId: string) => {
     setSelectedModel(modelId);
     try {
-      await selectModel(settings.endpoint, settings.apiKey, modelId);
+      await selectModel(HERMES_ENDPOINT, HERMES_API_KEY, modelId);
     } catch (err) {
       console.error('Failed to change active model on the backend:', err);
     }
@@ -228,6 +206,7 @@ export default function App() {
       id: assistantMsgId,
       role: 'assistant',
       content: '',
+      isGenerating: true,
     };
 
     setConversations(prev => prev.map(c => {
@@ -245,8 +224,8 @@ export default function App() {
     const actualModel = targetConv?.modelId || selectedModel;
 
     await sendChatMessageStream({
-      endpoint: settings.endpoint,
-      apiKey: settings.apiKey,
+      endpoint: HERMES_ENDPOINT,
+      apiKey: HERMES_API_KEY,
       model: actualModel,
       messages: updatedMessages,
       systemPrompt: settings.systemPrompt || '',
@@ -309,14 +288,17 @@ export default function App() {
         }));
       },
       onDone: () => {
+        setConversations(prev => prev.map(c => {
+          if (c.id === convId) {
+            return { ...c, messages: c.messages.map(m => m.id === assistantMsgId ? { ...m, isGenerating: false } : m) };
+          }
+          return c;
+        }));
         setIsGenerating(false);
         abortControllerRef.current = null;
       },
       onError: (err) => {
         console.error('Streaming connection error:', err);
-        setIsGenerating(false);
-        abortControllerRef.current = null;
-        
         setConversations(prev => prev.map(c => {
           if (c.id === convId) {
             return {
@@ -325,6 +307,7 @@ export default function App() {
                 if (m.id === assistantMsgId) {
                   return {
                     ...m,
+                    isGenerating: false,
                     content: m.content + `\n\n❌ **Erro de conexão**: ${err.message}. Certifique-se de que o container do Hermes está ativo e acessível na porta configurada.`
                   };
                 }
@@ -334,6 +317,8 @@ export default function App() {
           }
           return c;
         }));
+        setIsGenerating(false);
+        abortControllerRef.current = null;
       }
     });
   };
@@ -341,6 +326,11 @@ export default function App() {
   const handleStopGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+      // Mark isGenerating=false on the last assistant message
+      setConversations(prev => prev.map(c => ({
+        ...c,
+        messages: c.messages.map(m => m.isGenerating ? { ...m, isGenerating: false } : m)
+      })));
       setIsGenerating(false);
     }
   };
@@ -352,8 +342,8 @@ export default function App() {
     ));
   };
 
-  // Block UI completely if API key is not configured via Portainer (or settings)
-  if (!settings.apiKey) {
+  // Block UI completely if API key is not configured via Portainer
+  if (!HERMES_API_KEY) {
     return (
       <div style={{
         height: '100vh',

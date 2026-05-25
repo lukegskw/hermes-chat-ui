@@ -5,6 +5,7 @@ import { ChatMessage } from '../utils/api';
 
 export interface ChatWindowMessage extends ChatMessage {
   id: string;
+  isGenerating?: boolean;
 }
 
 export interface ChatWindowProps {
@@ -136,55 +137,9 @@ export default function ChatWindow({
       }}>
         {messages.length > 0 ? (
           <div style={{ maxWidth: '850px', width: '100%', margin: '0 auto' }}>
-            {messages.filter(msg => msg.role !== 'assistant' || msg.content || msg.reasoning_content || (msg.tool_calls && msg.tool_calls.length > 0)).map((msg) => (
+            {messages.filter(msg => msg.role !== 'assistant' || msg.content || msg.reasoning_content || (msg.tool_calls && msg.tool_calls.length > 0) || msg.isGenerating).map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
-            
-            {/* Thinking Indicator Bubble - Premium Neural Activity Breathing Animation */}
-            {isGenerating && messages[messages.length - 1]?.role === 'assistant' && !messages[messages.length - 1]?.content && (
-              <div 
-                className="animate-fade"
-                style={{
-                  display: 'flex',
-                  gap: '14px',
-                  width: '100%',
-                  alignItems: 'flex-start',
-                  marginBottom: '1.25rem',
-                }}
-              >
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)))',
-                  boxShadow: '0 0 15px hsl(var(--accent-primary) / 0.35)',
-                  animation: 'pulseGlow 2s infinite',
-                }}>
-                  <Sparkles size={16} color="white" />
-                </div>
-                <div className="glass neural-breathing" style={{
-                  border: '1px solid hsl(var(--border-subtle))',
-                  borderRadius: 'var(--border-radius-lg)',
-                  borderTopLeftRadius: '4px',
-                  padding: '1rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}>
-                  <div style={{ display: 'flex', gap: '5px', padding: '4px 2px' }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', animation: 'typingDot 1.2s infinite 0s' }} />
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', animation: 'typingDot 1.2s infinite 0.25s' }} />
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', animation: 'typingDot 1.2s infinite 0.5s' }} />
-                  </div>
-                  <span style={{ fontSize: '0.82rem', color: 'hsl(var(--text-main))', fontWeight: '600', marginLeft: '6px', letterSpacing: '0.2px' }}>
-                    Processando dados neurais...
-                  </span>
-                </div>
-              </div>
-            )}
             
             <div ref={messagesEndRef} />
           </div>
