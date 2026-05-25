@@ -17,132 +17,95 @@ import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 def get_hermes_models():
-    """Run `hermes model` via pty, capture output, and parse the models."""
+    """Get models directly via Python imports, fallback to pty scraping."""
+    models = []
+    active_model = "hermes-agent"
+    provider = "github-copilot"
+    
+    # ATTEMPT 1: Native Python imports (most robust, no screen scraping)
+    try:
+        import yaml
+        config_path = os.path.expanduser("~/.hermes/config.yaml")
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f) or {}
+                provider = config.get("model", {}).get("provider", "github-copilot")
+                active_model = config.get("model", {}).get("name", active_model)
+                
+        try:
+            from hermes_cli.models import provider_model_ids
+            m_ids = provider_model_ids(provider)
+            if m_ids:
+                models = [{"id": m, "label": str(m).replace("-", " ").title()} for m in m_ids]
+        except ImportError:
+            from hermes_cli.models import _PROVIDER_MODELS
+            m_data = _PROVIDER_MODELS.get(provider, [])
+            for m in m_data:
+                if isinstance(m, dict) and "id" in m:
+                    models.append({"id": m["id"], "label": m["id"].replace("-", " ").title()})
+                elif isinstance(m, str):
+                    models.append({"id": m, "label": m.replace("-", " ").title()})
+                    
+        if models:
+            return {
+                "active_provider": provider,
+                "default_model": active_model,
+                "data": models
+            }
+    except Exception as e:
+        print(f"Native import failed: {e}")
+
+    # ATTEMPT 2: PTY Screen scraping with aggressive fallback
     try:
         master, slave = pty.openpty()
-        
-        # We run hermes model in a pty so it thinks it has an interactive terminal
-        # and prints the inquirer menu with the models list.
-        process = subprocess.Popen(
-            ['hermes', 'model'],
-            stdin=slave,
-            stdout=slave,
-            stderr=slave,
-            close_fds=True,
-            env=os.environ.copy()
-        )
+        process = subprocess.Popen(['hermes', 'model'], stdin=slave, stdout=slave, stderr=slave, close_fds=True, env=os.environ.copy())
         os.close(slave)
         
         output = b""
         start_time = time.time()
         
-        # Read until we see the end of the prompt or timeout after 5 seconds
-        while time.time() - start_time < 5.0:
+        while time.time() - start_time < 4.0:
             try:
-                # Use os.read with a non-blocking approach if needed, but simple read usually works
-                # Since we want to avoid blocking forever, we'll use a short timeout via select
                 import select
                 r, _, _ = select.select([master], [], [], 0.5)
                 if r:
                     data = os.read(master, 1024)
-                    if not data:
-                        break
+                    if not data: break
                     output += data
-                    # Break early if we see the last option of the menu
-                    if b"Skip (keep current)" in output or b"Enter custom model name" in output:
+                    if b"Skip" in output or b"Enter custom" in output or b"Select default" in output:
+                        time.sleep(0.5) # Wait a bit for the rest of the menu to render
+                        data = os.read(master, 4096)
+                        output += data
                         break
             except OSError:
                 break
                 
-        # Send Ctrl+C to abort the interactive prompt safely
         os.write(master, b'\x03') 
-        
         process.terminate()
-        try:
-            process.wait(timeout=1)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            
         os.close(master)
         
         text = output.decode('utf-8', errors='ignore')
+        clean_text = re.sub(r'\x1b\[.*?m', '', text) # Strip ANSI
         
-        # Parse the text output
-        # Output example:
-        # Current model:    gemini-3-flash-preview
-        # Active provider:  github-copilot
-        # ...
-        # ->  gemini-3-flash-preview  <- currently in use
-        #     claude-opus-4.7
-        
-        active_model = "hermes-agent"
-        models = []
-        
-        in_list = False
-        for line in text.split('\n'):
-            line = line.strip('\r\n')
+        # Aggressive Regex: find anything that looks like a known model family
+        found_models = set()
+        for match in re.finditer(r'(gemini|claude|gpt|o1|o3|deepseek)[a-zA-Z0-9\-\.]+', clean_text.lower()):
+            found_models.add(match.group(0))
             
-            # Extract active model
-            if line.startswith('Current model:'):
-                parts = line.split(':', 1)
-                if len(parts) > 1:
-                    active_model = parts[1].strip()
-                    
-            # Start of the model list menu
-            if 'Select default model:' in line:
-                in_list = True
-                continue
-                
-            if in_list:
-                # Stop parsing if we hit these typical inquirer footers
-                if 'Enter custom model name' in line or 'Skip' in line or 'Answer:' in line:
-                    break
-                    
-                # A model line starts with '-> ' (selected) or '   ' (unselected)
-                # Note: there might be ANSI escape codes for colors, so we strip them
-                clean_line = re.sub(r'\x1b\[.*?m', '', line)
-                
-                # Check if it looks like a list item
-                if clean_line.startswith('-> ') or clean_line.startswith('   ') or clean_line.startswith('\u276f '): # \u276f is the arrow
-                    # Clean up prefix and suffix
-                    model_str = clean_line.replace('->', '').replace('\u276f', '').strip()
-                    
-                    # Remove " <- currently in use" suffix if present
-                    if '<- currently in use' in model_str:
-                        model_str = model_str.split('<-')[0].strip()
-                        
-                    # If there's still a space, just take the first word (the model ID)
-                    model_id = model_str.split(' ')[0].strip()
-                    
-                    if model_id and model_id not in ['Enter', 'Skip']:
-                        # Create a nice label
-                        label = model_id.replace('-', ' ').title()
-                        label = label.replace('Gpt', 'GPT')
-                        models.append({"id": model_id, "label": label})
-        
-        # Ensure the list is unique and has the active model
-        unique_models = []
-        seen = set()
-        for m in models:
-            if m["id"] not in seen:
-                seen.add(m["id"])
-                unique_models.append(m)
-                
-        # If we failed to parse but got the active model, at least return that
-        if not unique_models and active_model != "hermes-agent":
-            unique_models.append({"id": active_model, "label": active_model.title()})
+        for m in found_models:
+            models.append({"id": m, "label": m.replace("-", " ").title()})
+            
+        if not models and active_model != "hermes-agent":
+            models.append({"id": active_model, "label": active_model.title()})
             
         return {
-            "active_provider": "proxy",
+            "active_provider": "proxy-fallback",
             "default_model": active_model,
-            "data": unique_models
+            "data": models,
+            "debug_output": clean_text[:500] if not models else None
         }
     except Exception as e:
-        print(f"Error extracting models: {e}")
-        return {
-            "error": str(e),
-            "data": []
-        }
+        return {"error": str(e), "data": []}
 
 class HermesProxyHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
