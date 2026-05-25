@@ -328,7 +328,8 @@ export default function ChatWindow({
           }}>
             <Terminal size={11} style={{ color: 'hsl(var(--accent-primary))' }} />
             EXECUTANDO COM: 
-            <select
+            <input
+              list="models-list"
               value={selectedModel}
               onChange={(e) => onSelectModel(e.target.value)}
               style={{
@@ -338,16 +339,18 @@ export default function ChatWindow({
                 fontFamily: 'var(--font-mono)',
                 fontSize: '0.68rem',
                 outline: 'none',
-                cursor: 'pointer',
+                cursor: 'text',
                 marginLeft: '4px',
+                width: '140px',
+                borderBottom: '1px dashed hsl(var(--border-subtle))'
               }}
-            >
+              placeholder="Digite o modelo..."
+            />
+            <datalist id="models-list">
               {models.map((m) => (
-                <option key={m.id} value={m.id} style={{ background: 'hsl(var(--bg-surface))' }}>
-                  {m.id}
-                </option>
+                <option key={m.id} value={m.id} />
               ))}
-            </select>
+            </datalist>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
