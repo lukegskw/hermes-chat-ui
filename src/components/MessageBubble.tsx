@@ -256,18 +256,18 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
 
         {/* Inline thinking animation - shown while waiting for first content token */}
         {!isUser && message.isGenerating && !message.content && (
-          <div className="neural-breathing" style={{
+          <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '10px',
             padding: '4px 0 8px 0',
           }}>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', animation: 'typingDot 1.2s infinite 0s' }} />
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', animation: 'typingDot 1.2s infinite 0.25s' }} />
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', animation: 'typingDot 1.2s infinite 0.5s' }} />
+            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'hsl(var(--accent-primary))', animation: 'typingDot 1.2s infinite 0s' }} />
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'hsl(var(--accent-primary))', animation: 'typingDot 1.2s infinite 0.25s' }} />
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'hsl(var(--accent-primary))', animation: 'typingDot 1.2s infinite 0.5s' }} />
             </div>
-            <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', fontWeight: '600', letterSpacing: '0.2px' }}>
+            <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', fontWeight: '500', letterSpacing: '0.2px', fontStyle: 'italic' }}>
               Processando dados neurais...
             </span>
           </div>
