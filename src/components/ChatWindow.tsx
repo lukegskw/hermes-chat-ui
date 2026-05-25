@@ -283,29 +283,41 @@ export default function ChatWindow({
           }}>
             <Terminal size={11} style={{ color: 'hsl(var(--accent-primary))' }} />
             EXECUTANDO COM: 
-            <input
-              list="models-list"
-              value={selectedModel}
-              onChange={(e) => onSelectModel(e.target.value)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'hsl(var(--text-secondary))',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.68rem',
-                outline: 'none',
-                cursor: 'text',
-                marginLeft: '4px',
-                width: '140px',
-                borderBottom: '1px dashed hsl(var(--border-subtle))'
-              }}
-              placeholder="Digite o modelo..."
-            />
-            <datalist id="models-list">
-              {models.map((m) => (
-                <option key={m.id} value={m.id} />
-              ))}
-            </datalist>
+            <div style={{ position: 'relative', display: 'inline-block', marginLeft: '4px' }}>
+              <select
+                value={selectedModel}
+                onChange={(e) => onSelectModel(e.target.value)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'hsl(var(--text-secondary))',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.68rem',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  width: '150px',
+                  borderBottom: '1px dashed hsl(var(--border-subtle))',
+                  appearance: 'none',
+                  paddingRight: '14px',
+                }}
+                disabled={models.length === 0}
+              >
+                {models.length === 0 ? (
+                  <option value={selectedModel || ''}>{selectedModel || 'Carregando...'}</option>
+                ) : (
+                  models.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.label || m.id}
+                    </option>
+                  ))
+                )}
+              </select>
+              <div style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'hsl(var(--text-secondary))' }}>
+                <svg width="8" height="5" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>

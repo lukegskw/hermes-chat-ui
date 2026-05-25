@@ -6,6 +6,7 @@ import { fetchModels, selectModel, sendChatMessageStream, Model } from './utils/
 interface AppConfig {
   HERMES_API_URL?: string;
   HERMES_API_KEY?: string;
+  HERMES_PROXY_PORT?: string;
 }
 
 declare global {
@@ -17,6 +18,7 @@ declare global {
 // These come exclusively from Portainer ENV vars (via entrypoint.sh → window.APP_CONFIG)
 const HERMES_ENDPOINT = window.APP_CONFIG?.HERMES_API_URL || 'http://localhost:8642';
 const HERMES_API_KEY = window.APP_CONFIG?.HERMES_API_KEY || '';
+const HERMES_PROXY_PORT = window.APP_CONFIG?.HERMES_PROXY_PORT || '8643';
 
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt: 'Você é o Hermes, um assistente autônomo de inteligência artificial poderoso e prestativo. Responda em Português do Brasil.',
@@ -75,7 +77,7 @@ export default function App() {
   // --- Connection & Models Fetching ---
   const checkConnectionAndFetchModels = async () => {
     try {
-      const fetched = await fetchModels(HERMES_ENDPOINT, HERMES_API_KEY);
+      const fetched = await fetchModels(HERMES_ENDPOINT, HERMES_API_KEY, HERMES_PROXY_PORT);
       setModels(fetched);
       setIsConnected(true);
       

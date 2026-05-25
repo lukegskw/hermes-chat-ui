@@ -41,10 +41,36 @@ export interface SendChatMessageStreamOptions {
 }
 
 /**
- * Fetch models from hermes-agent's /v1/models endpoint.
+ * Fetch models from hermes-agent's proxy endpoint (if available).
+ * Falls back to /v1/models if the proxy is unreachable.
  */
-export async function fetchModels(endpoint: string, apiKey: string): Promise<Model[]> {
-  const url = `${endpoint.replace(/\/$/, '')}/v1/models?t=${Date.now()}`;
+export async function fetchModels(endpoint: string, apiKey: string, proxyPort: string = '8643'): Promise<Model[]> {
+  const base = endpoint.replace(/\/$/, '');
+  
+  // Try to reach the Python proxy script first
+  try {
+    const urlObj = new URL(base);
+    const proxyUrl = `${urlObj.protocol}//${urlObj.hostname}:${proxyPort}/api/models`;
+    
+    const proxyRes = await fetch(proxyUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (proxyRes.ok) {
+      const proxyData = await proxyRes.json();
+      if (proxyData.data && Array.isArray(proxyData.data) && proxyData.data.length > 0) {
+        return proxyData.data as Model[];
+      }
+    }
+  } catch (_e) {
+    // Proxy not available, fallback to v1
+  }
+
+  // Fallback to standard OpenAI-compatible /v1/models
+  const url = `${base}/v1/models?t=${Date.now()}`;
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -58,7 +84,10 @@ export async function fetchModels(endpoint: string, apiKey: string): Promise<Mod
   }
 
   const data = await response.json();
-  return (data.data || []) as Model[];
+  const all = (data.data || []) as Model[];
+  // Filter out the generic proxy alias if real provider models are present
+  const real = all.filter(m => m.id !== 'hermes-agent');
+  return real.length > 0 ? real : all;
 }
 
 export async function selectModel(endpoint: string, apiKey: string, modelId: string): Promise<any> {

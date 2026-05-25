@@ -193,8 +193,7 @@ export default function Sidebar({
             <Sparkles size={11} className="text-secondary" />
             Modelo Ativo
           </label>
-          <input
-            list="sidebar-models-list"
+          <select
             value={selectedModel}
             onChange={(e) => onSelectModel(e.target.value)}
             style={{
@@ -205,16 +204,30 @@ export default function Sidebar({
               fontSize: '0.82rem',
               fontWeight: '600',
               outline: 'none',
-              cursor: 'text',
+              cursor: isConnected ? 'pointer' : 'default',
+              appearance: 'none',
+              paddingRight: '12px',
             }}
-            placeholder={isConnected ? 'Digite ou selecione um modelo...' : 'Hermes desconectado'}
-            disabled={!isConnected}
-          />
-          <datalist id="sidebar-models-list">
-            {models.map(m => (
-              <option key={m.id} value={m.id} />
-            ))}
-          </datalist>
+            disabled={!isConnected || models.length === 0}
+          >
+            {models.length === 0 && isConnected ? (
+              <option value={selectedModel || ''}>{selectedModel || 'Carregando...'}</option>
+            ) : models.length === 0 && !isConnected ? (
+              <option value="">Hermes desconectado</option>
+            ) : (
+              models.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.label || m.id}
+                </option>
+              ))
+            )}
+          </select>
+          {/* Custom dropdown arrow */}
+          <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }}>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
         </div>
       </div>
 
