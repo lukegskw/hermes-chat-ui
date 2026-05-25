@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar, { Conversation, Settings } from './components/Sidebar';
 import ChatWindow, { ChatWindowMessage } from './components/ChatWindow';
-import { fetchModels, selectModel, sendChatMessageStream, Model } from './utils/api';
+import { fetchModels, sendChatMessageStream, Model } from './utils/api';
 
 interface AppConfig {
   HERMES_API_URL?: string;
@@ -149,11 +149,19 @@ export default function App() {
   };
 
   const handleSelectModel = async (modelId: string) => {
-    setSelectedModel(modelId);
+    if (!modelId) return;
     try {
-      await selectModel(HERMES_ENDPOINT, HERMES_API_KEY, modelId);
+      setSelectedModel(modelId);
+      
+      // Update existing conversation if one is active
+      if (activeConversationId) {
+        setConversations(prev => prev.map(c => 
+          c.id === activeConversationId ? { ...c, modelId } : c
+        ));
+      }
     } catch (err) {
-      console.error('Failed to change active model on the backend:', err);
+      console.error('Failed to change active model:', err);
+      // Fallback
     }
   };
 

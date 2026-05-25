@@ -90,24 +90,6 @@ export async function fetchModels(endpoint: string, apiKey: string, proxyPort: s
   return real.length > 0 ? real : all;
 }
 
-export async function selectModel(endpoint: string, apiKey: string, modelId: string): Promise<any> {
-  const url = `${endpoint.replace(/\/$/, '')}/v1/model/select`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ model: modelId }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to select model: ${response.statusText}`);
-  }
-
-  return await response.json();
-}
-
 export async function sendChatMessageStream({
   endpoint,
   apiKey,
