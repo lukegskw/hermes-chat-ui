@@ -112,16 +112,16 @@ export default function Sidebar({
                 width: '6px',
                 height: '6px',
                 borderRadius: '50%',
-                backgroundColor: isConnected ? 'hsl(var(--accent-emerald))' : 'hsl(0, 80%, 50%)',
-                boxShadow: isConnected ? '0 0 8px hsl(var(--accent-emerald))' : '0 0 8px hsl(0, 80%, 50%)',
+                backgroundColor: isFetchingModels ? 'hsl(35, 90%, 55%)' : isConnected ? 'hsl(var(--accent-emerald))' : 'hsl(0, 80%, 50%)',
+                boxShadow: isFetchingModels ? '0 0 8px hsl(35, 90%, 55%)' : isConnected ? '0 0 8px hsl(var(--accent-emerald))' : '0 0 8px hsl(0, 80%, 50%)',
                 animation: 'pulseStatus 2s infinite',
               }} />
               <span style={{
                 fontSize: '0.7rem',
-                color: isConnected ? 'hsl(var(--text-main) / 0.7)' : 'hsl(var(--text-muted))',
+                color: isFetchingModels ? 'hsl(35, 90%, 55%)' : isConnected ? 'hsl(var(--text-main) / 0.7)' : 'hsl(var(--text-muted))',
                 fontWeight: '500',
               }}>
-                {isConnected ? 'Online' : 'Offline'}
+                {isFetchingModels ? 'Conectando...' : isConnected ? 'Online' : 'Offline'}
               </span>
             </div>
           </div>

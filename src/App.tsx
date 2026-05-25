@@ -101,10 +101,6 @@ export default function App() {
 
   useEffect(() => {
     checkConnectionAndFetchModels();
-    
-    // Periodically poll connection status every 15 seconds
-    const interval = setInterval(checkConnectionAndFetchModels, 15000);
-    return () => clearInterval(interval);
   }, []);
 
   // --- Helper: Get active conversation ---

@@ -64,6 +64,7 @@ export default function ChatWindow({
   onSelectModel,
 }: ChatWindowProps) {
   const [input, setInput] = useState("");
+  const [historyIndex, setHistoryIndex] = useState(-1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -89,20 +90,39 @@ export default function ChatWindow({
     if (!input.trim() || isGenerating) return;
     onSendMessage(input.trim());
     setInput("");
+    setHistoryIndex(-1);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
-    } else if (e.key === "ArrowUp" && input === "") {
-      e.preventDefault();
-      const lastUserMsg = messages
-        .slice()
-        .reverse()
-        .find((m) => m.role === "user");
-      if (lastUserMsg) {
-        setInput(lastUserMsg.content);
+    } else if (e.key === "ArrowUp") {
+      // Only trigger history if cursor is at the beginning of the first line or input is empty
+      const target = e.target as HTMLTextAreaElement;
+      if (target.selectionStart === 0 && target.selectionEnd === 0 || input === "") {
+        e.preventDefault();
+        const userMessages = messages.filter(m => m.role === "user");
+        if (userMessages.length > 0) {
+          const nextIndex = Math.min(historyIndex + 1, userMessages.length - 1);
+          if (nextIndex !== historyIndex) {
+            setHistoryIndex(nextIndex);
+            setInput(userMessages[userMessages.length - 1 - nextIndex].content);
+          }
+        }
+      }
+    } else if (e.key === "ArrowDown") {
+      if (historyIndex >= 0) {
+        e.preventDefault();
+        const userMessages = messages.filter(m => m.role === "user");
+        const nextIndex = historyIndex - 1;
+        if (nextIndex === -1) {
+          setHistoryIndex(-1);
+          setInput("");
+        } else {
+          setHistoryIndex(nextIndex);
+          setInput(userMessages[userMessages.length - 1 - nextIndex].content);
+        }
       }
     }
   };
