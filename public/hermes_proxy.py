@@ -17,24 +17,7 @@ def get_hermes_models():
     active_model = "hermes-agent"
     provider = "proxy"
     
-    # 1. Fetch available models from the local API running on 8642
-    try:
-        req = urllib.request.Request(
-            "http://localhost:8642/v1/models",
-            headers={"Content-Type": "application/json"}
-        )
-        with urllib.request.urlopen(req, timeout=3.0) as response:
-            if response.status == 200:
-                data = json.loads(response.read().decode('utf-8'))
-                raw_models = data.get("data", [])
-                for m in raw_models:
-                    m_id = m.get("id")
-                    if m_id and m_id != "hermes-agent":
-                        models.append({"id": m_id, "label": m_id.replace("-", " ").title()})
-    except Exception as e:
-        print(f"Failed to fetch from local API: {e}")
-
-    # 2. Read the config.yaml to find out exactly which one is the active default
+    # 1. Read the config.yaml to find out exactly which one is the active default
     try:
         hermes_home = os.environ.get("HERMES_HOME", "/opt/data")
         config_paths = [
@@ -54,6 +37,44 @@ def get_hermes_models():
                 break
     except Exception as e:
         print(f"Failed to read config.yaml: {e}")
+
+    # 2. Try to get the full list of available models for the provider via native imports
+    try:
+        try:
+            from hermes_cli.models import provider_model_ids
+            m_ids = provider_model_ids(provider)
+            if m_ids:
+                models = [{"id": m, "label": str(m).replace("-", " ").title()} for m in m_ids]
+        except ImportError:
+            from hermes_cli.models import _PROVIDER_MODELS
+            m_data = _PROVIDER_MODELS.get(provider, [])
+            for m in m_data:
+                if isinstance(m, dict) and "id" in m:
+                    models.append({"id": m["id"], "label": m["id"].replace("-", " ").title()})
+                elif isinstance(m, str):
+                    models.append({"id": m, "label": m.replace("-", " ").title()})
+    except Exception as e:
+        print(f"Native import failed: {e}")
+
+    # 3. Fallback: Fetch available models from the local API running on 8642
+    if not models:
+        try:
+            req = urllib.request.Request(
+                "http://localhost:8642/v1/models",
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=3.0) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode('utf-8'))
+                    raw_models = data.get("data", [])
+                    for m in raw_models:
+                        m_id = m.get("id")
+                        if m_id and m_id != "hermes-agent":
+                            models.append({"id": m_id, "label": m_id.replace("-", " ").title()})
+        except Exception as e:
+            print(f"Failed to fetch from local API: {e}")
+
+
 
     # Ensure the active model is in the list, just in case
     if active_model != "hermes-agent" and not any(m["id"] == active_model for m in models):
