@@ -132,6 +132,10 @@ export async function sendChatMessageStream({
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
+    
+    // Map hermes toolCallIds to standard array indices for the UI state
+    let currentToolIndex = 0;
+    const toolIndexMap = new Map<string, number>();
 
     while (true) {
       const { done, value } = await reader.read();
@@ -157,8 +161,9 @@ export async function sendChatMessageStream({
 
           try {
             const parsed = JSON.parse(dataContent);
-            const delta = parsed.choices?.[0]?.delta || {};
             
+            // Handle standard OpenAI format
+            const delta = parsed.choices?.[0]?.delta || {};
             if (delta.content) {
               onChunk(delta.content);
             }
@@ -169,6 +174,24 @@ export async function sendChatMessageStream({
               for (const tc of delta.tool_calls) {
                 onToolCallChunk(tc);
               }
+            }
+
+            // Handle Hermes custom tool events
+            if (parsed.toolCallId && parsed.tool && parsed.status === 'running' && onToolCallChunk) {
+              if (!toolIndexMap.has(parsed.toolCallId)) {
+                toolIndexMap.set(parsed.toolCallId, currentToolIndex++);
+              }
+              const idx = toolIndexMap.get(parsed.toolCallId);
+              
+              onToolCallChunk({
+                index: idx,
+                id: parsed.toolCallId,
+                type: 'function',
+                function: {
+                  name: parsed.tool,
+                  arguments: parsed.label || '',
+                }
+              });
             }
           } catch (e) {
             // Ignore syntax errors for non-JSON or other formatting
@@ -194,6 +217,19 @@ export async function sendChatMessageStream({
             for (const tc of delta.tool_calls) {
               onToolCallChunk(tc);
             }
+          }
+          
+          if (parsed.toolCallId && parsed.tool && parsed.status === 'running' && onToolCallChunk) {
+            if (!toolIndexMap.has(parsed.toolCallId)) {
+              toolIndexMap.set(parsed.toolCallId, currentToolIndex++);
+            }
+            const idx = toolIndexMap.get(parsed.toolCallId);
+            onToolCallChunk({
+              index: idx,
+              id: parsed.toolCallId,
+              type: 'function',
+              function: { name: parsed.tool, arguments: parsed.label || '' }
+            });
           }
         } catch (e) {}
       }
