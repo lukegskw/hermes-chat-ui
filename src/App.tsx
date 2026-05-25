@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar, { Conversation, Settings } from './components/Sidebar';
 import ChatWindow, { ChatWindowMessage } from './components/ChatWindow';
-import { fetchModels, selectModel, sendChatMessageStream, Model } from './utils/api';
+import { fetchModels, fetchActiveModel, selectModel, sendChatMessageStream, Model } from './utils/api';
 
 interface AppConfig {
   HERMES_API_URL?: string;
@@ -75,12 +75,19 @@ export default function App() {
   // --- Connection & Models Fetching ---
   const checkConnectionAndFetchModels = async () => {
     try {
-      const fetched = await fetchModels(HERMES_ENDPOINT, HERMES_API_KEY);
+      // Fetch real provider models via /api/models + the active default model in parallel
+      const [fetched, activeModel] = await Promise.all([
+        fetchModels(HERMES_ENDPOINT, HERMES_API_KEY),
+        fetchActiveModel(HERMES_ENDPOINT, HERMES_API_KEY),
+      ]);
+      
       setModels(fetched);
       setIsConnected(true);
       
-      // If fetched model list exists and the selected model isn't in it, select the first one
-      if (fetched.length > 0) {
+      // Always prefer what hermes-agent itself reports as the active default model
+      if (activeModel) {
+        setSelectedModel(activeModel);
+      } else if (fetched.length > 0) {
         const found = fetched.find(m => m.id === selectedModel);
         if (!found) {
           setSelectedModel(fetched[0].id);

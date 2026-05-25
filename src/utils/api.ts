@@ -40,8 +40,49 @@ export interface SendChatMessageStreamOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * Fetch models from hermes-agent's native /api/models endpoint.
+ * This returns the real provider models (e.g. github-copilot models),
+ * not just the 'hermes-agent' proxy name.
+ * Falls back to /v1/models if /api/models is unavailable.
+ */
 export async function fetchModels(endpoint: string, apiKey: string): Promise<Model[]> {
-  const url = `${endpoint.replace(/\/$/, '')}/v1/models?t=${Date.now()}`;
+  const base = endpoint.replace(/\/$/, '');
+  
+  // Try hermes native API first — returns the real provider models
+  try {
+    const hermesUrl = `${base}/api/models?t=${Date.now()}`;
+    const hermesRes = await fetch(hermesUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (hermesRes.ok) {
+      const data: HermesModelsResponse = await hermesRes.json();
+      // Collect models from all provider groups
+      const allModels: Model[] = [];
+      if (data.groups && Array.isArray(data.groups)) {
+        for (const group of data.groups) {
+          if (group.models && Array.isArray(group.models)) {
+            for (const m of group.models) {
+              allModels.push({ id: m.id, label: m.label });
+            }
+          }
+        }
+      }
+      if (allModels.length > 0) {
+        return allModels;
+      }
+    }
+  } catch (_e) {
+    // Fall through to standard /v1/models
+  }
+  
+  // Fallback: standard OpenAI-compatible /v1/models
+  const url = `${base}/v1/models?t=${Date.now()}`;
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -55,7 +96,29 @@ export async function fetchModels(endpoint: string, apiKey: string): Promise<Mod
   }
 
   const data = await response.json();
-  return (data.data || []) as Model[];
+  const v1Models = (data.data || []) as Model[];
+  // Filter out the proxy 'hermes-agent' model name if real models exist
+  const filtered = v1Models.filter(m => m.id !== 'hermes-agent');
+  return filtered.length > 0 ? filtered : v1Models;
+}
+
+/**
+ * Fetch the currently active model from hermes-agent's /api/models.
+ * Returns the default_model string or null.
+ */
+export async function fetchActiveModel(endpoint: string, apiKey: string): Promise<string | null> {
+  try {
+    const base = endpoint.replace(/\/$/, '');
+    const res = await fetch(`${base}/api/models`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    });
+    if (res.ok) {
+      const data: HermesModelsResponse = await res.json();
+      return data.default_model || null;
+    }
+  } catch (_e) { /* ignore */ }
+  return null;
 }
 
 export async function selectModel(endpoint: string, apiKey: string, modelId: string): Promise<any> {
