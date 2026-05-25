@@ -67,7 +67,7 @@
 
 body {
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: radial-gradient(circle at 50% 0%, hsl(223 24% 12%), hsl(var(--bg-deep)) 70%);
 }
@@ -358,7 +358,7 @@ body {
   main {
     width: 100% !important;
     height: 100% !important;
-    padding-top: calc(56px + max(env(safe-area-inset-top), 54px)) !important; /* Spaced for custom mobile header bar */
+    padding-top: calc(56px + env(safe-area-inset-top, 0px)) !important;
   }
 
   /* Floating custom header bar for Mobile */
@@ -367,19 +367,30 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: calc(56px + max(env(safe-area-inset-top), 54px));
+    height: calc(56px + env(safe-area-inset-top, 0px));
     display: flex !important;
     align-items: center;
     justify-content: space-between;
     padding-left: 16px;
     padding-right: 16px;
-    padding-top: max(env(safe-area-inset-top), 54px);
+    padding-top: env(safe-area-inset-top, 0px);
     background: hsl(var(--bg-surface) / 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid hsl(var(--border-subtle));
     z-index: 100;
     box-sizing: border-box;
+  }
+
+  /* PWA Standalone Fix for Notch */
+  @media (display-mode: standalone) {
+    main {
+      padding-top: calc(56px + max(env(safe-area-inset-top), 54px)) !important;
+    }
+    .mobile-header-bar {
+      height: calc(56px + max(env(safe-area-inset-top), 54px));
+      padding-top: max(env(safe-area-inset-top), 54px);
+    }
   }
 
   /* Safe Area paddings inside Scrollable Chats */
