@@ -57,6 +57,7 @@ export default function App() {
   const [isFetchingModels, setIsFetchingModels] = useState<boolean>(true);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [connectionError, setConnectionError] = useState<string>('');
 
   // --- Refs ---
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -91,6 +92,7 @@ export default function App() {
       const fetched = await fetchModels(HERMES_ENDPOINT, HERMES_API_KEY, HERMES_PROXY_PORT);
       setModels(fetched.models);
       setIsConnected(true);
+      setConnectionError('');
       
       // Always sync the UI model with the CLI's default model on load
       if (fetched.defaultModel) {
@@ -98,9 +100,10 @@ export default function App() {
       } else if (fetched.models.length > 0) {
         setSelectedModel(fetched.models[0].id);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to connect to Hermes API server:', err);
       setIsConnected(false);
+      setConnectionError(err.message || 'Falha de rede.');
       setModels([]);
     } finally {
       setIsFetchingModels(false);
@@ -420,6 +423,7 @@ export default function App() {
         onSelectModel={handleSelectModel}
         isConnected={isConnected}
         isFetchingModels={isFetchingModels}
+        connectionError={connectionError}
         settings={settings}
         onSaveSettings={handleSaveSettings}
       />
@@ -433,6 +437,7 @@ export default function App() {
         models={models}
         onSelectModel={handleConversationModelChange}
         isFetchingModels={isFetchingModels}
+        connectionError={connectionError}
       />
     </div>
   );

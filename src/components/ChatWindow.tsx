@@ -24,6 +24,8 @@ export interface ChatWindowProps {
   selectedModel: string;
   models: any[];
   onSelectModel: (modelId: string) => void;
+  isFetchingModels?: boolean;
+  connectionError?: string;
 }
 
 const SUGGESTIONS = [
@@ -62,6 +64,8 @@ export default function ChatWindow({
   selectedModel,
   models,
   onSelectModel,
+  isFetchingModels,
+  connectionError,
 }: ChatWindowProps) {
   const [input, setInput] = useState("");
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -397,9 +401,15 @@ export default function ChatWindow({
                 }}
                 disabled={models.length === 0}
               >
-                {models.length === 0 ? (
+                {models.length === 0 && isFetchingModels ? (
                   <option value={selectedModel || ""}>
                     {selectedModel || "Carregando..."}
+                  </option>
+                ) : models.length === 0 && connectionError ? (
+                  <option value="">{connectionError.substring(0, 30)}...</option>
+                ) : models.length === 0 ? (
+                  <option value={selectedModel || ""}>
+                    {selectedModel || "Sem modelos"}
                   </option>
                 ) : (
                   models.map((m) => (

@@ -30,6 +30,7 @@ export interface SidebarProps {
   onSelectModel: (modelId: string) => void;
   isConnected: boolean;
   isFetchingModels?: boolean;
+  connectionError?: string;
   settings: Settings;
   onSaveSettings: (settings: Settings) => void;
 }
@@ -48,6 +49,7 @@ export default function Sidebar({
   onSelectModel,
   isConnected,
   isFetchingModels,
+  connectionError,
   settings,
   onSaveSettings,
 }: SidebarProps) {
@@ -215,6 +217,8 @@ export default function Sidebar({
           >
             {models.length === 0 && isFetchingModels ? (
               <option value={selectedModel}>{selectedModel || 'Buscando Modelos...'}</option>
+            ) : models.length === 0 && connectionError ? (
+              <option value="">{connectionError.substring(0, 30)}...</option>
             ) : models.length === 0 && isConnected ? (
               <option value={selectedModel}>{selectedModel || 'Sem Modelos'}</option>
             ) : models.length === 0 && !isConnected ? (

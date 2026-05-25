@@ -25,12 +25,22 @@ def get_hermes_models():
     # ATTEMPT 1: Native Python imports (most robust, no screen scraping)
     try:
         import yaml
-        config_path = os.path.expanduser("~/.hermes/config.yaml")
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                config = yaml.safe_load(f) or {}
-                provider = config.get("model", {}).get("provider", "github-copilot")
-                active_model = config.get("model", {}).get("name", active_model)
+        config_paths = [
+            "/opt/data/config.yaml",
+            "/opt/data/.hermes/config.yaml",
+            "/opt/hermes/.hermes/config.yaml",
+            "/home/hermes/.hermes/config.yaml",
+            os.path.expanduser("~/.hermes/config.yaml"),
+            "/root/.hermes/config.yaml"
+        ]
+        
+        for config_path in config_paths:
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    config = yaml.safe_load(f) or {}
+                    provider = config.get("model", {}).get("provider", provider)
+                    active_model = config.get("model", {}).get("name", active_model)
+                break
                 
         try:
             from hermes_cli.models import provider_model_ids
