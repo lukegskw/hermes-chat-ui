@@ -11,11 +11,28 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   const { role, content, timestamp } = message;
   const isUser = role === 'user';
   const [copied, setCopied] = useState(false);
-  const [showReasoning, setShowReasoning] = useState(false);
+  const [showReasoning, setShowReasoning] = useState(true);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = content;
+        // Move outside of viewport
+        textArea.style.position = "absolute";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+        } catch (err) {
+          console.error('Fallback: Oops, unable to copy', err);
+        }
+        document.body.removeChild(textArea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch (err) {

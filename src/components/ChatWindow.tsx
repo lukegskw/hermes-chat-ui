@@ -79,10 +79,16 @@ export default function ChatWindow({
     setInput('');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
+    } else if (e.key === 'ArrowUp' && input === '') {
+      e.preventDefault();
+      const lastUserMsg = messages.slice().reverse().find(m => m.role === 'user');
+      if (lastUserMsg) {
+        setInput(lastUserMsg.content);
+      }
     }
   };
 

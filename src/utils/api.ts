@@ -41,7 +41,7 @@ export interface SendChatMessageStreamOptions {
 }
 
 export async function fetchModels(endpoint: string, apiKey: string): Promise<Model[]> {
-  const url = `${endpoint.replace(/\/$/, '')}/v1/models`;
+  const url = `${endpoint.replace(/\/$/, '')}/v1/models?t=${Date.now()}`;
   const response = await fetch(url, {
     method: 'GET',
     headers: {

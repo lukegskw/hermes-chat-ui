@@ -25,7 +25,7 @@ const getInitialApiKey = (): string => {
   if (window.APP_CONFIG?.HERMES_API_KEY) {
     return window.APP_CONFIG.HERMES_API_KEY;
   }
-  return 'hermes-secure-api-key-2026';
+  return '';
 };
 
 const DEFAULT_SETTINGS: Settings = {
