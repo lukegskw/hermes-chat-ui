@@ -33,7 +33,7 @@ def get_hermes_models():
                 with open(config_path, 'r') as f:
                     config = yaml.safe_load(f) or {}
                     provider = config.get("model", {}).get("provider", provider)
-                    active_model = config.get("model", {}).get("name", active_model)
+                    active_model = config.get("model", {}).get("default", config.get("model", {}).get("name", active_model))
                 break
     except Exception as e:
         print(f"Failed to read config.yaml: {e}")
