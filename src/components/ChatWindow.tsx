@@ -136,12 +136,12 @@ export default function ChatWindow({
       }}>
         {messages.length > 0 ? (
           <div style={{ maxWidth: '850px', width: '100%', margin: '0 auto' }}>
-            {messages.filter(msg => !(msg.role === 'assistant' && !msg.content)).map((msg) => (
+            {messages.filter(msg => msg.role !== 'assistant' || msg.content || msg.reasoning_content || (msg.tool_calls && msg.tool_calls.length > 0)).map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
             
             {/* Thinking Indicator Bubble - Premium Neural Activity Breathing Animation */}
-            {isGenerating && messages[messages.length - 1]?.role === 'assistant' && !messages[messages.length - 1]?.content && (
+            {isGenerating && messages[messages.length - 1]?.role === 'assistant' && !messages[messages.length - 1]?.content && !messages[messages.length - 1]?.reasoning_content && (!messages[messages.length - 1]?.tool_calls || messages[messages.length - 1].tool_calls.length === 0) && (
               <div 
                 className="animate-fade"
                 style={{

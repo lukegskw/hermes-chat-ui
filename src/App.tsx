@@ -38,7 +38,17 @@ export default function App() {
   // --- States ---
   const [settings, setSettings] = useState<Settings>(() => {
     const saved = localStorage.getItem('hermes_settings');
-    return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    let parsed = saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    
+    // Always enforce Portainer environment variables (injected via entrypoint.sh into window.APP_CONFIG)
+    if (window.APP_CONFIG?.HERMES_API_URL) {
+      parsed.endpoint = window.APP_CONFIG.HERMES_API_URL;
+    }
+    if (window.APP_CONFIG?.HERMES_API_KEY) {
+      parsed.apiKey = window.APP_CONFIG.HERMES_API_KEY;
+    }
+    
+    return parsed;
   });
 
   const [conversations, setConversations] = useState<Conversation[]>(() => {
@@ -341,6 +351,39 @@ export default function App() {
       c.id === activeConversationId ? { ...c, modelId } : c
     ));
   };
+
+  // Block UI completely if API key is not configured via Portainer (or settings)
+  if (!settings.apiKey) {
+    return (
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'hsl(var(--bg-deep))',
+        color: 'white',
+        fontFamily: 'var(--font-sans)',
+        padding: '2rem',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          maxWidth: '500px',
+          padding: '2rem',
+          backgroundColor: 'hsl(var(--bg-card))',
+          borderRadius: 'var(--border-radius-lg)',
+          border: '1px solid hsl(0 80% 60% / 0.5)',
+          boxShadow: '0 0 20px hsl(0 80% 60% / 0.2)'
+        }}>
+          <h2 style={{ color: 'hsl(0 80% 60%)', marginBottom: '1rem' }}>Acesso Bloqueado</h2>
+          <p style={{ color: 'hsl(var(--text-secondary))', lineHeight: 1.6, fontSize: '0.95rem' }}>
+            A interface Hermes UI foi configurada para exigir uma chave de API para funcionar.
+            <br/><br/>
+            Por favor, defina a variável de ambiente <strong>HERMES_API_KEY</strong> no seu container do Portainer ou <code>docker-compose.yml</code>.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="root">
