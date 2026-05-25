@@ -17,23 +17,7 @@ declare global {
 
 // These come exclusively from Portainer ENV vars (via entrypoint.sh → window.APP_CONFIG)
 const getApiUrl = () => {
-  let url = window.APP_CONFIG?.HERMES_API_URL || '';
-  
-  // If the user explicitly sets 'AUTO' or leaves it empty/localhost
-  if (!url || url === 'AUTO' || url.includes('localhost') || url.includes('127.0.0.1')) {
-    return `${window.location.protocol}//${window.location.hostname}:8642`;
-  }
-  
-  // If they hardcoded 192.168.x.x but are accessing via Tailscale, fix it dynamically!
-  try {
-    const parsedUrl = new URL(url);
-    if (parsedUrl.hostname !== window.location.hostname) {
-      parsedUrl.hostname = window.location.hostname;
-      return parsedUrl.toString().replace(/\/$/, '');
-    }
-  } catch(e) {}
-  
-  return url;
+  return window.APP_CONFIG?.HERMES_API_URL || '';
 };
 
 const HERMES_ENDPOINT = getApiUrl();
@@ -89,11 +73,7 @@ export default function App() {
     }
   }, [activeConversationId]);
 
-  useEffect(() => {
-    if (selectedModel) {
-      localStorage.setItem('hermes_selected_model', selectedModel);
-    }
-  }, [selectedModel]);
+  // Removed localStorage to ensure the UI always syncs exclusively with the backend's active model.
 
   // --- Connection & Models Fetching ---
   const checkConnectionAndFetchModels = async () => {
