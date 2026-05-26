@@ -633,3 +633,16 @@ body {
   }
 }
 
+.desktop-compact-btn:hover {
+  border-color: hsl(var(--accent-primary) / 0.6) !important;
+  color: hsl(var(--accent-primary)) !important;
+  background-color: hsl(var(--accent-primary) / 0.1) !important;
+  box-shadow: 0 0 10px hsl(var(--accent-primary) / 0.15);
+}
+
+@media (max-width: 768px) {
+  .desktop-compact-btn {
+    display: none !important;
+  }
+}
+

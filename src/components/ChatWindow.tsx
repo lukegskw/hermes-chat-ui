@@ -389,7 +389,7 @@ export default function ChatWindow({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "6px",
+              justifyContent: "space-between",
               fontSize: "0.68rem",
               fontFamily: "var(--font-mono)",
               color: "hsl(var(--text-secondary))",
@@ -399,85 +399,112 @@ export default function ChatWindow({
               paddingBottom: "6px",
             }}
           >
-            <Terminal
-              size={11}
-              style={{ color: "hsl(var(--accent-primary))" }}
-            />
-            EXECUTANDO COM:
-            <div
-              style={{
-                position: "relative",
-                display: "inline-flex",
-                marginLeft: "2px",
-                maxWidth: "calc(100vw - 120px)",
-              }}
-            >
-              <select
-                value={selectedModel}
-                onChange={(e) => onSelectModel(e.target.value)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "hsl(var(--text-secondary))",
-                  fontFamily: "var(--font-mono)",
-                  fontWeight: "600",
-                  fontSize: "0.68rem",
-                  outline: "none",
-                  cursor: "pointer",
-                  width: "auto",
-                  maxWidth: "100%",
-                  textOverflow: "ellipsis",
-                  borderBottom: "1px dashed hsl(var(--border-subtle))",
-                  appearance: "none",
-                  paddingRight: "14px",
-                }}
-                disabled={models.length === 0}
-              >
-                {models.length === 0 && isFetchingModels ? (
-                  <option value={selectedModel || ""}>
-                    {selectedModel || "Carregando..."}
-                  </option>
-                ) : models.length === 0 && connectionError ? (
-                  <option value="">{connectionError.substring(0, 30)}...</option>
-                ) : models.length === 0 ? (
-                  <option value={selectedModel || ""}>
-                    {selectedModel || "Sem modelos"}
-                  </option>
-                ) : (
-                  models.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label || m.id}
-                    </option>
-                  ))
-                )}
-              </select>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Terminal
+                size={11}
+                style={{ color: "hsl(var(--accent-primary))" }}
+              />
+              EXECUTANDO COM:
               <div
                 style={{
-                  position: "absolute",
-                  right: "2px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                  color: "hsl(var(--text-secondary))",
+                  position: "relative",
+                  display: "inline-flex",
+                  marginLeft: "2px",
+                  maxWidth: "calc(100vw - 120px)",
                 }}
               >
-                <svg
-                  width="8"
-                  height="5"
-                  viewBox="0 0 10 6"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
+                <select
+                  value={selectedModel}
+                  onChange={(e) => onSelectModel(e.target.value)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "hsl(var(--text-secondary))",
+                    fontFamily: "var(--font-mono)",
+                    fontWeight: "600",
+                    fontSize: "0.68rem",
+                    outline: "none",
+                    cursor: "pointer",
+                    width: "auto",
+                    maxWidth: "100%",
+                    textOverflow: "ellipsis",
+                    borderBottom: "1px dashed hsl(var(--border-subtle))",
+                    appearance: "none",
+                    paddingRight: "14px",
+                  }}
+                  disabled={models.length === 0}
                 >
-                  <path
-                    d="M1 1L5 5L9 1"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                  {models.length === 0 && isFetchingModels ? (
+                    <option value={selectedModel || ""}>
+                      {selectedModel || "Carregando..."}
+                    </option>
+                  ) : models.length === 0 && connectionError ? (
+                    <option value="">{connectionError.substring(0, 30)}...</option>
+                  ) : models.length === 0 ? (
+                    <option value={selectedModel || ""}>
+                      {selectedModel || "Sem modelos"}
+                    </option>
+                  ) : (
+                    models.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label || m.id}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "2px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    pointerEvents: "none",
+                    color: "hsl(var(--text-secondary))",
+                  }}
+                >
+                  <svg
+                    width="8"
+                    height="5"
+                    viewBox="0 0 10 6"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M1 1L5 5L9 1"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
               </div>
             </div>
+
+            {/* Desktop and Mobile Input-adjacent Compact Button */}
+            <button
+              type="button"
+              onClick={() => onSendMessage('/compact')}
+              className="desktop-compact-btn"
+              style={{
+                background: "transparent",
+                border: "1px solid hsl(var(--border-subtle))",
+                color: "hsl(var(--text-secondary))",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "2px 8px",
+                borderRadius: "10px",
+                fontSize: "0.68rem",
+                fontWeight: "600",
+                backgroundColor: "hsl(var(--bg-card) / 0.5)",
+                transition: "all 0.2s ease",
+              }}
+              title="Compactar Histórico da Sessão"
+            >
+              <DatabaseZap size={12} /> Compactar
+            </button>
           </div>
 
           <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
