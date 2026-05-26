@@ -357,7 +357,7 @@ body {
   /* ChatWindow responsive updates */
   main {
     width: 100% !important;
-    height: 100% !important;
+    height: 100dvh !important;
     padding-top: calc(66px + env(safe-area-inset-top, 0px)) !important;
   }
 
@@ -389,7 +389,7 @@ body {
 
   /* Safe Area paddings inside Input Bar wrapper */
   main > div:last-child {
-    padding: 0 1rem max(1rem, env(safe-area-inset-bottom, 0px)) 1rem !important;
+    padding: 0 1rem calc(0.5rem + env(safe-area-inset-bottom, 0px)) 1rem !important;
     width: 100% !important;
   }
 

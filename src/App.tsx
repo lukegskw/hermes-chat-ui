@@ -17,7 +17,13 @@ declare global {
 
 // These come exclusively from Portainer ENV vars (via entrypoint.sh → window.APP_CONFIG)
 const getApiUrl = () => {
-  return window.APP_CONFIG?.HERMES_API_URL || '';
+  try {
+    const urlObj = new URL(window.APP_CONFIG?.HERMES_API_URL || 'http://localhost:8642');
+    urlObj.port = window.APP_CONFIG?.HERMES_PROXY_PORT || '8643';
+    return urlObj.toString().replace(/\/$/, '');
+  } catch (e) {
+    return 'http://localhost:8643';
+  }
 };
 
 const HERMES_ENDPOINT = getApiUrl();
