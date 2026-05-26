@@ -92,6 +92,8 @@ def approval_callback(tool_name: str, args: dict, **kwargs) -> str:
     Called synchronously by the AIAgent when a restricted tool is invoked.
     We must block until the user resolves the approval via the API.
     """
+    global _pending_approvals
+    
     approval_id = str(uuid.uuid4())
     
     # Register the pending approval
@@ -137,7 +139,6 @@ def approval_callback(tool_name: str, args: dict, **kwargs) -> str:
         del _approval_events[approval_id]
         
     # Remove from pending queue
-    global _pending_approvals
     _pending_approvals = [p for p in _pending_approvals if p["id"] != approval_id]
     
     return response
