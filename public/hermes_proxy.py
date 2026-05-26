@@ -2,11 +2,56 @@ import json
 import asyncio
 import os
 import yaml
+import importlib.util
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
 
+# --- MONKEY PATCH NATIVE API SERVER ---
+try:
+    spec = importlib.util.find_spec("gateway.platforms.api_server")
+    if spec and spec.origin:
+        api_server_path = spec.origin
+        with open(api_server_path, "r") as f:
+            content = f.read()
+        
+        if "def get_internal_pending_approvals" not in content:
+            patch = """
+
+# --- INJECTED BY HERMES PROXY ---
+from tools.approval import _pending, _lock, resolve_gateway_approval
+from pydantic import BaseModel
+
+class ApprovalChoice(BaseModel):
+    session_id: str
+    choice: str
+
+@app.get("/internal/approval/pending")
+async def get_internal_pending_approvals():
+    try:
+        with _lock:
+            for sid, queue in _pending.items():
+                if isinstance(queue, list) and queue:
+                    return {"pending": dict(queue[0]), "session_id": sid}
+                elif queue:
+                    return {"pending": dict(queue), "session_id": sid}
+    except Exception as e:
+        print("Error reading _pending:", e)
+    return {}
+
+@app.post("/internal/approval/respond")
+async def respond_internal_approval(payload: ApprovalChoice):
+    resolve_gateway_approval(payload.session_id, payload.choice)
+    return {"status": "success"}
+"""
+            with open(api_server_path, "w") as f:
+                f.write(content + patch)
+            print("Successfully monkey-patched api_server.py for approvals!")
+except Exception as e:
+    print("Failed to monkey-patch api_server.py:", e)
+
+# --- PROXY APP ---
 app = FastAPI(title="Hermes Chat UI Proxy")
 
 app.add_middleware(
@@ -82,12 +127,25 @@ async def get_models(request: Request):
 
 @app.get("/api/approval/pending")
 async def get_pending_approvals():
-    # Return empty dict so data.pending is undefined
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(f"{NATIVE_HERMES_URL}/internal/approval/pending") as response:
+                if response.status == 200:
+                    return await response.json()
+        except Exception:
+            pass
     return {}
 
 @app.post("/api/approval/respond")
-async def respond_approval():
-    return {"status": "success"}
+async def respond_approval(request: Request):
+    body = await request.json()
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(f"{NATIVE_HERMES_URL}/internal/approval/respond", json=body) as response:
+                return await response.json()
+        except Exception:
+            pass
+    return {"status": "error"}
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):

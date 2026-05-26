@@ -295,13 +295,14 @@ export async function fetchPendingApproval(endpoint: string, apiKey: string): Pr
 /** Submit approval decision */
 export async function respondApproval(
   endpoint: string, apiKey: string,
-  choice: 'once' | 'session' | 'always' | 'deny'
+  choice: 'once' | 'session' | 'always' | 'deny',
+  sessionId?: string
 ): Promise<void> {
   const url = `${endpoint.replace(/\/$/, '')}/api/approval/respond`;
   await fetch(url, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ choice })
+    body: JSON.stringify({ choice, session_id: sessionId || 'default' })
   });
 }
 

@@ -134,7 +134,11 @@ export default function App() {
 
   const handleRespondApproval = async (choice: 'once' | 'session' | 'always' | 'deny') => {
     try {
-      await respondApproval(HERMES_ENDPOINT, HERMES_API_KEY, choice);
+      if (pendingApproval && pendingApproval.session_id) {
+        await respondApproval(HERMES_ENDPOINT, HERMES_API_KEY, choice, pendingApproval.session_id);
+      } else {
+        await respondApproval(HERMES_ENDPOINT, HERMES_API_KEY, choice);
+      }
       setPendingApproval(null);
     } catch (err) {
       console.error("Error responding to approval:", err);
