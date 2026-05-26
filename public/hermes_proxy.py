@@ -196,9 +196,11 @@ if __name__ == "__main__":
         # Set PYTHONPATH to include /tmp
         env = os.environ.copy()
         env["PYTHONPATH"] = "/tmp:" + env.get("PYTHONPATH", "")
+        # Enforce execution approvals so the gateway blocks instead of returning text
+        env["HERMES_EXEC_ASK"] = "1"
         
         # Start native hermes gateway run as a subprocess!
         print("Starting native hermes gateway run...")
-        subprocess.Popen(["hermes", "gateway", "run", "--accept-hooks"], env=env)
+        subprocess.Popen(["hermes", "gateway", "run", "--replace", "--accept-hooks"], env=env)
     
     uvicorn.run(app, host="0.0.0.0", port=8643)
