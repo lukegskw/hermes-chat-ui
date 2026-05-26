@@ -1,5 +1,7 @@
 import json
 import asyncio
+import os
+import yaml
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,33 +19,71 @@ app.add_middleware(
 
 NATIVE_HERMES_URL = "http://localhost:8642"
 
+__namespace = None
+for ns in ['hermes_agent', 'hermes_cli', 'hermes', 'openhermes']:
+    try:
+        __import__(f"{ns}.models")
+        __namespace = ns
+        break
+    except ImportError:
+        pass
+
 @app.get("/api/models")
 async def get_models(request: Request):
-    """Fetch models from the native Hermes API."""
-    try:
-        headers = {}
-        auth_header = request.headers.get("Authorization")
-        if auth_header:
-            headers["Authorization"] = auth_header
-            
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{NATIVE_HERMES_URL}/v1/models", headers=headers, timeout=5.0) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    models = [{"id": m["id"], "label": m["id"].replace("-", " ").title()} for m in data.get("data", [])]
-                    if models:
-                        return {"data": models, "default_model": models[0]["id"]}
-    except Exception as e:
-        print(f"Error fetching models from native API: {e}")
+    """Fetch models from config.yaml and the python package."""
+    models = []
+    active_model = "hermes-agent"
+    provider = "proxy"
     
-    # Fallback if native API fails
-    return {"data": [{"id": "hermes-agent", "label": "Hermes Agent"}], "default_model": "hermes-agent"}
+    try:
+        hermes_home = os.environ.get("HERMES_HOME", "/opt/data")
+        config_paths = [
+            os.path.join(hermes_home, "config.yaml"),
+            "/opt/data/config.yaml",
+            "/opt/data/.hermes/config.yaml",
+            os.path.expanduser("~/.hermes/config.yaml")
+        ]
+        
+        for config_path in config_paths:
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    config = yaml.safe_load(f) or {}
+                    provider = config.get("model", {}).get("provider", provider)
+                    active_model = config.get("model", {}).get("default", config.get("model", {}).get("name", active_model))
+                break
+    except Exception as e:
+        print(f"Error reading config: {e}")
+
+    try:
+        if __namespace:
+            models_module = __import__(f"{__namespace}.models", fromlist=['provider_model_ids', '_PROVIDER_MODELS'])
+            try:
+                m_ids = models_module.provider_model_ids(provider)
+                if m_ids:
+                    models = [{"id": m, "label": str(m).replace("-", " ").title()} for m in m_ids]
+            except AttributeError:
+                m_data = getattr(models_module, '_PROVIDER_MODELS', {}).get(provider, [])
+                for m in m_data:
+                    if isinstance(m, dict) and "id" in m:
+                        models.append({"id": m["id"], "label": m["id"].replace("-", " ").title()})
+                    elif isinstance(m, str):
+                        models.append({"id": m, "label": m.replace("-", " ").title()})
+    except Exception as e:
+        print(f"Error fetching models from {__namespace}: {e}")
+        pass
+
+    if active_model != "hermes-agent" and not any(m["id"] == active_model for m in models):
+        models.insert(0, {"id": active_model, "label": active_model.replace("-", " ").title()})
+        
+    if not models:
+        models = [{"id": "hermes-agent", "label": "Hermes Agent"}]
+
+    return {"data": models, "default_model": active_model}
 
 @app.get("/api/approval/pending")
 async def get_pending_approvals():
-    # The user decided to resolve approvals externally. 
-    # Return empty to satisfy the frontend's polling.
-    return {"pending": []}
+    # Return empty dict so data.pending is undefined
+    return {}
 
 @app.post("/api/approval/respond")
 async def respond_approval():
@@ -61,15 +101,19 @@ async def chat_completions(request: Request):
     
     async def stream_generator():
         async with aiohttp.ClientSession() as session:
-            async with session.post(f"{NATIVE_HERMES_URL}/v1/chat/completions", data=body, headers=headers) as response:
-                if response.status != 200:
-                    error_msg = await response.read()
-                    yield f"data: {json.dumps({'choices': [{'delta': {'content': f'API Error {response.status}: {error_msg.decode()}'}}]})}\n\n"
-                    yield "data: [DONE]\n\n"
-                    return
-                
-                async for chunk, _ in response.content.iter_chunks():
-                    yield chunk
+            try:
+                async with session.post(f"{NATIVE_HERMES_URL}/v1/chat/completions", data=body, headers=headers) as response:
+                    if response.status != 200:
+                        error_msg = await response.read()
+                        yield f"data: {json.dumps({'choices': [{'delta': {'content': f'API Error {response.status}: {error_msg.decode()}'}}]})}\n\n"
+                        yield "data: [DONE]\n\n"
+                        return
+                    
+                    async for chunk, _ in response.content.iter_chunks():
+                        yield chunk
+            except Exception as e:
+                yield f"data: {json.dumps({'choices': [{'delta': {'content': f'Proxy Error: {str(e)}'}}]})}\n\n"
+                yield "data: [DONE]\n\n"
 
     return StreamingResponse(stream_generator(), media_type="text/event-stream")
 
