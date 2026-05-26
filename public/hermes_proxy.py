@@ -198,6 +198,7 @@ if __name__ == "__main__":
         env["PYTHONPATH"] = "/tmp:" + env.get("PYTHONPATH", "")
         # Enforce execution approvals so the gateway blocks instead of returning text
         env["HERMES_EXEC_ASK"] = "1"
+        env["HERMES_SESSION_KEY"] = "default-session"
         
         # Start native hermes gateway run as a subprocess!
         print("Starting native hermes gateway run...")
