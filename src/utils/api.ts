@@ -40,8 +40,39 @@ export interface SendChatMessageStreamOptions {
   signal?: AbortSignal;
 }
 
-export async function fetchModels(endpoint: string, apiKey: string): Promise<{models: Model[], defaultModel: string}> {
-  const base = endpoint.replace(/\\/$/, '');
+/**
+ * Fetch models from hermes-agent's proxy endpoint (if available).
+ * Falls back to /v1/models if the proxy is unreachable.
+ */
+export async function fetchModels(endpoint: string, apiKey: string, proxyPort: string = '8643'): Promise<{models: Model[], defaultModel: string}> {
+  const base = endpoint.replace(/\/$/, '');
+  
+  // Try to reach the Python proxy script first
+  try {
+    const urlObj = new URL(base);
+    const proxyUrl = `${urlObj.protocol}//${urlObj.hostname}:${proxyPort}/api/models`;
+    
+    const proxyRes = await fetch(proxyUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (proxyRes.ok) {
+      const proxyData = await proxyRes.json();
+      if (proxyData.data && Array.isArray(proxyData.data) && proxyData.data.length > 0) {
+        return { 
+          models: proxyData.data as Model[],
+          defaultModel: proxyData.default_model || proxyData.data[0].id
+        };
+      }
+    }
+  } catch (_e) {
+    // Proxy not available, fallback to v1
+  }
+
+  // Fallback to standard OpenAI-compatible /v1/models
   const url = `${base}/v1/models?t=${Date.now()}`;
   const response = await fetch(url, {
     method: 'GET',
@@ -248,8 +279,17 @@ export interface PendingApproval {
 
 /** Poll for pending approvals */
 export async function fetchPendingApproval(endpoint: string, apiKey: string): Promise<PendingApproval | null> {
-  // Polling disabled as native API server handles approvals conversationally
-  return null;
+  const url = `${endpoint.replace(/\/$/, '')}/api/approval/pending`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.pending ? data : null;
+  } catch (err) {
+    return null;
+  }
 }
 
 /** Submit approval decision */
@@ -266,18 +306,13 @@ export async function respondApproval(
   });
 }
 
-/** Trigger context compaction via native slash command */
+/** Trigger context compaction */
 export async function compressSession(endpoint: string, apiKey: string): Promise<boolean> {
-  const url = `${endpoint.replace(/\/$/, '')}/v1/chat/completions`;
+  const url = `${endpoint.replace(/\/$/, '')}/api/session/compress`;
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: "hermes-agent",
-        messages: [{ role: "user", content: "/compress" }],
-        stream: false
-      })
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
     });
     return res.ok;
   } catch (err) {
