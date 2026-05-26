@@ -12,8 +12,8 @@ import uvicorn
 
 # Try to import hermes agent components
 try:
-    from hermes_cli.agent import AIAgent
-    from hermes_cli.config import AgentConfig
+    from hermes_agent.agent import AIAgent
+    from hermes_agent.config import AgentConfig
 except ImportError:
     AIAgent = None
 
@@ -62,12 +62,12 @@ def get_hermes_models():
 
     try:
         try:
-            from hermes_cli.models import provider_model_ids
+            from hermes_agent.models import provider_model_ids
             m_ids = provider_model_ids(provider)
             if m_ids:
                 models = [{"id": m, "label": str(m).replace("-", " ").title()} for m in m_ids]
         except ImportError:
-            from hermes_cli.models import _PROVIDER_MODELS
+            from hermes_agent.models import _PROVIDER_MODELS
             m_data = _PROVIDER_MODELS.get(provider, [])
             for m in m_data:
                 if isinstance(m, dict) and "id" in m:
@@ -173,7 +173,7 @@ async def respond_approval(request: Request):
 
 async def chat_stream_generator(messages: list) -> AsyncGenerator[str, None]:
     if AIAgent is None:
-        yield f"data: {json.dumps({'choices': [{'delta': {'content': 'Error: hermes_cli package not found. Cannot run AIAgent natively.'}}]})}\n\n"
+        yield f"data: {json.dumps({'choices': [{'delta': {'content': 'Error: hermes_agent package not found. Cannot run AIAgent natively.'}}]})}\n\n"
         yield "data: [DONE]\n\n"
         return
 
