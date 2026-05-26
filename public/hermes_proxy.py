@@ -15,12 +15,14 @@ import sys
 AIAgent = None
 AgentConfig = None
 import_error_details = []
+__namespace = None
 
 # Try multiple known namespace variations due to upstream refactoring
 for ns in ['hermes_agent', 'hermes_cli', 'hermes', 'openhermes']:
     try:
         AIAgent = __import__(f"{ns}.agent", fromlist=['AIAgent']).AIAgent
         AgentConfig = __import__(f"{ns}.config", fromlist=['AgentConfig']).AgentConfig
+        __namespace = ns
         break
     except Exception as e:
         import_error_details.append(f"{ns}: {str(e)}")
@@ -78,20 +80,21 @@ def get_hermes_models():
         pass
 
     try:
-        try:
-            from hermes_agent.models import provider_model_ids
-            m_ids = provider_model_ids(provider)
-            if m_ids:
-                models = [{"id": m, "label": str(m).replace("-", " ").title()} for m in m_ids]
-        except ImportError:
-            from hermes_agent.models import _PROVIDER_MODELS
-            m_data = _PROVIDER_MODELS.get(provider, [])
-            for m in m_data:
-                if isinstance(m, dict) and "id" in m:
-                    models.append({"id": m["id"], "label": m["id"].replace("-", " ").title()})
-                elif isinstance(m, str):
-                    models.append({"id": m, "label": m.replace("-", " ").title()})
-    except Exception:
+        if __namespace:
+            models_module = __import__(f"{__namespace}.models", fromlist=['provider_model_ids', '_PROVIDER_MODELS'])
+            try:
+                m_ids = models_module.provider_model_ids(provider)
+                if m_ids:
+                    models = [{"id": m, "label": str(m).replace("-", " ").title()} for m in m_ids]
+            except AttributeError:
+                m_data = getattr(models_module, '_PROVIDER_MODELS', {}).get(provider, [])
+                for m in m_data:
+                    if isinstance(m, dict) and "id" in m:
+                        models.append({"id": m["id"], "label": m["id"].replace("-", " ").title()})
+                    elif isinstance(m, str):
+                        models.append({"id": m, "label": m.replace("-", " ").title()})
+    except Exception as e:
+        print(f"Error fetching models: {e}")
         pass
 
     if active_model != "hermes-agent" and not any(m["id"] == active_model for m in models):
@@ -199,12 +202,20 @@ async def chat_stream_generator(messages: list) -> AsyncGenerator[str, None]:
     # hermes-webui handles this by maintaining agent sessions.
     # We will instantiate a new one or use a dummy for simplicity.
     try:
-        config = AgentConfig()
-        # Ensure the approval mode allows our callback
-        config.approvals.mode = "manual" 
+        config = None
+        if AgentConfig:
+            config = AgentConfig()
+            config.approvals.mode = "manual" 
         
-        agent = AIAgent(config=config)
-        agent.set_approval_callback(approval_callback)
+        try:
+            agent = AIAgent(config=config, approval_callback=approval_callback)
+        except TypeError:
+            try:
+                agent = AIAgent(approval_callback=approval_callback)
+            except TypeError:
+                agent = AIAgent()
+                if hasattr(agent, 'set_approval_callback'):
+                    agent.set_approval_callback(approval_callback)
         
         # Map messages
         # ... logic to run agent.stream_chat(messages) ...
