@@ -407,38 +407,12 @@ export default function Sidebar({
         }
       `}} />
 
-      {/* Settings Dialog Drawer overlay */}
+      {/* Settings Dialog Modal/Drawer */}
       {isSettingsOpen && (
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          top: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-end',
-          zIndex: 100,
-          animation: 'fadeIn 0.2s ease-out',
-        }}>
+        <div className="settings-overlay">
           <form 
             onSubmit={handleSaveSettings}
-            className="glass" 
-            style={{
-              backgroundColor: 'hsl(var(--bg-card))',
-              borderTop: '1px solid hsl(var(--border-subtle))',
-              borderLeft: 'none',
-              borderRight: 'none',
-              borderBottom: 'none',
-              padding: '1.25rem',
-              borderRadius: 'var(--border-radius-lg) var(--border-radius-lg) 0 0',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
+            className="glass settings-modal" 
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '700', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -459,20 +433,11 @@ export default function Sidebar({
                 Prompt de Sistema (Opcional)
               </label>
               <textarea 
-                rows={3}
+                className="settings-textarea"
+                rows={8}
                 value={tempSystemPrompt}
                 onChange={(e) => setTempSystemPrompt(e.target.value)}
                 placeholder="Você é o Hermes, um assistente de IA prestativo..."
-                style={{
-                  padding: '0.6rem 0.8rem',
-                  borderRadius: 'var(--border-radius-sm)',
-                  backgroundColor: 'hsl(var(--bg-deep))',
-                  border: '1px solid hsl(var(--border-subtle))',
-                  color: 'white',
-                  fontSize: '0.82rem',
-                  outline: 'none',
-                  resize: 'none',
-                }}
               />
             </div>
 

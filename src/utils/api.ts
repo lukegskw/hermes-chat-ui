@@ -267,3 +267,55 @@ export async function sendChatMessageStream({
     }
   }
 }
+
+export interface PendingApproval {
+  id: string;
+  tool: string;
+  command: string;
+  label?: string;
+  risk_level?: string;
+  session_id?: string;
+}
+
+/** Poll for pending approvals */
+export async function fetchPendingApproval(endpoint: string, apiKey: string): Promise<PendingApproval | null> {
+  const url = `${endpoint.replace(/\/$/, '')}/api/approval/pending`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.pending ? data : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+/** Submit approval decision */
+export async function respondApproval(
+  endpoint: string, apiKey: string,
+  choice: 'once' | 'session' | 'always' | 'deny'
+): Promise<void> {
+  const url = `${endpoint.replace(/\/$/, '')}/api/approval/respond`;
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ choice })
+  });
+}
+
+/** Trigger context compaction */
+export async function compressSession(endpoint: string, apiKey: string): Promise<boolean> {
+  const url = `${endpoint.replace(/\/$/, '')}/api/session/compress`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Failed to compress session:", err);
+    return false;
+  }
+}

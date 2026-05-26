@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar, { Conversation, Settings } from './components/Sidebar';
 import ChatWindow, { ChatWindowMessage } from './components/ChatWindow';
-import { fetchModels, sendChatMessageStream, Model } from './utils/api';
+import { fetchModels, sendChatMessageStream, Model, PendingApproval, fetchPendingApproval, respondApproval, compressSession } from './utils/api';
 
 interface AppConfig {
   HERMES_API_URL?: string;
@@ -52,6 +52,7 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string>('');
+  const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
 
   // --- Refs ---
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -103,6 +104,36 @@ export default function App() {
   useEffect(() => {
     checkConnectionAndFetchModels();
   }, []);
+
+  // --- Approval Polling ---
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    
+    if (isGenerating) {
+      interval = setInterval(async () => {
+        try {
+          const approval = await fetchPendingApproval(HERMES_ENDPOINT, HERMES_API_KEY);
+          setPendingApproval(approval);
+        } catch (err) {
+          console.error("Error polling approval:", err);
+        }
+      }, 1500);
+    } else if (pendingApproval) {
+      // Clear pending approval if generation stops unexpectedly
+      setPendingApproval(null);
+    }
+
+    return () => clearInterval(interval);
+  }, [isGenerating]);
+
+  const handleRespondApproval = async (choice: 'once' | 'session' | 'always' | 'deny') => {
+    try {
+      await respondApproval(HERMES_ENDPOINT, HERMES_API_KEY, choice);
+      setPendingApproval(null);
+    } catch (err) {
+      console.error("Error responding to approval:", err);
+    }
+  };
 
   // --- Helper: Get active conversation ---
   const activeConversation = conversations.find(c => c.id === activeConversationId);
@@ -186,6 +217,41 @@ export default function App() {
       setActiveConversationId(convId);
     }
 
+    const targetConv = currentConversations.find(c => c.id === convId);
+    let existingMessages = targetConv ? targetConv.messages : [];
+
+    // Intercept /compact and /compress commands
+    const command = text.trim();
+    if (command === '/compact' || command === '/compress') {
+      const userMsg: ChatWindowMessage = { id: `msg_${Date.now()}`, role: 'user', content: command };
+      const systemMsg: ChatWindowMessage = { 
+        id: `msg_${Date.now() + 1}`, 
+        role: 'system', 
+        content: '⏳ Compactando contexto da sessão...' 
+      };
+      
+      setConversations(prev => prev.map(c => 
+        c.id === convId ? { ...c, messages: [...existingMessages, userMsg, systemMsg] } : c
+      ));
+
+      setIsGenerating(true);
+      const success = await compressSession(HERMES_ENDPOINT, HERMES_API_KEY);
+      setIsGenerating(false);
+
+      setConversations(prev => prev.map(c => {
+        if (c.id === convId) {
+          const msgs = [...c.messages];
+          msgs[msgs.length - 1] = {
+            ...msgs[msgs.length - 1],
+            content: success ? '✅ Contexto compactado com sucesso pelo agente.' : '❌ Falha ao compactar contexto da sessão.'
+          };
+          return { ...c, messages: msgs };
+        }
+        return c;
+      }));
+      return;
+    }
+
     // 2. Add user message
     const userMsg: ChatWindowMessage = {
       id: `msg_${Date.now()}`,
@@ -194,8 +260,6 @@ export default function App() {
     };
 
     // Update state to render User message instantly
-    const targetConv = currentConversations.find(c => c.id === convId);
-    const existingMessages = targetConv ? targetConv.messages : [];
     const updatedMessages = [...existingMessages, userMsg];
     
     // Auto title update if it's the first message
@@ -428,6 +492,8 @@ export default function App() {
         onSelectModel={handleConversationModelChange}
         isFetchingModels={isFetchingModels}
         connectionError={connectionError}
+        pendingApproval={pendingApproval}
+        onRespondApproval={handleRespondApproval}
       />
     </div>
   );

@@ -358,7 +358,7 @@ body {
   main {
     width: 100% !important;
     height: 100% !important;
-    padding-top: 66px !important;
+    padding-top: calc(66px + env(safe-area-inset-top, 0px)) !important;
   }
 
   /* Floating custom header bar for Mobile */
@@ -367,13 +367,13 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: 66px;
+    height: calc(66px + env(safe-area-inset-top, 0px));
     display: flex !important;
     align-items: center;
     justify-content: space-between;
     padding-left: 16px;
     padding-right: 16px;
-    padding-top: 10px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
     background: hsl(var(--bg-surface) / 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -382,28 +382,14 @@ body {
     box-sizing: border-box;
   }
 
-  /* PWA Standalone Fix for Notch */
-  @media (display-mode: standalone) {
-    main {
-      padding-top: calc(66px + env(safe-area-inset-top, 0px)) !important;
-    }
-    .mobile-header-bar {
-      height: calc(66px + env(safe-area-inset-top, 0px));
-      padding-top: calc(10px + env(safe-area-inset-top, 0px));
-    }
-    main > div:last-child {
-      padding: 0 1rem max(1rem, env(safe-area-inset-bottom, 0px)) 1rem !important;
-    }
-  }
-
   /* Safe Area paddings inside Scrollable Chats */
   main > div:first-child {
     padding: 1rem 1rem 1.5rem 1rem !important;
   }
 
-  /* Safe Area paddings inside Input Bar wrapper (Base/Browser) */
+  /* Safe Area paddings inside Input Bar wrapper */
   main > div:last-child {
-    padding: 0 1rem 1rem 1rem !important;
+    padding: 0 1rem max(1rem, env(safe-area-inset-bottom, 0px)) 1rem !important;
     width: 100% !important;
   }
 
@@ -427,6 +413,223 @@ body {
   /* Form input layout on small screens */
   form {
     padding: 0.5rem 0.6rem !important;
+  }
+}
+
+/* Approval Card Styles */
+.approval-card {
+  padding: 1.2rem;
+  border-radius: var(--border-radius-lg);
+  background-color: hsl(var(--bg-card) / 0.85);
+  border: 1px solid hsl(var(--accent-primary) / 0.4);
+  box-shadow: 0 0 20px hsl(var(--accent-primary) / 0.15);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.pulse-attention {
+  animation: pulseBorder 2s infinite;
+}
+
+@keyframes pulseBorder {
+  0% { box-shadow: 0 0 0 0 hsl(var(--accent-primary) / 0.4); }
+  70% { box-shadow: 0 0 0 10px hsl(var(--accent-primary) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--accent-primary) / 0); }
+}
+
+.approval-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.approval-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: hsl(var(--bg-deep));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid hsl(var(--border-subtle));
+}
+
+.text-amber { color: #f59e0b; }
+
+.approval-card-title h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.05rem;
+  color: white;
+  font-weight: 600;
+}
+
+.approval-card-title p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: hsl(var(--text-secondary));
+}
+
+.approval-card-details {
+  background: hsl(var(--bg-deep) / 0.5);
+  border-radius: var(--border-radius-md);
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: hsl(var(--text-muted));
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.detail-code {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: white;
+  background: hsl(0 0% 0% / 0.3);
+  padding: 8px;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.approval-card-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.approval-card-actions button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.approval-btn-allow {
+  background: hsl(142 70% 45%);
+  color: white;
+}
+.approval-btn-allow:hover { background: hsl(142 70% 50%); transform: translateY(-1px); }
+
+.approval-btn-session {
+  background: hsl(var(--accent-primary));
+  color: white;
+}
+.approval-btn-session:hover { background: hsl(var(--accent-secondary)); transform: translateY(-1px); }
+
+.approval-btn-always {
+  background: hsl(var(--bg-deep));
+  color: hsl(var(--text-secondary));
+  border-color: hsl(var(--border-subtle));
+}
+.approval-btn-always:hover { background: hsl(var(--bg-surface)); color: white; }
+
+.approval-btn-deny {
+  background: transparent;
+  color: hsl(0 80% 60%);
+  border-color: hsl(0 80% 60% / 0.3);
+}
+.approval-btn-deny:hover { background: hsl(0 80% 60% / 0.1); }
+
+@media (max-width: 600px) {
+  .approval-card-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Settings Modal Responsive Styles */
+.settings-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  backgroundColor: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+  padding: 20px;
+}
+
+.settings-modal {
+  background-color: hsl(var(--bg-card));
+  border: 1px solid hsl(var(--border-subtle));
+  padding: 1.5rem;
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 600px;
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-lg);
+}
+
+.settings-textarea {
+  padding: 0.8rem;
+  border-radius: var(--border-radius-md);
+  background-color: hsl(var(--bg-deep));
+  border: 1px solid hsl(var(--border-subtle));
+  color: white;
+  font-size: 0.88rem;
+  font-family: var(--font-mono);
+  outline: none;
+  resize: vertical;
+  min-height: 120px;
+  max-height: 400px;
+  line-height: 1.5;
+}
+
+.settings-textarea:focus {
+  border-color: hsl(var(--accent-primary));
+  box-shadow: 0 0 0 2px hsl(var(--accent-primary) / 0.2);
+}
+
+/* Mobile Settings as Bottom Sheet */
+@media (max-width: 768px) {
+  .settings-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  
+  .settings-modal {
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    max-width: 100%;
+    margin: 0;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  
+  .settings-textarea {
+    min-height: 150px;
+    max-height: 50vh;
   }
 }
 

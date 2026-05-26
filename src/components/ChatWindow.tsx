@@ -6,9 +6,11 @@ import {
   Terminal,
   ArrowRight,
   Menu,
+  DatabaseZap,
 } from "lucide-react";
 import MessageBubble from "./MessageBubble";
-import { ChatMessage } from "../utils/api";
+import { ChatMessage, PendingApproval } from "../utils/api";
+import { ApprovalCard } from "./ApprovalCard";
 
 export interface ChatWindowMessage extends ChatMessage {
   id: string;
@@ -26,6 +28,8 @@ export interface ChatWindowProps {
   onSelectModel: (modelId: string) => void;
   isFetchingModels?: boolean;
   connectionError?: string;
+  pendingApproval?: PendingApproval | null;
+  onRespondApproval?: (choice: 'once' | 'session' | 'always' | 'deny') => void;
 }
 
 const SUGGESTIONS = [
@@ -66,6 +70,8 @@ export default function ChatWindow({
   onSelectModel,
   isFetchingModels,
   connectionError,
+  pendingApproval,
+  onRespondApproval,
 }: ChatWindowProps) {
   const [input, setInput] = useState("");
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -171,7 +177,27 @@ export default function ChatWindow({
         >
           Hermes Console
         </span>
-        <div style={{ width: "22px" }} /> {/* Spacer for symmetry */}
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={() => onSendMessage('/compact')}
+          style={{
+            background: "transparent",
+            border: "1px solid hsl(var(--border-subtle))",
+            color: "hsl(var(--text-secondary))",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "4px 8px",
+            borderRadius: "12px",
+            fontSize: "0.75rem",
+            fontWeight: "600",
+            backgroundColor: "hsl(var(--bg-card) / 0.5)",
+          }}
+          title="Compactar Histórico"
+        >
+          <DatabaseZap size={14} /> Compactar
+        </button>
       </div>
 
       {/* Messages View Area */}
@@ -338,6 +364,12 @@ export default function ChatWindow({
           margin: "0 auto",
         }}
       >
+        {pendingApproval && onRespondApproval && (
+          <div style={{ marginBottom: "12px" }}>
+            <ApprovalCard approval={pendingApproval} onRespond={onRespondApproval} />
+          </div>
+        )}
+        
         <form
           onSubmit={handleSubmit}
           className="glass glow-hover"
