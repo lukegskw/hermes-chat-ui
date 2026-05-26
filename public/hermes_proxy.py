@@ -10,12 +10,29 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-# Try to import hermes agent components
-try:
-    from hermes_agent.agent import AIAgent
-    from hermes_agent.config import AgentConfig
-except ImportError:
-    AIAgent = None
+import sys
+
+AIAgent = None
+AgentConfig = None
+import_error_details = []
+
+# Try multiple known namespace variations due to upstream refactoring
+for ns in ['hermes_agent', 'hermes_cli', 'hermes', 'openhermes']:
+    try:
+        AIAgent = __import__(f"{ns}.agent", fromlist=['AIAgent']).AIAgent
+        AgentConfig = __import__(f"{ns}.config", fromlist=['AgentConfig']).AgentConfig
+        break
+    except Exception as e:
+        import_error_details.append(f"{ns}: {str(e)}")
+
+if AIAgent is None:
+    try:
+        from run_agent import AIAgent
+        # mock AgentConfig if needed
+        class AgentConfig:
+            approvals = type('obj', (object,), {'mode': 'manual'})()
+    except Exception as e:
+        import_error_details.append(f"run_agent: {str(e)}")
 
 app = FastAPI(title="Hermes Chat UI Proxy")
 
@@ -173,7 +190,8 @@ async def respond_approval(request: Request):
 
 async def chat_stream_generator(messages: list) -> AsyncGenerator[str, None]:
     if AIAgent is None:
-        yield f"data: {json.dumps({'choices': [{'delta': {'content': 'Error: hermes_agent package not found. Cannot run AIAgent natively.'}}]})}\n\n"
+        debug_info = f"Error: Cannot import AIAgent. Tried namespaces:\\n{chr(10).join(import_error_details)}\\n\\nSys Path: {sys.path}"
+        yield f"data: {json.dumps({'choices': [{'delta': {'content': debug_info}}]})}\n\n"
         yield "data: [DONE]\n\n"
         return
 
