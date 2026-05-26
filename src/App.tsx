@@ -17,18 +17,11 @@ declare global {
 
 // These come exclusively from Portainer ENV vars (via entrypoint.sh → window.APP_CONFIG)
 const getApiUrl = () => {
-  try {
-    const urlObj = new URL(window.APP_CONFIG?.HERMES_API_URL || 'http://localhost:8642');
-    urlObj.port = window.APP_CONFIG?.HERMES_PROXY_PORT || '8643';
-    return urlObj.toString().replace(/\/$/, '');
-  } catch (e) {
-    return 'http://localhost:8643';
-  }
+  return window.APP_CONFIG?.HERMES_API_URL || 'http://localhost:8642';
 };
 
 const HERMES_ENDPOINT = getApiUrl();
 const HERMES_API_KEY = window.APP_CONFIG?.HERMES_API_KEY || '';
-const HERMES_PROXY_PORT = window.APP_CONFIG?.HERMES_PROXY_PORT || '8643';
 
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt: 'Você é o Hermes, um assistente autônomo de inteligência artificial poderoso e prestativo. Responda em Português do Brasil.',
@@ -86,7 +79,7 @@ export default function App() {
   const checkConnectionAndFetchModels = async () => {
     try {
       setIsFetchingModels(true);
-      const fetched = await fetchModels(HERMES_ENDPOINT, HERMES_API_KEY, HERMES_PROXY_PORT);
+      const fetched = await fetchModels(HERMES_ENDPOINT, HERMES_API_KEY);
       setModels(fetched.models);
       setIsConnected(true);
       setConnectionError('');
