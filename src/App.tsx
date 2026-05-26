@@ -111,6 +111,10 @@ export default function App() {
     checkConnectionAndFetchModels();
   }, []);
 
+  // --- Helper: Get active conversation ---
+  const activeConversation = conversations.find(c => c.id === activeConversationId);
+  const activeMessages = activeConversation ? activeConversation.messages : [];
+
   // --- Text-Based Approval Interception ---
   useEffect(() => {
     if (!isGenerating && activeMessages.length > 0) {
@@ -152,9 +156,6 @@ export default function App() {
     }
   };
 
-  // --- Helper: Get active conversation ---
-  const activeConversation = conversations.find(c => c.id === activeConversationId);
-  const activeMessages = activeConversation ? activeConversation.messages : [];
 
   // --- User Actions ---
   const handleNewChat = () => {
