@@ -3,19 +3,32 @@ import asyncio
 import os
 import yaml
 import importlib.util
+import shutil
+import subprocess
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
 
-# --- MONKEY PATCH NATIVE API SERVER ---
-try:
-    spec = importlib.util.find_spec("gateway.platforms.api_server")
-    if spec and spec.origin:
-        api_server_path = spec.origin
+def prepare_native_gateway():
+    try:
+        spec = importlib.util.find_spec("gateway")
+        if not spec or not spec.submodule_search_locations:
+            print("Could not find native gateway module!")
+            return False
+            
+        native_dir = spec.submodule_search_locations[0]
+        tmp_dir = "/tmp/gateway"
+        
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)
+            
+        shutil.copytree(native_dir, tmp_dir)
+        
+        api_server_path = os.path.join(tmp_dir, "platforms", "api_server.py")
         with open(api_server_path, "r") as f:
             content = f.read()
-        
+            
         if "def get_internal_pending_approvals" not in content:
             patch = """
 
@@ -47,9 +60,11 @@ async def respond_internal_approval(payload: ApprovalChoice):
 """
             with open(api_server_path, "w") as f:
                 f.write(content + patch)
-            print("Successfully monkey-patched api_server.py for approvals!")
-except Exception as e:
-    print("Failed to monkey-patch api_server.py:", e)
+            print("Successfully copied and patched api_server.py in /tmp/gateway!")
+        return True
+    except Exception as e:
+        print("Failed to prepare patched gateway:", e)
+        return False
 
 # --- PROXY APP ---
 app = FastAPI(title="Hermes Chat UI Proxy")
@@ -177,4 +192,13 @@ async def chat_completions(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
+    if prepare_native_gateway():
+        # Set PYTHONPATH to include /tmp
+        env = os.environ.copy()
+        env["PYTHONPATH"] = "/tmp:" + env.get("PYTHONPATH", "")
+        
+        # Start native hermes gateway run as a subprocess!
+        print("Starting native hermes gateway run...")
+        subprocess.Popen(["hermes", "gateway", "run", "--accept-hooks"], env=env)
+    
     uvicorn.run(app, host="0.0.0.0", port=8643)
