@@ -18,21 +18,26 @@ app.add_middleware(
 NATIVE_HERMES_URL = "http://localhost:8642"
 
 @app.get("/api/models")
-async def get_models():
+async def get_models(request: Request):
     """Fetch models from the native Hermes API."""
     try:
+        headers = {}
+        auth_header = request.headers.get("Authorization")
+        if auth_header:
+            headers["Authorization"] = auth_header
+            
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{NATIVE_HERMES_URL}/v1/models", timeout=5.0) as response:
+            async with session.get(f"{NATIVE_HERMES_URL}/v1/models", headers=headers, timeout=5.0) as response:
                 if response.status == 200:
                     data = await response.json()
                     models = [{"id": m["id"], "label": m["id"].replace("-", " ").title()} for m in data.get("data", [])]
                     if models:
-                        return models
+                        return {"data": models, "default_model": models[0]["id"]}
     except Exception as e:
         print(f"Error fetching models from native API: {e}")
     
     # Fallback if native API fails
-    return [{"id": "hermes-agent", "label": "Hermes Agent"}]
+    return {"data": [{"id": "hermes-agent", "label": "Hermes Agent"}], "default_model": "hermes-agent"}
 
 @app.get("/api/approval/pending")
 async def get_pending_approvals():
@@ -49,9 +54,14 @@ async def chat_completions(request: Request):
     """Proxy the chat completion request to the native Hermes API."""
     body = await request.body()
     
+    headers = {"Content-Type": "application/json"}
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        headers["Authorization"] = auth_header
+    
     async def stream_generator():
         async with aiohttp.ClientSession() as session:
-            async with session.post(f"{NATIVE_HERMES_URL}/v1/chat/completions", data=body, headers={"Content-Type": "application/json"}) as response:
+            async with session.post(f"{NATIVE_HERMES_URL}/v1/chat/completions", data=body, headers=headers) as response:
                 if response.status != 200:
                     error_msg = await response.read()
                     yield f"data: {json.dumps({'choices': [{'delta': {'content': f'API Error {response.status}: {error_msg.decode()}'}}]})}\n\n"
