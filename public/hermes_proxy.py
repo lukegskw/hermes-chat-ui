@@ -82,15 +82,6 @@ async def get_models(request: Request):
 
     return {"data": models, "default_model": active_model}
 
-@app.get("/api/approval/pending")
-async def get_pending_approvals():
-    # Native agent in API mode handles approvals conversationally via text.
-    # It does not expose a polling endpoint, so we just return empty.
-    return {}
-
-@app.post("/api/approval/respond")
-async def respond_approval(request: Request):
-    return {"status": "error"}
 
 @app.post("/api/session/compress")
 async def compress_session(request: Request):
