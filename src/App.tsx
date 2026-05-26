@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar, { Conversation, Settings } from './components/Sidebar';
 import ChatWindow, { ChatWindowMessage } from './components/ChatWindow';
-import { fetchModels, sendChatMessageStream, Model, PendingApproval, fetchPendingApproval, respondApproval, compressSession } from './utils/api';
+import { fetchModels, sendChatMessageStream, Model, PendingApproval, compressSession } from './utils/api';
 
 interface AppConfig {
   HERMES_API_URL?: string;
@@ -31,7 +31,7 @@ const HERMES_API_KEY = window.APP_CONFIG?.HERMES_API_KEY || '';
 const HERMES_PROXY_PORT = window.APP_CONFIG?.HERMES_PROXY_PORT || '8643';
 
 const DEFAULT_SETTINGS: Settings = {
-  systemPrompt: 'Você é o Hermes, um assistente autônomo de inteligência artificial poderoso e prestativo. Responda em Português do Brasil.',
+  systemPrompt: 'Você é o Hermes, um assistente autônomo de inteligência artificial poderoso e prestativo. Responda em Português do Brasil.\n\nCRITICAL INSTRUCTION: Se uma ferramenta retornar um erro com o status "approval_required", você DEVE pedir permissão ao usuário imprimindo EXATAMENTE a seguinte string no final da sua resposta: [APPROVAL_REQUIRED: <comando_a_executar>]\nApós imprimir essa string, pare a geração e aguarde a resposta do usuário.',
 };
 
 export default function App() {
@@ -111,37 +111,44 @@ export default function App() {
     checkConnectionAndFetchModels();
   }, []);
 
-  // --- Approval Polling ---
+  // --- Text-Based Approval Interception ---
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    
-    if (isGenerating) {
-      interval = setInterval(async () => {
-        try {
-          const approval = await fetchPendingApproval(HERMES_ENDPOINT, HERMES_API_KEY);
-          setPendingApproval(approval);
-        } catch (err) {
-          console.error("Error polling approval:", err);
+    if (!isGenerating && activeMessages.length > 0) {
+      const lastMsg = activeMessages[activeMessages.length - 1];
+      if (lastMsg.role === 'assistant') {
+        const match = lastMsg.content.match(/\[APPROVAL_REQUIRED:\s*(.*?)\]/);
+        if (match) {
+          const command = match[1].trim();
+          setPendingApproval({
+            id: `pending_${Date.now()}`,
+            tool: 'terminal',
+            command: command,
+            label: command
+          });
+          
+          // Strip the ugly tag from the user's view
+          setConversations(prev => prev.map(c => {
+            if (c.id === activeConversationId) {
+              const msgs = [...c.messages];
+              msgs[msgs.length - 1] = {
+                ...lastMsg,
+                content: lastMsg.content.replace(/\[APPROVAL_REQUIRED:\s*(.*?)\]/g, '').trim() || '⚠️ O comando acima precisa de aprovação manual para prosseguir.'
+              };
+              return { ...c, messages: msgs };
+            }
+            return c;
+          }));
         }
-      }, 1500);
-    } else if (pendingApproval) {
-      // Clear pending approval if generation stops unexpectedly
-      setPendingApproval(null);
+      }
     }
-
-    return () => clearInterval(interval);
-  }, [isGenerating]);
+  }, [activeMessages, isGenerating, activeConversationId]);
 
   const handleRespondApproval = async (choice: 'once' | 'session' | 'always' | 'deny') => {
-    try {
-      if (pendingApproval && pendingApproval.session_id) {
-        await respondApproval(HERMES_ENDPOINT, HERMES_API_KEY, choice, pendingApproval.session_id);
-      } else {
-        await respondApproval(HERMES_ENDPOINT, HERMES_API_KEY, choice);
-      }
-      setPendingApproval(null);
-    } catch (err) {
-      console.error("Error responding to approval:", err);
+    setPendingApproval(null);
+    if (choice === 'deny') {
+      await handleSendMessage(`[APPROVAL_DENIED] Comando rejeitado pelo usuário. Não execute o comando.`);
+    } else {
+      await handleSendMessage(`[APPROVAL_GRANTED] Permissão concedida pelo usuário. Você pode prosseguir com a execução do comando.`);
     }
   };
 
