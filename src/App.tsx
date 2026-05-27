@@ -7,33 +7,11 @@ import { useHermesStream } from "./hooks/useHermesStream";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from 'sonner';
 
-interface AppConfig {
-  HERMES_API_URL?: string;
-  HERMES_API_KEY?: string;
-  HERMES_PROXY_PORT?: string;
-}
-
-declare global {
-  interface Window {
-    APP_CONFIG?: AppConfig;
-  }
-}
-
-const getApiUrl = () => {
-  try {
-    const urlObj = new URL(
-      window.APP_CONFIG?.HERMES_API_URL || "http://localhost:8642",
-    );
-    urlObj.port = window.APP_CONFIG?.HERMES_PROXY_PORT || "8643";
-    return urlObj.toString().replace(/\/$/, "");
-  } catch {
-    return "http://localhost:8643";
-  }
-};
+import { envConfig, getApiUrl } from "./config/env";
 
 const HERMES_ENDPOINT = getApiUrl();
-const HERMES_API_KEY = window.APP_CONFIG?.HERMES_API_KEY || "";
-const HERMES_PROXY_PORT = window.APP_CONFIG?.HERMES_PROXY_PORT || "8643";
+const HERMES_API_KEY = envConfig.HERMES_API_KEY;
+const HERMES_PROXY_PORT = envConfig.HERMES_PROXY_PORT;
 
 export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
