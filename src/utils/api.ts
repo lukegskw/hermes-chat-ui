@@ -1,13 +1,23 @@
 /**
  * Hermes OpenAI-Compatible Client API in TypeScript
  */
+import { z } from 'zod';
+import { logger } from './logger';
 
-export interface Model {
-  id: string;
-  object?: string;
-  created?: number;
-  owned_by?: string;
-}
+export const ModelSchema = z.object({
+  id: z.string(),
+  object: z.string().optional(),
+  created: z.number().optional(),
+  owned_by: z.string().optional(),
+  label: z.string().optional(),
+});
+
+export type Model = z.infer<typeof ModelSchema>;
+
+const ModelsResponseSchema = z.object({
+  data: z.array(ModelSchema).optional(),
+  default_model: z.string().optional()
+});
 
 export interface ToolCall {
   id: string;
@@ -19,11 +29,13 @@ export interface ToolCall {
 }
 
 export interface ChatMessage {
-  id?: string;
+  id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   reasoning_content?: string;
   tool_calls?: ToolCall[];
+  isGenerating?: boolean;
+  timestamp?: string;
 }
 
 export interface SendChatMessageStreamOptions {
@@ -34,7 +46,7 @@ export interface SendChatMessageStreamOptions {
   systemPrompt: string;
   onChunk: (chunk: string) => void;
   onReasoningChunk?: (chunk: string) => void;
-  onToolCallChunk?: (toolCallDelta: any) => void;
+  onToolCallChunk?: (toolCallDelta: unknown) => void;
   onDone: () => void;
   onError: (error: Error) => void;
   signal?: AbortSignal;
@@ -60,16 +72,18 @@ export async function fetchModels(endpoint: string, apiKey: string, proxyPort: s
     });
     
     if (proxyRes.ok) {
-      const proxyData = await proxyRes.json();
-      if (proxyData.data && Array.isArray(proxyData.data) && proxyData.data.length > 0) {
+      const proxyData: unknown = await proxyRes.json();
+      const parsed = ModelsResponseSchema.safeParse(proxyData);
+      
+      if (parsed.success && parsed.data.data && parsed.data.data.length > 0) {
         return { 
-          models: proxyData.data as Model[],
-          defaultModel: proxyData.default_model || proxyData.data[0].id
+          models: parsed.data.data,
+          defaultModel: parsed.data.default_model || parsed.data.data[0].id
         };
       }
     }
-  } catch (_e) {
-    // Proxy not available, fallback to v1
+  } catch (error: unknown) {
+    logger.debug({ error }, "Proxy not available, falling back to /v1/models");
   }
 
   // Fallback to standard OpenAI-compatible /v1/models
@@ -86,8 +100,9 @@ export async function fetchModels(endpoint: string, apiKey: string, proxyPort: s
     throw new Error(`Failed to fetch models: ${response.statusText}`);
   }
 
-  const data = await response.json();
-  const all = (data.data || []) as Model[];
+  const data: unknown = await response.json();
+  const parsed = ModelsResponseSchema.safeParse(data);
+  const all = parsed.success && parsed.data.data ? parsed.data.data : [];
   // Filter out the generic proxy alias if real provider models are present
   const real = all.filter(m => m.id !== 'hermes-agent');
   const finalModels = real.length > 0 ? real : all;
@@ -115,7 +130,7 @@ export async function sendChatMessageStream({
     const url = `${endpoint.replace(/\/$/, '')}/v1/chat/completions`;
     
     // Prepare conversation messages payload
-    const payloadMessages: ChatMessage[] = [];
+    const payloadMessages: Omit<ChatMessage, 'id'>[] = [];
     if (systemPrompt) {
       payloadMessages.push({ role: 'system', content: systemPrompt });
     }
@@ -159,7 +174,7 @@ export async function sendChatMessageStream({
     let currentToolIndex = 0;
     const toolIndexMap = new Map<string, number>();
 
-    while (true) {
+    for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -215,8 +230,8 @@ export async function sendChatMessageStream({
                 }
               });
             }
-          } catch (e) {
-            // Ignore syntax errors for non-JSON or other formatting
+          } catch {
+            // ignore
           }
         }
       }
@@ -253,17 +268,19 @@ export async function sendChatMessageStream({
               function: { name: parsed.tool, arguments: parsed.label || '' }
             });
           }
-        } catch (e) {}
+        } catch {
+          // ignore
+        }
       }
     }
 
     onDone();
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'AbortError') {
       // User aborted stream, do not trigger error callback
       onDone();
     } else {
-      onError(error as Error);
+      onError(error instanceof Error ? error : new Error(String(error)));
     }
   }
 }
@@ -287,8 +304,8 @@ export async function compressSession(endpoint: string, apiKey: string): Promise
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
     });
     return res.ok;
-  } catch (err) {
-    console.error("Failed to compress session:", err);
+  } catch (error: unknown) {
+    logger.error({ error }, "Failed to compress session");
     return false;
   }
 }

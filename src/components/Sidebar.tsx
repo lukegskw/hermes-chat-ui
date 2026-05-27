@@ -3,13 +3,13 @@ import {
   Bot, Plus, Trash2, Settings as SettingsIcon, MessageSquare, 
   Sparkles, X, Save 
 } from 'lucide-react';
-import { Model } from '../utils/api';
+import { Model, ChatMessage } from '../utils/api';
 
 export interface Conversation {
   id: string;
   title: string;
   modelId?: string;
-  messages: any[];
+  messages: ChatMessage[];
 }
 
 export interface Settings {

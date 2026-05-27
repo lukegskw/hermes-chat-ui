@@ -1,4 +1,3 @@
-import React from 'react';
 import { PendingApproval } from '../utils/api';
 import { Check, Unlock, Lock, X } from 'lucide-react';
 

@@ -9,7 +9,7 @@ import {
   DatabaseZap,
 } from "lucide-react";
 import MessageBubble from "./MessageBubble";
-import { ChatMessage, PendingApproval } from "../utils/api";
+import { ChatMessage, PendingApproval, Model } from "../utils/api";
 import { ApprovalCard } from "./ApprovalCard";
 
 export interface ChatWindowMessage extends ChatMessage {
@@ -24,7 +24,7 @@ export interface ChatWindowProps {
   onSendMessage: (text: string) => void;
   onStopGeneration: () => void;
   selectedModel: string;
-  models: any[];
+  models: Model[];
   onSelectModel: (modelId: string) => void;
   isFetchingModels?: boolean;
   connectionError?: string;

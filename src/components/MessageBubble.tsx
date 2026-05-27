@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Copy, Check, Bot, User, Sparkles, TerminalSquare, ChevronDown, ChevronRight, BrainCircuit } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 import { ChatWindowMessage } from './ChatWindow';
+import { ToolCall } from '../utils/api';
+import { logger } from '../utils/logger';
 
 export interface MessageBubbleProps {
   message: ChatWindowMessage;
@@ -15,6 +17,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
 
   const handleCopy = async () => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(content);
       } else {
@@ -29,14 +32,14 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         try {
           document.execCommand('copy');
         } catch (err) {
-          console.error('Fallback: Oops, unable to copy', err);
+          logger.error({ error: err }, 'Fallback: Oops, unable to copy');
         }
         document.body.removeChild(textArea);
       }
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch (err) {
-      console.error('Failed to copy: ', err);
+      logger.error({ error: err }, 'Failed to copy: ');
     }
   };
 
@@ -45,7 +48,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
     try {
       const date = new Date(timeStr);
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
+    } catch {
       return '';
     }
   };
@@ -213,7 +216,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
               </div>
             )}
             
-            {message.tool_calls && message.tool_calls.map((tc: any, i: number) => (
+            {message.tool_calls && message.tool_calls.map((tc: ToolCall, i: number) => (
               <div key={i} style={{
                 backgroundColor: 'hsl(var(--bg-deep) / 0.8)',
                 border: '1px dashed hsl(var(--accent-primary) / 0.5)',
@@ -233,9 +236,9 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
                   fontWeight: '700',
                 }}>
                   <TerminalSquare size={14} />
-                  🛠️ Executando Ferramenta: {tc.function?.name}
+                  🛠️ Executando Ferramenta: {tc.function.name}
                 </div>
-                {tc.function?.arguments && (
+                {tc.function.arguments && (
                   <div style={{
                     fontSize: '0.75rem',
                     color: 'hsl(var(--text-muted))',

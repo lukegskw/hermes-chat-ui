@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Check, Copy } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface CodeBlockProps {
   language: string;
@@ -15,12 +16,12 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      logger.error({ error: err }, 'Failed to copy text');
     }
   };
 
   // Simple, elegant syntax highlighting simulation
-  const highlightCode = (rawCode: string, lang: string) => {
+  const highlightCode = (rawCode: string) => {
     if (!rawCode) return '';
     
     // Quick regex replacements for basic token highlighting (safe & fast)
@@ -64,7 +65,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
         </button>
       </div>
       <pre>
-        <code>{highlightCode(code, language)}</code>
+        <code>{highlightCode(code)}</code>
       </pre>
     </div>
   );
