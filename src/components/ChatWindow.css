@@ -1,0 +1,132 @@
+.desktop-compact-btn:hover {
+  border-color: hsl(var(--accent-primary) / 0.6) !important;
+  color: hsl(var(--accent-primary)) !important;
+  background-color: hsl(var(--accent-primary) / 0.1) !important;
+  box-shadow: 0 0 10px hsl(var(--accent-primary) / 0.15);
+}
+
+@media (max-width: 768px) {
+  .desktop-compact-btn {
+    display: none !important;
+  }
+
+  /* ChatWindow responsive updates */
+  main {
+    width: 100% !important;
+    height: 100dvh !important;
+    padding-top: calc(66px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* Floating custom header bar for Mobile */
+  .mobile-header-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(66px + env(safe-area-inset-top, 0px));
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    background: hsl(var(--bg-surface) / 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid hsl(var(--border-subtle));
+    z-index: 100;
+    box-sizing: border-box;
+  }
+
+  /* Safe Area paddings inside Scrollable Chats */
+  main > div:first-child {
+    padding: 1rem 1rem 1.5rem 1rem !important;
+  }
+
+  /* Safe Area paddings inside Input Bar wrapper */
+  main > div:last-child {
+    padding: 0 1rem calc(0.5rem + env(safe-area-inset-bottom, 0px)) 1rem !important;
+    width: 100% !important;
+  }
+
+  /* Floating quick action suggestions */
+  div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  
+  /* Form input layout on small screens */
+  form {
+    padding: 0.5rem 0.6rem !important;
+  }
+}
+
+.attachment-preview-strip {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.attachment-thumbnail {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid hsl(var(--border-subtle));
+  background: hsl(var(--bg-deep));
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.attachment-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: hsl(var(--bg-deep) / 0.8);
+  border: 1px solid hsl(var(--border-subtle));
+  color: hsl(var(--text-main));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.remove-btn:hover {
+  background: hsl(0 80% 60%);
+  color: white;
+  border-color: hsl(0 80% 60%);
+}
+
+.drop-zone-active {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: hsl(var(--accent-primary) / 0.1);
+  border: 2px dashed hsl(var(--accent-primary));
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--accent-primary));
+  font-weight: 600;
+  font-size: 0.9rem;
+  z-index: 10;
+  pointer-events: none;
+}

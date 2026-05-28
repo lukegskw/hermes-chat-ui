@@ -1,0 +1,73 @@
+/* Settings Modal Responsive Styles */
+.settings-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+  padding: 20px;
+}
+
+.settings-modal {
+  background-color: hsl(var(--bg-card));
+  border: 1px solid hsl(var(--border-subtle));
+  padding: 1.5rem;
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 600px;
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-md); /* updated to standard token */
+}
+
+.settings-textarea {
+  padding: 0.8rem;
+  border-radius: var(--border-radius-md);
+  background-color: hsl(var(--bg-deep));
+  border: 1px solid hsl(var(--border-subtle));
+  color: white;
+  font-size: 0.88rem;
+  font-family: var(--font-mono);
+  outline: none;
+  resize: vertical;
+  min-height: 120px;
+  max-height: 400px;
+  line-height: 1.5;
+}
+
+.settings-textarea:focus {
+  border-color: hsl(var(--accent-primary));
+  box-shadow: 0 0 0 2px hsl(var(--accent-primary) / 0.2);
+}
+
+/* Mobile Settings as Bottom Sheet */
+@media (max-width: 768px) {
+  .settings-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  
+  .settings-modal {
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    max-width: 100%;
+    margin: 0;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  
+  .settings-textarea {
+    min-height: 150px;
+    max-height: 50vh;
+  }
+}

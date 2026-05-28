@@ -1,0 +1,95 @@
+/* src/components/AgentActivityLog.css */
+.activity-log {
+  margin-bottom: 12px;
+  background-color: hsl(var(--bg-deep) / 0.5);
+  border: 1px solid hsl(var(--border-subtle));
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.activity-log-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  background-color: hsl(var(--bg-card));
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.activity-log-summary:hover {
+  background-color: hsl(var(--bg-card) / 0.8);
+  color: hsl(var(--text-main));
+}
+
+.summary-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.activity-timeline {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid hsl(var(--border-subtle));
+}
+
+.timeline-node {
+  display: flex;
+  gap: 12px;
+  position: relative;
+}
+
+.timeline-node::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 18px;
+  bottom: -10px;
+  width: 2px;
+  background-color: hsl(var(--border-subtle));
+}
+
+.timeline-node:last-child::before {
+  display: none;
+}
+
+.node-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: hsl(var(--bg-card));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--accent-primary));
+  position: relative;
+  z-index: 1;
+  margin-top: 2px;
+}
+
+.node-content {
+  flex: 1;
+  font-size: 0.85rem;
+  color: hsl(var(--text-main));
+  padding-bottom: 4px;
+}
+
+.node-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.node-description {
+  color: hsl(var(--text-muted));
+  font-size: 0.8rem;
+  font-style: italic;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

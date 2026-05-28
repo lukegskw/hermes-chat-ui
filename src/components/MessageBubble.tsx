@@ -4,6 +4,9 @@ import MarkdownRenderer from './MarkdownRenderer';
 import { ChatWindowMessage } from './ChatWindow';
 import { ToolCall } from '../utils/api';
 import { logger } from '../utils/logger';
+import { AgentActivityLog } from './AgentActivityLog';
+import { ToolCallBox } from './ToolCallBox';
+import './MessageBubble.css';
 
 export interface MessageBubbleProps {
   message: ChatWindowMessage;
@@ -167,48 +170,59 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         {/* Reasoning and Tools rendering */}
         {!isUser && (message.reasoning_content || (message.tool_calls && message.tool_calls.length > 0)) && (
           <div style={{ marginBottom: '12px' }}>
+            
+            <AgentActivityLog 
+              toolCalls={message.tool_calls} 
+              reasoningContent={message.reasoning_content} 
+            />
+            
             {message.reasoning_content && (
               <div 
                 style={{
                   backgroundColor: 'hsl(var(--bg-deep) / 0.5)',
                   border: '1px solid hsl(var(--border-subtle))',
                   borderRadius: 'var(--border-radius-md)',
-                  marginBottom: '8px',
+                  marginBottom: '12px',
                   overflow: 'hidden',
+                  boxShadow: 'var(--shadow-sm)',
                 }}
               >
                 <button
                   onClick={() => setShowReasoning(!showReasoning)}
                   style={{
                     width: '100%',
-                    background: 'transparent',
+                    background: 'hsl(var(--bg-card))',
                     border: 'none',
-                    padding: '8px 12px',
+                    padding: '10px 14px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    color: 'hsl(var(--text-muted))',
-                    fontSize: '0.75rem',
+                    gap: '8px',
+                    color: 'hsl(var(--text-main))',
+                    fontSize: '0.8rem',
                     fontWeight: '600',
                     cursor: 'pointer',
+                    transition: 'background 0.2s',
                   }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'hsl(var(--bg-card) / 0.8)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'hsl(var(--bg-card))'}
                 >
-                  <BrainCircuit size={14} style={{ color: 'hsl(var(--accent-secondary))' }} />
-                  Processo de Raciocínio (Thoughts)
-                  <div style={{ marginLeft: 'auto' }}>
-                    {showReasoning ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  <BrainCircuit size={15} style={{ color: 'hsl(var(--accent-secondary))' }} />
+                  Processo de Raciocínio
+                  <div style={{ marginLeft: 'auto', color: 'hsl(var(--text-muted))' }}>
+                    {showReasoning ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                   </div>
                 </button>
                 {showReasoning && (
                   <div style={{
-                    padding: '8px 12px 12px 12px',
+                    padding: '12px 14px',
                     borderTop: '1px solid hsl(var(--border-subtle))',
                     color: 'hsl(var(--text-secondary))',
-                    fontSize: '0.8rem',
+                    fontSize: '0.82rem',
                     fontFamily: 'var(--font-sans)',
-                    lineHeight: '1.5',
+                    lineHeight: '1.6',
                     whiteSpace: 'pre-wrap',
                     fontStyle: 'italic',
+                    background: 'hsl(var(--bg-deep) / 0.3)',
                   }}>
                     {message.reasoning_content}
                   </div>
@@ -217,42 +231,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
             )}
             
             {message.tool_calls && message.tool_calls.map((tc: ToolCall, i: number) => (
-              <div key={i} style={{
-                backgroundColor: 'hsl(var(--bg-deep) / 0.8)',
-                border: '1px dashed hsl(var(--accent-primary) / 0.5)',
-                borderRadius: 'var(--border-radius-sm)',
-                padding: '8px 12px',
-                marginBottom: '8px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  color: 'hsl(var(--accent-primary))',
-                  fontSize: '0.75rem',
-                  fontWeight: '700',
-                }}>
-                  <TerminalSquare size={14} />
-                  🛠️ Executando Ferramenta: {tc.function.name}
-                </div>
-                {tc.function.arguments && (
-                  <div style={{
-                    fontSize: '0.75rem',
-                    color: 'hsl(var(--text-muted))',
-                    fontFamily: 'var(--font-mono)',
-                    backgroundColor: 'hsl(var(--bg-card))',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-all',
-                  }}>
-                    {tc.function.arguments}
-                  </div>
-                )}
-              </div>
+              <ToolCallBox key={i} toolCall={tc} isGenerating={message.isGenerating} />
             ))}
           </div>
         )}
@@ -277,26 +256,38 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         )}
 
         {/* Message body */}
+        {/* Message body */}
         <div style={{
           fontSize: '0.94rem',
           color: isUser ? 'hsl(var(--text-pure))' : 'hsl(var(--text-main))',
           wordBreak: 'break-word',
         }}>
           {isUser ? (
-            <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{content}</p>
+            <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
+              {typeof content === 'string' ? (
+                <p>{content}</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {content.map((part, idx) => {
+                    if (part.type === 'text') {
+                      return <p key={idx}>{part.text}</p>;
+                    } else if (part.type === 'image_url') {
+                      return (
+                        <div key={idx} style={{ maxWidth: '300px', borderRadius: '8px', overflow: 'hidden' }}>
+                          <img src={part.image_url.url} alt="anexo" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              )}
+            </div>
           ) : (
-            <MarkdownRenderer content={content} />
+            <MarkdownRenderer content={typeof content === 'string' ? content : content.filter(p => p.type === 'text').map(p => p.text).join('\n')} />
           )}
         </div>
       </div>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        .msg-copy-btn:hover {
-          opacity: 1 !important;
-          color: hsl(var(--text-pure)) !important;
-          background-color: hsl(var(--bg-surface) / 0.8) !important;
-        }
-      `}} />
     </div>
   );
 }

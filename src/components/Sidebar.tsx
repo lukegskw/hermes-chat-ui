@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { 
-  Bot, Plus, Trash2, Settings as SettingsIcon, MessageSquare, 
-  Sparkles, X, Save 
-} from 'lucide-react';
+import React, { useState, forwardRef } from 'react';
+import { Bot, Plus, Trash2, Settings as SettingsIcon, MessageSquare, Sparkles, X, Save } from 'lucide-react';
 import { Model, ChatMessage } from '../utils/api';
+import './Sidebar.css';
+import './Settings.css';
 
 export interface Conversation {
   id: string;
@@ -35,7 +34,7 @@ export interface SidebarProps {
   onSaveSettings: (settings: Settings) => void;
 }
 
-export default function Sidebar({
+const Sidebar = forwardRef<HTMLElement, SidebarProps>(({
   isSidebarOpen,
   onToggleSidebar,
   conversations,
@@ -52,7 +51,7 @@ export default function Sidebar({
   connectionError,
   settings,
   onSaveSettings,
-}: SidebarProps) {
+}, ref) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempSystemPrompt, setTempSystemPrompt] = useState(settings.systemPrompt || '');
 
@@ -65,7 +64,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className={`glass ${isSidebarOpen ? 'sidebar-open' : ''}`} style={{
+    <aside ref={ref} className={`glass ${isSidebarOpen ? 'sidebar-open' : ''}`} style={{
       width: 'var(--sidebar-width)',
       height: '100%',
       display: 'flex',
@@ -390,23 +389,6 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* CSS injection for delete button hover behavior */}
-      <style dangerouslySetInnerHTML={{__html: `
-        [style*="Conversa sem título"]:hover .delete-btn,
-        div[key]:hover .delete-btn {
-          opacity: 1 !important;
-        }
-        .delete-btn:hover {
-          color: hsl(0, 80%, 60%) !important;
-          background-color: hsl(0 80% 60% / 0.1) !important;
-        }
-        @media (max-width: 768px) {
-          .mobile-close-sidebar-btn {
-            display: block !important;
-          }
-        }
-      `}} />
-
       {/* Settings Dialog Modal/Drawer */}
       {isSettingsOpen && (
         <div className="settings-overlay">
@@ -468,4 +450,6 @@ export default function Sidebar({
       )}
     </aside>
   );
-}
+});
+
+export default Sidebar;

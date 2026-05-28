@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import { useChatState } from "./hooks/useChatState";
 import { useModels } from "./hooks/useModels";
 import { useHermesStream } from "./hooks/useHermesStream";
+import { useSwipeDrawer } from "./hooks/useSwipeDrawer";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from 'sonner';
 
@@ -15,6 +16,14 @@ const HERMES_PROXY_PORT = envConfig.HERMES_PROXY_PORT;
 
 export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+
+  useSwipeDrawer(sidebarRef, backdropRef, {
+    isOpen: isSidebarOpen,
+    onOpen: () => setIsSidebarOpen(true),
+    onClose: () => setIsSidebarOpen(false),
+  });
 
   const {
     settings,
@@ -116,15 +125,16 @@ export default function App() {
   return (
     <ErrorBoundary>
       <Toaster position="top-center" richColors theme="dark" />
-      <div id="root">
-        {isSidebarOpen && (
-          <div
-            className="sidebar-backdrop"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
+      <div id="root" className="layout">
+        <div
+          ref={backdropRef}
+          className="sidebar-backdrop"
+          style={{ display: isSidebarOpen ? 'block' : 'none' }}
+          onClick={() => setIsSidebarOpen(false)}
+        />
 
         <Sidebar
+          ref={sidebarRef}
           isSidebarOpen={isSidebarOpen}
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           conversations={conversations}

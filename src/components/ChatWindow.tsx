@@ -7,10 +7,14 @@ import {
   ArrowRight,
   Menu,
   DatabaseZap,
+  Paperclip,
+  X as XIcon,
 } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import { ChatMessage, PendingApproval, Model } from "../utils/api";
 import { ApprovalCard } from "./ApprovalCard";
+import { validateImageFile, fileToBase64 } from "../utils/imageUtils";
+import "./ChatWindow.css";
 
 export interface ChatWindowMessage extends ChatMessage {
   id: string;
@@ -21,7 +25,7 @@ export interface ChatWindowProps {
   onToggleSidebar: () => void;
   messages: ChatWindowMessage[];
   isGenerating: boolean;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, attachments?: File[]) => void;
   onStopGeneration: () => void;
   selectedModel: string;
   models: Model[];
@@ -74,9 +78,13 @@ export default function ChatWindow({
   onRespondApproval,
 }: ChatWindowProps) {
   const [input, setInput] = useState("");
+  const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
@@ -95,12 +103,45 @@ export default function ChatWindow({
     }
   }, [input]);
 
+  const addAttachments = async (files: File[]) => {
+    const validFiles = files.filter(f => validateImageFile(f).valid);
+    if (validFiles.length === 0) return;
+    
+    setPendingAttachments(prev => [...prev, ...validFiles]);
+    
+    for (const file of validFiles) {
+      try {
+        const dataUrl = await fileToBase64(file);
+        setPreviewUrls(prev => [...prev, dataUrl]);
+      } catch (e) {
+        console.error('Failed to parse image', e);
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      addAttachments(Array.from(e.target.files));
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setPendingAttachments(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || isGenerating) return;
-    onSendMessage(input.trim());
+    if (!input.trim() && pendingAttachments.length === 0) return;
+    
+    onSendMessage(input.trim(), pendingAttachments);
     setInput("");
+    setPendingAttachments([]);
+    setPreviewUrls([]);
     setHistoryIndex(-1);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -108,7 +149,6 @@ export default function ChatWindow({
       e.preventDefault();
       handleSubmit();
     } else if (e.key === "ArrowUp") {
-      // Only trigger history if cursor is at the beginning of the first line or input is empty
       const target = e.target as HTMLTextAreaElement;
       if (target.selectionStart === 0 && target.selectionEnd === 0 || input === "") {
         e.preventDefault();
@@ -147,6 +187,21 @@ export default function ChatWindow({
         backgroundColor: "hsl(var(--bg-deep))",
         position: "relative",
         overflow: "hidden",
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        setIsDragging(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files.length > 0) {
+          addAttachments(Array.from(e.dataTransfer.files));
+        }
       }}
     >
       {/* Mobile-only Header Bar */}
@@ -370,6 +425,23 @@ export default function ChatWindow({
           </div>
         )}
         
+        {previewUrls.length > 0 && (
+          <div className="attachment-preview-strip">
+            {previewUrls.map((url, i) => (
+              <div key={i} className="attachment-thumbnail">
+                <img src={url} alt={`Anexo ${i}`} />
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(i)}
+                  className="remove-btn"
+                >
+                  <XIcon size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        
         <form
           onSubmit={handleSubmit}
           className="glass glow-hover"
@@ -507,13 +579,22 @@ export default function ChatWindow({
             </button>
           </div>
 
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "8px", position: "relative" }}>
+            {isDragging && (
+              <div className="drop-zone-active">Solte as imagens aqui</div>
+            )}
+            
             <textarea
               ref={textareaRef}
               rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPaste={(e) => {
+                if (e.clipboardData.files.length > 0) {
+                  addAttachments(Array.from(e.clipboardData.files));
+                }
+              }}
               placeholder="Envie uma mensagem para o Hermes..."
               style={{
                 flex: 1,
@@ -530,8 +611,37 @@ export default function ChatWindow({
               }}
             />
 
-            {/* Input buttons group */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                multiple
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "var(--border-radius-md)",
+                  backgroundColor: "transparent",
+                  border: "none",
+                  color: "hsl(var(--text-muted))",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s",
+                }}
+                className="glow-hover"
+                title="Anexar imagem"
+              >
+                <Paperclip size={18} />
+              </button>
+              
               {isGenerating ? (
                 <button
                   type="button"
@@ -561,17 +671,17 @@ export default function ChatWindow({
                     width: "36px",
                     height: "36px",
                     borderRadius: "var(--border-radius-md)",
-                    backgroundColor: input.trim()
+                    backgroundColor: (input.trim() || pendingAttachments.length > 0)
                       ? "hsl(var(--accent-primary))"
                       : "hsl(var(--bg-deep))",
                     border: "none",
-                    color: input.trim() ? "white" : "hsl(var(--text-muted))",
-                    cursor: input.trim() ? "pointer" : "not-allowed",
+                    color: (input.trim() || pendingAttachments.length > 0) ? "white" : "hsl(var(--text-muted))",
+                    cursor: (input.trim() || pendingAttachments.length > 0) ? "pointer" : "not-allowed",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     transition: "all 0.25s",
-                    boxShadow: input.trim() ? "var(--shadow-glow)" : "none",
+                    boxShadow: (input.trim() || pendingAttachments.length > 0) ? "var(--shadow-glow)" : "none",
                   }}
                   title="Enviar mensagem"
                 >

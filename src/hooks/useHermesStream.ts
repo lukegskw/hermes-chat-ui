@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Conversation, Settings } from '../components/Sidebar';
-import { ChatMessage, sendChatMessageStream, compressSession, PendingApproval } from '../utils/api';
+import { ChatMessage, sendChatMessageStream, compressSession, PendingApproval, ContentPart } from '../utils/api';
+import { fileToBase64 } from '../utils/imageUtils';
 import { logger } from '../utils/logger';
 
 export function useHermesStream(
@@ -66,8 +67,8 @@ export function useHermesStream(
     }
   };
 
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim() || isGenerating) return;
+  const handleSendMessage = async (text: string, attachments?: File[]) => {
+    if ((!text.trim() && (!attachments || attachments.length === 0)) || isGenerating) return;
 
     let convId = activeConversationId;
     let currentConversations = [...conversations];
@@ -133,10 +134,31 @@ export function useHermesStream(
     }
 
     // 2. Add user message
+    let messageContent: string | ContentPart[] = text;
+
+    if (attachments && attachments.length > 0) {
+      const contentParts: ContentPart[] = [];
+      if (text) {
+        contentParts.push({ type: "text", text });
+      }
+      for (const file of attachments) {
+        try {
+          const base64Data = await fileToBase64(file);
+          contentParts.push({
+            type: "image_url",
+            image_url: { url: base64Data },
+          });
+        } catch (e) {
+          logger.error("Failed to convert image to base64", { error: e });
+        }
+      }
+      messageContent = contentParts;
+    }
+
     const userMsg: ChatMessage = {
       id: `msg_${Date.now()}`,
       role: "user",
-      content: text,
+      content: messageContent,
     };
 
     const updatedMessages = [...existingMessages, userMsg];

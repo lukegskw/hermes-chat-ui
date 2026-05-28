@@ -1,0 +1,87 @@
+/* src/components/ToolCallBox.css */
+.tool-call-box {
+  background-color: hsl(var(--bg-deep) / 0.8);
+  border: 1px dashed hsl(var(--accent-primary) / 0.5);
+  border-radius: var(--border-radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.tool-call-box.type-delegate {
+  border-color: hsl(280 80% 60% / 0.6);
+  background-color: hsl(280 80% 60% / 0.05);
+}
+
+.tool-call-box.type-execute {
+  border-color: hsl(150 80% 40% / 0.6);
+  background-color: hsl(150 80% 40% / 0.05);
+}
+
+.tool-call-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tool-call-header.type-delegate { color: hsl(280 80% 70%); }
+.tool-call-header.type-execute { color: hsl(150 80% 50%); }
+.tool-call-header.type-default { color: hsl(var(--accent-primary)); }
+
+.tool-call-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-call-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  opacity: 0.7;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.tool-call-args {
+  font-size: 0.75rem;
+  color: hsl(var(--text-muted));
+  font-family: var(--font-mono);
+  background-color: hsl(var(--bg-card));
+  padding: 8px 10px;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-top: 4px;
+  border: 1px solid hsl(var(--border-subtle));
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .tool-call-box {
+    max-width: 100%;
+  }
+}

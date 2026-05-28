@@ -1,0 +1,12 @@
+.msg-copy-btn:hover {
+  opacity: 1 !important;
+  color: hsl(var(--text-pure)) !important;
+  background-color: hsl(var(--bg-surface) / 0.8) !important;
+}
+
+@media (max-width: 768px) {
+  /* Bubble responsive sizes */
+  div[style*="maxWidth: '75%'"] {
+    max-width: 90% !important;
+  }
+}

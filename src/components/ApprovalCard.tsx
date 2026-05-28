@@ -1,5 +1,7 @@
+import React from 'react';
+import { Terminal, ShieldAlert, Check, X, Shield, Clock, Unlock, Lock } from 'lucide-react';
 import { PendingApproval } from '../utils/api';
-import { Check, Unlock, Lock, X } from 'lucide-react';
+import './ApprovalCard.css';
 
 interface ApprovalCardProps {
   approval: PendingApproval;
