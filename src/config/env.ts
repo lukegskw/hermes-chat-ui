@@ -13,7 +13,7 @@ declare global {
 }
 
 const envSchema = z.object({
-  HERMES_API_URL: z.string().url("A variável HERMES_API_URL deve ser uma URL válida"),
+  HERMES_API_URL: z.string().optional().default(""),
   HERMES_API_KEY: z.string().optional().default(""),
   HERMES_PROXY_PORT: z.string().default("8643"),
 });
