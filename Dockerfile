@@ -25,4 +25,4 @@ RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8643
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["/app/entrypoint.sh"]
