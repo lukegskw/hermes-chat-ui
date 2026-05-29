@@ -10,7 +10,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Unified image based on hermes-agent
-FROM ghcr.io/nousresearch/hermes-agent:${HERMES_AGENT_VERSION}
+FROM nousresearch/hermes-agent:${HERMES_AGENT_VERSION}
 
 # Install Python dependencies for the proxy
 RUN pip install fastapi uvicorn aiohttp pyyaml

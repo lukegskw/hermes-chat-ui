@@ -7,7 +7,7 @@ Hermes Chat UI is a React/Vite Progressive Web App (PWA) designed as a frontend 
 This repository provides two deployment modes using Docker:
 
 ### 1. Unified Image (Recommended)
-This is the default `Dockerfile`. It builds a single image based on `ghcr.io/nousresearch/hermes-agent`, containing:
+This is the default `Dockerfile`. It builds a single image based on `nousresearch/hermes-agent`, containing:
 - The native Hermes Agent core.
 - A FastAPI proxy (`hermes_proxy.py`) that serves the compiled React SPA and augments the API (e.g., model extraction, context compression).
 - Runs on port `8643`.
