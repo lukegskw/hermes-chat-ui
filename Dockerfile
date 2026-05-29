@@ -1,3 +1,6 @@
+# Define arguments before any FROM statement so they can be used in FROM directives
+ARG HERMES_AGENT_VERSION=latest
+
 # Stage 1: Build the SPA
 FROM node:20-alpine AS build
 WORKDIR /app
@@ -7,7 +10,6 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Unified image based on hermes-agent
-ARG HERMES_AGENT_VERSION=latest
 FROM ghcr.io/nousresearch/hermes-agent:${HERMES_AGENT_VERSION}
 
 # Install Python dependencies for the proxy
