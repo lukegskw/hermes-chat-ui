@@ -6,13 +6,21 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve using Nginx
-FROM nginx:1.25-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Stage 2: Unified image based on hermes-agent
+ARG HERMES_AGENT_VERSION=latest
+FROM ghcr.io/nousresearch/hermes-agent:${HERMES_AGENT_VERSION}
 
-EXPOSE 80
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
+# Install Python dependencies for the proxy
+RUN pip install fastapi uvicorn aiohttp pyyaml
+
+# Copy built SPA
+COPY --from=build /app/dist /app/static/
+
+# Copy proxy server
+COPY hermes_proxy.py /app/hermes_proxy.py
+COPY entrypoint.unified.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 8643
+
+ENTRYPOINT ["/app/entrypoint.sh"]

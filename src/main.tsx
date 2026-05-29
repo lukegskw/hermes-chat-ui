@@ -4,16 +4,20 @@ import './index.css'
 import App from './App'
 import { logger } from './utils/logger'
 
+import { initConfig } from './config/env'
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Failed to find root element');
 }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+initConfig().then(() => {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+});
 
 // Register PWA Service Worker in production
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

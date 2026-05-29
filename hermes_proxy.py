@@ -48,13 +48,17 @@ async def get_models(request: Request):
         
         for config_path in config_paths:
             if os.path.exists(config_path):
-                with open(config_path, 'r') as f:
-                    config = yaml.safe_load(f) or {}
-                    provider = config.get("model", {}).get("provider", provider)
-                    active_model = config.get("model", {}).get("default", config.get("model", {}).get("name", active_model))
-                break
+                try:
+                    with open(config_path, 'r') as f:
+                        config = yaml.safe_load(f) or {}
+                        provider = config.get("model", {}).get("provider", provider)
+                        active_model = config.get("model", {}).get("default", config.get("model", {}).get("name", active_model))
+                    break
+                except Exception as e:
+                    print(f"Error reading config at {config_path}: {e}")
+                    continue
     except Exception as e:
-        print(f"Error reading config: {e}")
+        print(f"Unexpected error in config parsing: {e}")
 
     try:
         if __namespace:
@@ -64,7 +68,13 @@ async def get_models(request: Request):
                 if m_ids:
                     models = [{"id": m, "label": str(m).replace("-", " ").title()} for m in m_ids]
             except AttributeError:
-                m_data = getattr(models_module, '_PROVIDER_MODELS', {}).get(provider, [])
+                m_data_map = getattr(models_module, '_PROVIDER_MODELS', {})
+                if provider in m_data_map:
+                    m_data = m_data_map[provider]
+                else:
+                    m_data = []
+                    for p_models in m_data_map.values():
+                        m_data.extend(p_models)
                 for m in m_data:
                     if isinstance(m, dict) and "id" in m:
                         models.append({"id": m["id"], "label": m["id"].replace("-", " ").title()})
@@ -80,7 +90,14 @@ async def get_models(request: Request):
     if not models:
         models = [{"id": "hermes-agent", "label": "Hermes Agent"}]
 
-    return {"data": models, "default_model": active_model}
+    unique_models = []
+    seen = set()
+    for m in models:
+        if m["id"] not in seen:
+            seen.add(m["id"])
+            unique_models.append(m)
+
+    return {"data": unique_models, "default_model": active_model}
 
 
 @app.post("/api/session/compress")
@@ -134,7 +151,24 @@ async def chat_completions(request: Request):
 
     return StreamingResponse(stream_generator(), media_type="text/event-stream")
 
+@app.get("/api/config")
+async def get_config():
+    """Returns the runtime configuration for the UI."""
+    return {
+        "HERMES_API_URL": os.environ.get("HERMES_API_URL", ""),
+        "HERMES_API_KEY": os.environ.get("HERMES_API_KEY", ""),
+        "HERMES_PROXY_PORT": os.environ.get("PORT", "8643"),
+    }
+
+# Mount SPA
+from fastapi.staticfiles import StaticFiles
+static_dir = os.environ.get("HERMES_STATIC_DIR", "/app/static")
+if os.path.exists(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+else:
+    print(f"WARNING: Static directory '{static_dir}' not found. UI will not be served.")
+
 if __name__ == "__main__":
     import uvicorn
     print("Starting Hermes Proxy (Model Extractor & Compact Wrapper)...")
-    uvicorn.run(app, host="0.0.0.0", port=8643)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8643)))

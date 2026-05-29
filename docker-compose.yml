@@ -1,12 +1,16 @@
 version: '3.8'
 
 services:
-  hermes-chat-ui:
+  hermes:
     image: ${DOCKER_IMAGE:-ghcr.io/lucasgiglio/hermes-chat-ui:latest}
-    container_name: hermes-chat-ui
+    container_name: hermes
     ports:
-      - "${FRONTEND_PORT:-5173}:80"
+      - "${PORT:-8643}:8643"
+    volumes:
+      - hermes-data:/opt/data
     environment:
-      - HERMES_API_URL=${HERMES_API_URL:-http://localhost:8642}
       - HERMES_API_KEY=${HERMES_API_KEY:-hermes-secure-api-key-2026}
     restart: unless-stopped
+
+volumes:
+  hermes-data:

@@ -1,16 +1,40 @@
-# React + Vite
+# Hermes Chat UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Hermes Chat UI is a React/Vite Progressive Web App (PWA) designed as a frontend interface for the Hermes AI Agent.
 
-Currently, two official plugins are available:
+## Architecture & Deployment Modes
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This repository provides two deployment modes using Docker:
 
-## React Compiler
+### 1. Unified Image (Recommended)
+This is the default `Dockerfile`. It builds a single image based on `ghcr.io/nousresearch/hermes-agent`, containing:
+- The native Hermes Agent core.
+- A FastAPI proxy (`hermes_proxy.py`) that serves the compiled React SPA and augments the API (e.g., model extraction, context compression).
+- Runs on port `8643`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**To build & run:**
+```bash
+docker compose up -d --build
+```
 
-## Expanding the ESLint configuration
+You can update the underlying Hermes Agent version via build arguments:
+```bash
+docker build --build-arg HERMES_AGENT_VERSION=latest -t hermes-chat-ui .
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 2. Standalone Frontend Image
+If you want to run the UI completely separated from the Hermes Agent backend, you can use `Dockerfile.standalone`. This builds an Nginx image that serves only the static React files.
+
+**To build:**
+```bash
+docker build -f Dockerfile.standalone -t hermes-chat-ui-standalone .
+```
+
+## Local Development
+
+For local frontend development:
+1. Copy `.env.example` to `.env` (or configure your `.env` with the URL of a running Hermes Agent).
+2. Install dependencies: `pnpm install`
+3. Run the dev server: `pnpm run dev`
+
+The local UI will automatically read the `.env` configuration to proxy requests to your development backend.
