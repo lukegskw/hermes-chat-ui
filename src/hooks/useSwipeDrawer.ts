@@ -177,7 +177,7 @@ export function useSwipeDrawer(
       if (backdrop) {
         backdrop.style.opacity = '';
         backdrop.style.transition = '';
-        backdrop.style.display = '';
+        // Do not touch display here, let React handle it via isSidebarOpen state
       }
     };
 
