@@ -41,9 +41,7 @@ export const initConfig = async () => {
 
     if (res.ok) {
       const serverConfig = await res.json();
-      if (serverConfig.HERMES_API_URL) {
-        rawConfig = { ...rawConfig, ...serverConfig };
-      }
+      rawConfig = { ...rawConfig, ...serverConfig };
     }
   } catch (e) {
     // Ignore fetch errors or timeouts, fallback to env/window

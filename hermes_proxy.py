@@ -157,7 +157,7 @@ async def get_config():
     return {
         "HERMES_API_URL": os.environ.get("HERMES_API_URL", ""),
         "HERMES_API_KEY": os.environ.get("HERMES_API_KEY", ""),
-        "HERMES_PROXY_PORT": os.environ.get("PORT", "8643"),
+        "HERMES_PROXY_PORT": os.environ.get("HERMES_PROXY_PORT", os.environ.get("PORT", "8643")),
     }
 
 # Mount SPA
@@ -171,4 +171,5 @@ else:
 if __name__ == "__main__":
     import uvicorn
     print("Starting Hermes Proxy (Model Extractor & Compact Wrapper)...")
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8643)))
+    port = int(os.environ.get("HERMES_PROXY_PORT", os.environ.get("PORT", 8643)))
+    uvicorn.run(app, host="0.0.0.0", port=port)
