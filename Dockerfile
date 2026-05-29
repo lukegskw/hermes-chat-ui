@@ -15,9 +15,6 @@ FROM nousresearch/hermes-agent:${HERMES_AGENT_VERSION}
 # Set PATH to use the agent's virtual environment
 ENV PATH="/opt/hermes/.venv/bin:$PATH"
 
-# Install Python dependencies for the proxy
-RUN pip install fastapi uvicorn aiohttp pyyaml
-
 # Copy built SPA
 COPY --from=build /app/dist /app/static/
 
