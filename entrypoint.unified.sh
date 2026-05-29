@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# Start hermes-agent gateway in background using official entrypoint to drop privileges
+# Start hermes-agent gateway in background
 echo "Starting Hermes Agent gateway..."
-/opt/hermes/docker/entrypoint.sh hermes gateway run --accept-hooks &
+su -s /bin/sh hermes -c "hermes gateway run --accept-hooks" &
 HERMES_PID=$!
 
 # Wait for gateway to be ready

@@ -10,11 +10,11 @@ import { Toaster } from 'sonner';
 
 import { envConfig, getApiUrl } from "./config/env";
 
-const HERMES_ENDPOINT = getApiUrl();
-const HERMES_API_KEY = envConfig.HERMES_API_KEY;
-const HERMES_PROXY_PORT = envConfig.HERMES_PROXY_PORT;
-
 export default function App() {
+  const HERMES_ENDPOINT = getApiUrl();
+  const HERMES_API_KEY = envConfig.HERMES_API_KEY;
+  const HERMES_PROXY_PORT = envConfig.HERMES_PROXY_PORT;
+
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
