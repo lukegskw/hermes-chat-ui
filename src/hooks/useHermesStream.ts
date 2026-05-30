@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { Conversation, Settings } from '../components/Sidebar';
+import { Conversation } from '../components/Sidebar';
 import { ChatMessage, sendChatMessageStream, compressSession, PendingApproval, ContentPart } from '../utils/api';
 import { fileToBase64 } from '../utils/imageUtils';
 import { logger } from '../utils/logger';
 
 export function useHermesStream(
   endpoint: string,
-  apiKey: string,
-  settings: Settings,
+  settings: { systemPrompt?: string },
   conversations: Conversation[],
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
   activeConversationId: string,
@@ -23,7 +22,7 @@ export function useHermesStream(
   useEffect(() => {
     if (!isGenerating && activeMessages.length > 0) {
       const lastMsg = activeMessages[activeMessages.length - 1];
-      if (lastMsg.role === "assistant") {
+      if (lastMsg.role === "assistant" && typeof lastMsg.content === "string") {
         const match = lastMsg.content.match(/\[APPROVAL_REQUIRED:\s*(.*?)\]/);
         if (match) {
           const command = match[1].trim();
@@ -43,7 +42,7 @@ export function useHermesStream(
                 msgs[msgs.length - 1] = {
                   ...lastMsg,
                   content:
-                    lastMsg.content
+                    (lastMsg.content as string)
                       .replace(/\[APPROVAL_REQUIRED:\s*(.*?)\]/g, "")
                       .trim() ||
                     "⚠️ O comando acima precisa de aprovação manual para prosseguir.",
@@ -112,7 +111,7 @@ export function useHermesStream(
       );
 
       setIsGenerating(true);
-      const success = await compressSession(endpoint, apiKey);
+      const success = await compressSession(endpoint);
       setIsGenerating(false);
 
       setConversations((prev) =>
@@ -149,7 +148,7 @@ export function useHermesStream(
             image_url: { url: base64Data },
           });
         } catch (e) {
-          logger.error("Failed to convert image to base64", { error: e });
+          logger.error({ error: e }, "Failed to convert image to base64");
         }
       }
       messageContent = contentParts;
@@ -204,7 +203,6 @@ export function useHermesStream(
 
     await sendChatMessageStream({
       endpoint,
-      apiKey,
       model: actualModel,
       messages: updatedMessages,
       systemPrompt: settings.systemPrompt || "",
@@ -257,7 +255,7 @@ export function useHermesStream(
                 messages: c.messages.map((m) => {
                   if (m.id === assistantMsgId) {
                     const currentTools = [...(m.tool_calls || [])];
-                    const delta = tcDelta as { index?: number; id: string; type: string; function?: { name?: string; arguments?: string } };
+                    const delta = tcDelta as { index?: number; id: string; type: string; function?: { name?: string; arguments?: string }; status?: 'running' | 'completed' | 'error' };
                     const index = delta.index || 0;
                     if (!currentTools[index]) {
                       currentTools[index] = {
@@ -267,10 +265,14 @@ export function useHermesStream(
                           name: delta.function?.name || "",
                           arguments: delta.function?.arguments || "",
                         },
+                        status: delta.status || 'running'
                       };
                     } else {
                       if (delta.function?.arguments) {
                         currentTools[index].function.arguments += delta.function.arguments;
+                      }
+                      if (delta.status) {
+                        currentTools[index].status = delta.status;
                       }
                     }
                     return { ...m, tool_calls: currentTools };

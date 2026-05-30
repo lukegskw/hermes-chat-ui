@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronRight, Brain, Wrench, GitMerge, Activity } from 'lucide-react';
 import { ToolCall } from '../utils/api';
 import './AgentActivityLog.css';

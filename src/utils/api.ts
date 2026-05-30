@@ -26,6 +26,7 @@ export interface ToolCall {
     name: string;
     arguments: string;
   };
+  status?: 'running' | 'completed' | 'error';
 }
 
 export type ContentPart = 
@@ -44,7 +45,6 @@ export interface ChatMessage {
 
 export interface SendChatMessageStreamOptions {
   endpoint: string;
-  apiKey: string;
   model: string;
   messages: ChatMessage[];
   systemPrompt: string;
@@ -60,66 +60,28 @@ export interface SendChatMessageStreamOptions {
  * Fetch models from hermes-agent's proxy endpoint (if available).
  * Falls back to /v1/models if the proxy is unreachable.
  */
-export async function fetchModels(endpoint: string, apiKey: string, proxyPort: string = '8643'): Promise<{models: Model[], defaultModel: string}> {
-  const base = endpoint.replace(/\/$/, '');
-  
-  // Try to reach the Python proxy script first
+export async function fetchModels(endpoint: string): Promise<{ models: Model[], defaultModel: string }> {
   try {
-    const urlObj = new URL(base);
-    const proxyUrl = `${urlObj.protocol}//${urlObj.hostname}:${proxyPort}/api/models`;
-    
-    const proxyRes = await fetch(proxyUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (proxyRes.ok) {
-      const proxyData: unknown = await proxyRes.json();
-      const parsed = ModelsResponseSchema.safeParse(proxyData);
-      
-      if (parsed.success && parsed.data.data && parsed.data.data.length > 0) {
-        return { 
-          models: parsed.data.data,
-          defaultModel: parsed.data.default_model || parsed.data.data[0].id
-        };
-      }
+    const response = await fetch(`${endpoint}/api/models`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch models: ${response.status}`);
+    }
+    const data: unknown = await response.json();
+    const parsed = ModelsResponseSchema.safeParse(data);
+    if (parsed.success && parsed.data.data) {
+      return {
+        models: parsed.data.data,
+        defaultModel: parsed.data.default_model || (parsed.data.data[0]?.id ?? '')
+      };
     }
   } catch (error: unknown) {
-    logger.debug({ error }, "Proxy not available, falling back to /v1/models");
+    logger.debug({ error }, "Failed to fetch models");
   }
-
-  // Fallback to standard OpenAI-compatible /v1/models
-  const url = `${base}/v1/models?t=${Date.now()}`;
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch models: ${response.statusText}`);
-  }
-
-  const data: unknown = await response.json();
-  const parsed = ModelsResponseSchema.safeParse(data);
-  const all = parsed.success && parsed.data.data ? parsed.data.data : [];
-  // Filter out the generic proxy alias if real provider models are present
-  const real = all.filter(m => m.id !== 'hermes-agent');
-  const finalModels = real.length > 0 ? real : all;
-  
-  return {
-    models: finalModels,
-    defaultModel: finalModels.length > 0 ? finalModels[0].id : 'hermes-agent'
-  };
+  return { models: [], defaultModel: '' };
 }
 
 export async function sendChatMessageStream({
   endpoint,
-  apiKey,
   model,
   messages,
   systemPrompt,
@@ -131,8 +93,6 @@ export async function sendChatMessageStream({
   signal
 }: SendChatMessageStreamOptions): Promise<void> {
   try {
-    const url = `${endpoint.replace(/\/$/, '')}/v1/chat/completions`;
-    
     // Prepare conversation messages payload
     const payloadMessages: Omit<ChatMessage, 'id'>[] = [];
     if (systemPrompt) {
@@ -147,10 +107,9 @@ export async function sendChatMessageStream({
       });
     });
 
-    const response = await fetch(url, {
+    const response = await fetch(`${endpoint.replace(/\/$/, '')}/v1/chat/completions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -218,7 +177,7 @@ export async function sendChatMessageStream({
             }
 
             // Handle Hermes custom tool events
-            if (parsed.toolCallId && parsed.tool && parsed.status === 'running' && onToolCallChunk) {
+            if (parsed.toolCallId && parsed.tool && onToolCallChunk) {
               if (!toolIndexMap.has(parsed.toolCallId)) {
                 toolIndexMap.set(parsed.toolCallId, currentToolIndex++);
               }
@@ -231,7 +190,8 @@ export async function sendChatMessageStream({
                 function: {
                   name: parsed.tool,
                   arguments: parsed.label || '',
-                }
+                },
+                status: parsed.status
               });
             }
           } catch {
@@ -260,7 +220,7 @@ export async function sendChatMessageStream({
             }
           }
           
-          if (parsed.toolCallId && parsed.tool && parsed.status === 'running' && onToolCallChunk) {
+          if (parsed.toolCallId && parsed.tool && onToolCallChunk) {
             if (!toolIndexMap.has(parsed.toolCallId)) {
               toolIndexMap.set(parsed.toolCallId, currentToolIndex++);
             }
@@ -269,7 +229,11 @@ export async function sendChatMessageStream({
               index: idx,
               id: parsed.toolCallId,
               type: 'function',
-              function: { name: parsed.tool, arguments: parsed.label || '' }
+              function: {
+                name: parsed.tool,
+                arguments: parsed.label || '',
+              },
+              status: parsed.status
             });
           }
         } catch {
@@ -300,14 +264,12 @@ export interface PendingApproval {
 
 
 /** Trigger context compaction */
-export async function compressSession(endpoint: string, apiKey: string): Promise<boolean> {
-  const url = `${endpoint.replace(/\/$/, '')}/api/session/compress`;
+export async function compressSession(endpoint: string): Promise<boolean> {
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+    const response = await fetch(`${endpoint.replace(/\/$/, '')}/api/session/compress`, {
+      method: 'POST'
     });
-    return res.ok;
+    return response.ok;
   } catch (error: unknown) {
     logger.error({ error }, "Failed to compress session");
     return false;

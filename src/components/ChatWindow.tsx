@@ -157,7 +157,8 @@ export default function ChatWindow({
           const nextIndex = Math.min(historyIndex + 1, userMessages.length - 1);
           if (nextIndex !== historyIndex) {
             setHistoryIndex(nextIndex);
-            setInput(userMessages[userMessages.length - 1 - nextIndex].content);
+            const content = userMessages[userMessages.length - 1 - nextIndex].content;
+            setInput(typeof content === 'string' ? content : content.filter(c => c.type === 'text').map(c => c.text).join('\n'));
           }
         }
       }
@@ -171,7 +172,8 @@ export default function ChatWindow({
           setInput("");
         } else {
           setHistoryIndex(nextIndex);
-          setInput(userMessages[userMessages.length - 1 - nextIndex].content);
+          const content = userMessages[userMessages.length - 1 - nextIndex].content;
+          setInput(typeof content === 'string' ? content : content.filter(c => c.type === 'text').map(c => c.text).join('\n'));
         }
       }
     }

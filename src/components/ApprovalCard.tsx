@@ -1,5 +1,5 @@
-import React from 'react';
-import { Terminal, ShieldAlert, Check, X, Shield, Clock, Unlock, Lock } from 'lucide-react';
+
+import { Check, X, Unlock, Lock } from 'lucide-react';
 import { PendingApproval } from '../utils/api';
 import './ApprovalCard.css';
 

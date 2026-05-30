@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { TerminalSquare, GitMerge, Code, Wrench, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { TerminalSquare, GitMerge, Code, Wrench, CheckCircle2, ChevronDown, ChevronRight, XCircle } from 'lucide-react';
 import { ToolCall } from '../utils/api';
 import './ToolCallBox.css';
 
@@ -28,6 +28,9 @@ export function ToolCallBox({ toolCall, isGenerating }: ToolCallBoxProps) {
     Icon = Code;
   }
   
+  const isRunning = toolCall.status === 'running' || (toolCall.status === undefined && isGenerating);
+  const isError = toolCall.status === 'error';
+  
   return (
     <div className={`tool-call-box ${typeClass}`}>
       <div 
@@ -43,8 +46,10 @@ export function ToolCallBox({ toolCall, isGenerating }: ToolCallBoxProps) {
         </span>
         
         <div className="tool-call-status">
-          {isGenerating ? (
+          {isRunning ? (
             <div className="status-spinner" />
+          ) : isError ? (
+            <XCircle size={14} style={{ color: 'hsl(0 80% 60%)' }} />
           ) : (
             <CheckCircle2 size={14} opacity={0.7} />
           )}

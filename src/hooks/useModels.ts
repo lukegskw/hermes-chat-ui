@@ -5,8 +5,6 @@ import { Conversation } from '../components/Sidebar';
 
 export function useModels(
   endpoint: string,
-  apiKey: string,
-  proxyPort: string,
   activeConversationId: string,
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>
 ) {
@@ -19,7 +17,7 @@ export function useModels(
   const checkConnectionAndFetchModels = async () => {
     try {
       setIsFetchingModels(true);
-      const fetched = await fetchModels(endpoint, apiKey, proxyPort);
+      const fetched = await fetchModels(endpoint);
       setModels(fetched.models);
       setIsConnected(true);
       setConnectionError("");
@@ -40,12 +38,10 @@ export function useModels(
   };
 
   useEffect(() => {
-    if (endpoint && apiKey) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      checkConnectionAndFetchModels();
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    checkConnectionAndFetchModels();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endpoint, apiKey, proxyPort]);
+  }, [endpoint]);
 
   const handleSelectModel = (modelId: string) => {
     if (!modelId) return;

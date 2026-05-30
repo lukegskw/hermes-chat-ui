@@ -109,9 +109,9 @@ async def compress_session(request: Request):
         "stream": False
     }
     headers = {"Content-Type": "application/json"}
-    auth_header = request.headers.get("Authorization")
+    auth_header = os.environ.get("API_SERVER_KEY")
     if auth_header:
-        headers["Authorization"] = auth_header
+        headers["Authorization"] = f"Bearer {auth_header}"
         
     async with aiohttp.ClientSession() as session:
         try:
@@ -129,9 +129,9 @@ async def chat_completions(request: Request):
     body = await request.body()
     
     headers = {"Content-Type": "application/json"}
-    auth_header = request.headers.get("Authorization")
+    auth_header = os.environ.get("API_SERVER_KEY")
     if auth_header:
-        headers["Authorization"] = auth_header
+        headers["Authorization"] = f"Bearer {auth_header}"
     
     async def stream_generator():
         async with aiohttp.ClientSession() as session:
@@ -155,9 +155,7 @@ async def chat_completions(request: Request):
 async def get_config():
     """Returns the runtime configuration for the UI."""
     return {
-        "HERMES_API_URL": os.environ.get("HERMES_API_URL", ""),
-        "HERMES_API_KEY": os.environ.get("HERMES_API_KEY", ""),
-        "HERMES_PROXY_PORT": os.environ.get("HERMES_PROXY_PORT", os.environ.get("PORT", "8643")),
+        "auth_required": False
     }
 
 # Mount SPA

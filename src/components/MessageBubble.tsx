@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, Bot, User, Sparkles, TerminalSquare, ChevronDown, ChevronRight, BrainCircuit } from 'lucide-react';
+import { Copy, Check, Bot, User, Sparkles, ChevronDown, ChevronRight, BrainCircuit } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 import { ChatWindowMessage } from './ChatWindow';
 import { ToolCall } from '../utils/api';
@@ -19,13 +19,14 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   const [showReasoning, setShowReasoning] = useState(true);
 
   const handleCopy = async () => {
+    const textContent = typeof content === 'string' ? content : content.filter(c => c.type === 'text').map(c => c.text).join('\n');
     try {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(content);
+        await navigator.clipboard.writeText(textContent);
       } else {
         const textArea = document.createElement("textarea");
-        textArea.value = content;
+        textArea.value = textContent;
         // Move outside of viewport
         textArea.style.position = "absolute";
         textArea.style.left = "-999999px";
@@ -271,7 +272,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
                   {content.map((part, idx) => {
                     if (part.type === 'text') {
                       return <p key={idx}>{part.text}</p>;
-                    } else if (part.type === 'image_url') {
+                    } else {
                       return (
                         <div key={idx} style={{ maxWidth: '300px', borderRadius: '8px', overflow: 'hidden' }}>
                           <img src={part.image_url.url} alt="anexo" style={{ width: '100%', height: 'auto', display: 'block' }} />

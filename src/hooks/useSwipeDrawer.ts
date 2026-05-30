@@ -64,7 +64,7 @@ export function useSwipeDrawer(
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isTracking || !sidebar) return;
+      if (!isTracking) return;
       
       const touch = e.touches[0];
       const deltaX = touch.clientX - startX;
@@ -80,8 +80,8 @@ export function useSwipeDrawer(
       currentX = touch.clientX;
       
       // Calculate new position
-      let newTranslateX = 0;
-      let progress = 0;
+      let newTranslateX: number;
+      let progress: number;
       
       const backdrop = backdropRef.current; // Get current backdrop if it exists
       
@@ -111,8 +111,8 @@ export function useSwipeDrawer(
       }
     };
 
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (!isTracking || !sidebar) return;
+    const handleTouchEnd = () => {
+      if (!isTracking) return;
       isTracking = false;
       
       const deltaX = currentX - startX;
@@ -169,10 +169,9 @@ export function useSwipeDrawer(
     };
     
     const resetStyles = () => {
-      if (sidebar) {
-        sidebar.style.transform = '';
-        sidebar.style.transition = '';
-      }
+      sidebar.style.transform = '';
+      sidebar.style.transition = '';
+      
       const backdrop = backdropRef.current;
       if (backdrop) {
         backdrop.style.opacity = '';
