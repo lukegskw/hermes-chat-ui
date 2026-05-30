@@ -23,6 +23,7 @@ export function useChatState() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string>("");
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
   const endpoint = getApiUrl();
 
@@ -30,30 +31,33 @@ export function useChatState() {
     localStorage.setItem("hermes_settings", JSON.stringify(settings));
   }, [settings]);
 
-  // Load conversations list from backend
   // Expose reload method for external components and focus sync
   const loadConversationsList = useCallback(async () => {
     const list = await fetchConversations(endpoint);
     setConversations(list as Conversation[]);
-    if (list.length > 0 && !activeConversationId) {
-      setActiveConversationId(list[0].id);
-    }
-  }, [endpoint, activeConversationId]);
+    setActiveConversationId((prev) => {
+      if (!prev && list.length > 0) return list[0].id;
+      return prev;
+    });
+  }, [endpoint]);
 
   // Initial load
   useEffect(() => {
     let active = true;
     const initialLoad = async () => {
+      setIsInitializing(true);
       const list = await fetchConversations(endpoint);
       if (!active) return;
       setConversations(list as Conversation[]);
-      if (list.length > 0 && !activeConversationId) {
-        setActiveConversationId(list[0].id);
-      }
+      setActiveConversationId((prev) => {
+        if (!prev && list.length > 0) return list[0].id;
+        return prev;
+      });
+      setIsInitializing(false);
     };
     void initialLoad();
     return () => { active = false; };
-  }, [endpoint, activeConversationId]);
+  }, [endpoint]);
 
   // Load active conversation details from backend
   useEffect(() => {
@@ -164,6 +168,7 @@ export function useChatState() {
     setActiveConversationId,
     activeConversation,
     activeMessages,
+    isInitializing,
     handleNewChat,
     handleSelectConversation,
     handleDeleteConversation,

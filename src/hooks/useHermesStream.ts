@@ -14,9 +14,11 @@ export function useHermesStream(
   selectedModel: string,
   activeMessages: ChatMessage[]
 ) {
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [generatingStates, setGeneratingStates] = useState<Record<string, boolean>>({});
   const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const abortControllersRef = useRef<Record<string, AbortController | undefined>>({});
+  
+  const isGenerating = generatingStates[activeConversationId] || false;
 
   // --- Text-Based Approval Interception ---
   useEffect(() => {
@@ -56,6 +58,24 @@ export function useHermesStream(
       }
     }
   }, [activeMessages, isGenerating, activeConversationId, setConversations]);
+
+  const handleCleanupConversation = (id: string) => {
+    setGeneratingStates(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    abortControllersRef.current[id]?.abort();
+    delete abortControllersRef.current[id];
+  };
+  
+  const handleCleanupAllConversations = () => {
+    setGeneratingStates({});
+    for (const id of Object.keys(abortControllersRef.current)) {
+      abortControllersRef.current[id]?.abort();
+    }
+    abortControllersRef.current = {};
+  };
 
   const handleRespondApproval = async (choice: "once" | "session" | "always" | "deny") => {
     setPendingApproval(null);
@@ -110,9 +130,9 @@ export function useHermesStream(
         ),
       );
 
-      setIsGenerating(true);
+      setGeneratingStates(prev => ({ ...prev, [convId]: true }));
       const success = await compressSession(endpoint);
-      setIsGenerating(false);
+      setGeneratingStates(prev => ({ ...prev, [convId]: false }));
 
       setConversations((prev) =>
         prev.map((c) => {
@@ -195,9 +215,9 @@ export function useHermesStream(
     );
 
     // 4. Fire API call with abort controller
-    setIsGenerating(true);
+    setGeneratingStates(prev => ({ ...prev, [convId]: true }));
     const controller = new AbortController();
-    abortControllerRef.current = controller;
+    abortControllersRef.current[convId] = controller;
 
     const actualModel = targetConv?.modelId || selectedModel;
 
@@ -300,8 +320,8 @@ export function useHermesStream(
             return c;
           }),
         );
-        setIsGenerating(false);
-        abortControllerRef.current = null;
+        setGeneratingStates(prev => ({ ...prev, [convId]: false }));
+        delete abortControllersRef.current[convId];
       },
       onError: (err) => {
         logger.error({ error: err }, "Streaming connection error");
@@ -327,24 +347,30 @@ export function useHermesStream(
             return c;
           }),
         );
-        setIsGenerating(false);
-        abortControllerRef.current = null;
+        setGeneratingStates(prev => ({ ...prev, [convId]: false }));
+        delete abortControllersRef.current[convId];
       },
     });
   };
 
   const handleStopGeneration = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    const controller = abortControllersRef.current[activeConversationId];
+    if (controller) {
+      controller.abort();
       setConversations((prev) =>
-        prev.map((c) => ({
-          ...c,
-          messages: c.messages.map((m) =>
-            m.isGenerating ? { ...m, isGenerating: false } : m,
-          ),
-        })),
+        prev.map((c) => {
+          if (c.id === activeConversationId) {
+            return {
+              ...c,
+              messages: c.messages.map((m) =>
+                m.isGenerating ? { ...m, isGenerating: false } : m,
+              ),
+            };
+          }
+          return c;
+        })
       );
-      setIsGenerating(false);
+      setGeneratingStates(prev => ({ ...prev, [activeConversationId]: false }));
     }
   };
 
@@ -353,6 +379,8 @@ export function useHermesStream(
     pendingApproval,
     handleSendMessage,
     handleStopGeneration,
-    handleRespondApproval
+    handleRespondApproval,
+    handleCleanupConversation,
+    handleCleanupAllConversations
   };
 }

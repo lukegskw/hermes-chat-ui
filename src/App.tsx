@@ -30,6 +30,7 @@ export default function App() {
     setActiveConversationId,
     activeConversation,
     activeMessages,
+    isInitializing,
     handleNewChat,
     handleSelectConversation,
     handleDeleteConversation,
@@ -55,7 +56,9 @@ export default function App() {
     pendingApproval,
     handleSendMessage,
     handleStopGeneration,
-    handleRespondApproval
+    handleRespondApproval,
+    handleCleanupConversation,
+    handleCleanupAllConversations
   } = useHermesStream(
     HERMES_ENDPOINT,
     settings,
@@ -68,6 +71,14 @@ export default function App() {
   );
 
 
+
+  if (isInitializing) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-base)' }}>
+        <div style={{ color: 'var(--text-muted)' }}>Carregando histórico...</div>
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary>
@@ -94,8 +105,14 @@ export default function App() {
             handleNewChat();
             setIsSidebarOpen(false);
           }}
-          onDeleteConversation={handleDeleteConversation}
-          onClearAll={handleClearAll}
+          onDeleteConversation={(id) => {
+            handleDeleteConversation(id);
+            handleCleanupConversation(id);
+          }}
+          onClearAll={() => {
+            handleClearAll();
+            handleCleanupAllConversations();
+          }}
           models={models}
           selectedModel={selectedModel}
           onSelectModel={handleSelectModel}
