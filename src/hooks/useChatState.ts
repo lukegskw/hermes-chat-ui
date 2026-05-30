@@ -6,6 +6,7 @@ import {
   createConversation,
   deleteConversation,
   deleteAllConversations,
+  ChatMessage
 } from "../utils/api";
 import { getApiUrl } from "../config/env";
 
@@ -22,7 +23,6 @@ export function useChatState() {
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string>("");
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
   const endpoint = getApiUrl();
@@ -46,18 +46,14 @@ export function useChatState() {
     let active = true;
     const initialLoad = async () => {
       setIsInitializing(true);
-      const list = await fetchConversations(endpoint);
-      if (!active) return;
-      setConversations(list as Conversation[]);
-      setActiveConversationId((prev) => {
-        if (!prev && list.length > 0) return list[0].id;
-        return prev;
-      });
-      setIsInitializing(false);
+      await loadConversationsList();
+      if (active) {
+        setIsInitializing(false);
+      }
     };
     void initialLoad();
     return () => { active = false; };
-  }, [endpoint]);
+  }, [loadConversationsList]);
 
   // Load active conversation details from backend
   useEffect(() => {
@@ -65,17 +61,33 @@ export function useChatState() {
       if (activeConversationId) {
         fetchConversation(endpoint, activeConversationId).then((data) => {
           if (data) {
-            const uiData = data as Conversation;
-            setActiveConversation(uiData);
-            setConversations((prev) =>
-              prev.map((c) => (c.id === data.id ? uiData : c))
-            );
-          } else {
-            setActiveConversation(null);
+            setConversations((prev) => {
+              const prevConv = prev.find((c) => c.id === data.id);
+              if (!prevConv) {
+                return [...prev, data as Conversation];
+              }
+
+              // SMART MERGE: Preserve frontend generating states and local-only messages
+              const dbMessages = data.messages;
+              const mergedMessages = dbMessages.map((dbMsg: ChatMessage) => {
+                const localEquivalent = prevConv.messages.find(m => m.id === dbMsg.id);
+                // If the frontend is actively generating this message, it is the source of truth.
+                if (localEquivalent && localEquivalent.isGenerating) {
+                  return localEquivalent;
+                }
+                return dbMsg;
+              });
+
+              // Append purely local messages that aren't in the DB yet
+              const dbMessageIds = new Set(mergedMessages.map((m: ChatMessage) => m.id));
+              const localOnlyMessages = prevConv.messages.filter(m => !dbMessageIds.has(m.id));
+              mergedMessages.push(...localOnlyMessages);
+
+              const uiData = { ...data, messages: mergedMessages } as Conversation;
+              return prev.map((c) => (c.id === data.id ? uiData : c));
+            });
           }
         });
-      } else {
-        setActiveConversation(null);
       }
     };
 
@@ -93,19 +105,7 @@ export function useChatState() {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [activeConversationId, endpoint, loadConversationsList]);
 
-  // Expose setConversations and intercept updates to the active conversation
-  const handleConversationsUpdate = (
-    updateFn: React.SetStateAction<Conversation[]>
-  ) => {
-    setConversations((prev) => {
-      const next = typeof updateFn === "function" ? updateFn(prev) : updateFn;
-      const updatedActive = next.find((c) => c.id === activeConversationId);
-      if (updatedActive) {
-        setActiveConversation(updatedActive);
-      }
-      return next;
-    });
-  };
+
 
   const handleNewChat = async () => {
     const newId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -116,7 +116,6 @@ export function useChatState() {
     };
 
     setConversations((prev) => [newConv, ...prev]);
-    setActiveConversation(newConv);
     setActiveConversationId(newId);
 
     // Save to backend
@@ -128,15 +127,13 @@ export function useChatState() {
   };
 
   const handleDeleteConversation = async (id: string) => {
-    setConversations((prev) => prev.filter((c) => c.id !== id));
+    const remaining = conversations.filter((c) => c.id !== id);
+    setConversations(remaining);
+    
     if (activeConversationId === id) {
-      const remaining = conversations.filter((c) => c.id !== id);
-      if (remaining.length > 0) {
-        setActiveConversationId(remaining[0].id);
-      } else {
-        setActiveConversationId("");
-      }
+      setActiveConversationId(remaining.length > 0 ? remaining[0].id : "");
     }
+    
     await deleteConversation(endpoint, id);
   };
 
@@ -156,6 +153,7 @@ export function useChatState() {
     setSettings(newSettings);
   };
 
+  const activeConversation = conversations.find(c => c.id === activeConversationId) || null;
   const activeMessages = activeConversation ? activeConversation.messages : [];
 
   return {
@@ -163,7 +161,7 @@ export function useChatState() {
     setSettings,
     handleSaveSettings,
     conversations,
-    setConversations: handleConversationsUpdate,
+    setConversations,
     activeConversationId,
     setActiveConversationId,
     activeConversation,

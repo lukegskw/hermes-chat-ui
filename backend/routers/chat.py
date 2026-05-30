@@ -9,6 +9,15 @@ from ..engine import async_chat_engine
 
 router = APIRouter()
 NATIVE_HERMES_URL = "http://localhost:8642"
+active_tasks = {}
+
+@router.post("/api/chat/{conv_id}/cancel")
+async def cancel_chat(conv_id: str):
+    """Explicitly cancel a running generation task for a conversation."""
+    if conv_id in active_tasks:
+        active_tasks[conv_id].cancel()
+        return {"status": "cancelled"}
+    return {"status": "not found"}
 
 @router.post("/api/session/compress")
 async def compress_session(request: Request):
@@ -85,9 +94,11 @@ async def chat_completions(request: Request):
     response_queue = asyncio.Queue()
 
     # Launch background task
-    asyncio.create_task(
+    bg_task = asyncio.create_task(
         async_chat_engine(conv_id, user_msg_id, body, headers, response_queue)
     )
+    active_tasks[conv_id] = bg_task
+    bg_task.add_done_callback(lambda t: active_tasks.pop(conv_id, None))
 
     async def stream_generator():
         try:

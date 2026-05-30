@@ -357,6 +357,12 @@ export function useHermesStream(
     const controller = abortControllersRef.current[activeConversationId];
     if (controller) {
       controller.abort();
+
+      // Explicitly tell backend to kill the task
+      fetch(`${endpoint.replace(/\/$/, "")}/api/chat/${activeConversationId}/cancel`, {
+        method: "POST"
+      }).catch(err => console.error("Failed to cancel on backend:", err));
+
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id === activeConversationId) {
