@@ -1,0 +1,45 @@
+import sqlite3
+import os
+import json
+
+DB_PATH = os.environ.get("HERMES_DB_PATH", "/opt/data/hermes_chats.db")
+
+def get_db_connection():
+    # If /opt/data doesn't exist, fallback to local directory
+    db_file = DB_PATH
+    if not os.path.exists(os.path.dirname(db_file)):
+        db_file = "hermes_chats.db"
+    
+    conn = sqlite3.connect(db_file)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS conversations (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS messages (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            content_json TEXT NOT NULL,
+            tool_calls_json TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+
+# Initialize DB on import
+init_db()

@@ -18,8 +18,7 @@ ENV PATH="/opt/hermes/.venv/bin:$PATH"
 # Copy built SPA
 COPY --from=build /app/dist /app/static/
 
-# Copy proxy server
-COPY hermes_proxy.py /app/hermes_proxy.py
+COPY backend /app/backend
 COPY entrypoint.unified.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 

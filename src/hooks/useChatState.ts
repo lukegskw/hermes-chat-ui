@@ -1,5 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Conversation, Settings } from '../components/Sidebar';
+import { useState, useEffect, useCallback } from "react";
+import { Conversation, Settings } from "../components/Sidebar";
+import {
+  fetchConversations,
+  fetchConversation,
+  createConversation,
+  deleteConversation,
+  deleteAllConversations,
+} from "../utils/api";
+import { getApiUrl } from "../config/env";
 
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt:
@@ -12,51 +20,108 @@ export function useChatState() {
     return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
   });
 
-  const [conversations, setConversations] = useState<Conversation[]>(() => {
-    const saved = localStorage.getItem("hermes_conversations");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string>("");
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
 
-  const [activeConversationId, setActiveConversationId] = useState<string>(() => {
-    const saved = localStorage.getItem("hermes_active_conv_id");
-    return saved || "";
-  });
+  const endpoint = getApiUrl();
 
   useEffect(() => {
     localStorage.setItem("hermes_settings", JSON.stringify(settings));
   }, [settings]);
 
-  useEffect(() => {
-    localStorage.setItem("hermes_conversations", JSON.stringify(conversations));
-  }, [conversations]);
-
-  useEffect(() => {
-    if (activeConversationId) {
-      localStorage.setItem("hermes_active_conv_id", activeConversationId);
-    } else {
-      localStorage.removeItem("hermes_active_conv_id");
+  // Load conversations list from backend
+  // Expose reload method for external components and focus sync
+  const loadConversationsList = useCallback(async () => {
+    const list = await fetchConversations(endpoint);
+    setConversations(list as Conversation[]);
+    if (list.length > 0 && !activeConversationId) {
+      setActiveConversationId(list[0].id);
     }
-  }, [activeConversationId]);
+  }, [endpoint, activeConversationId]);
 
-  const activeConversation = conversations.find((c) => c.id === activeConversationId);
-  const activeMessages = activeConversation ? activeConversation.messages : [];
+  // Initial load
+  useEffect(() => {
+    let active = true;
+    const initialLoad = async () => {
+      const list = await fetchConversations(endpoint);
+      if (!active) return;
+      setConversations(list as Conversation[]);
+      if (list.length > 0 && !activeConversationId) {
+        setActiveConversationId(list[0].id);
+      }
+    };
+    void initialLoad();
+    return () => { active = false; };
+  }, [endpoint, activeConversationId]);
 
-  const handleNewChat = () => {
+  // Load active conversation details from backend
+  useEffect(() => {
+    const fetchActive = () => {
+      if (activeConversationId) {
+        fetchConversation(endpoint, activeConversationId).then((data) => {
+          if (data) {
+            const uiData = data as Conversation;
+            setActiveConversation(uiData);
+            setConversations((prev) =>
+              prev.map((c) => (c.id === data.id ? uiData : c))
+            );
+          } else {
+            setActiveConversation(null);
+          }
+        });
+      } else {
+        setActiveConversation(null);
+      }
+    };
+
+    fetchActive();
+
+    // Auto-sync on window focus (for iOS PWA wake up)
+    const handleFocus = () => {
+      loadConversationsList();
+      fetchActive();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [activeConversationId, endpoint, loadConversationsList]);
+
+  // Expose setConversations and intercept updates to the active conversation
+  const handleConversationsUpdate = (
+    updateFn: React.SetStateAction<Conversation[]>
+  ) => {
+    setConversations((prev) => {
+      const next = typeof updateFn === "function" ? updateFn(prev) : updateFn;
+      const updatedActive = next.find((c) => c.id === activeConversationId);
+      if (updatedActive) {
+        setActiveConversation(updatedActive);
+      }
+      return next;
+    });
+  };
+
+  const handleNewChat = async () => {
     const newId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newConv: Conversation = {
       id: newId,
       title: "Nova Conversa",
       messages: [],
     };
+
     setConversations((prev) => [newConv, ...prev]);
+    setActiveConversation(newConv);
     setActiveConversationId(newId);
+
+    // Save to backend
+    await createConversation(endpoint, newConv);
   };
 
   const handleSelectConversation = (id: string) => {
     setActiveConversationId(id);
   };
 
-  const handleDeleteConversation = (id: string) => {
+  const handleDeleteConversation = async (id: string) => {
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeConversationId === id) {
       const remaining = conversations.filter((c) => c.id !== id);
@@ -66,12 +131,18 @@ export function useChatState() {
         setActiveConversationId("");
       }
     }
+    await deleteConversation(endpoint, id);
   };
 
-  const handleClearAll = () => {
-    if (window.confirm("Tem certeza de que deseja apagar permanentemente todas as conversas?")) {
+  const handleClearAll = async () => {
+    if (
+      window.confirm(
+        "Tem certeza de que deseja apagar permanentemente todas as conversas?"
+      )
+    ) {
       setConversations([]);
       setActiveConversationId("");
+      await deleteAllConversations(endpoint);
     }
   };
 
@@ -79,12 +150,14 @@ export function useChatState() {
     setSettings(newSettings);
   };
 
+  const activeMessages = activeConversation ? activeConversation.messages : [];
+
   return {
     settings,
     setSettings,
     handleSaveSettings,
     conversations,
-    setConversations,
+    setConversations: handleConversationsUpdate,
     activeConversationId,
     setActiveConversationId,
     activeConversation,
@@ -93,5 +166,6 @@ export function useChatState() {
     handleSelectConversation,
     handleDeleteConversation,
     handleClearAll,
+    reloadConversations: loadConversationsList,
   };
 }

@@ -206,6 +206,7 @@ export function useHermesStream(
       model: actualModel,
       messages: updatedMessages,
       systemPrompt: settings.systemPrompt || "",
+      conversationId: convId,
       signal: controller.signal,
       onChunk: (chunk) => {
         setConversations((prev) =>
