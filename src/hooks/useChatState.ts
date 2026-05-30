@@ -78,13 +78,15 @@ export function useChatState() {
     fetchActive();
 
     // Auto-sync on window focus (for iOS PWA wake up)
-    const handleFocus = () => {
-      loadConversationsList();
-      fetchActive();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadConversationsList();
+        fetchActive();
+      }
     };
 
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [activeConversationId, endpoint, loadConversationsList]);
 
   // Expose setConversations and intercept updates to the active conversation
