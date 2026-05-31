@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export interface AppConfig {
   HERMES_API_URL?: string;
@@ -22,14 +22,18 @@ const envSchema = z.object({
 export let envConfig: AppConfig = {
   HERMES_API_URL: "",
   HERMES_API_KEY: "",
-  HERMES_PROXY_PORT: "8643"
+  HERMES_PROXY_PORT: "8643",
 };
 
 export const initConfig = async () => {
   let rawConfig: Record<string, string | undefined> = {
-    HERMES_API_URL: window.APP_CONFIG?.HERMES_API_URL || import.meta.env.VITE_HERMES_API_URL,
-    HERMES_API_KEY: window.APP_CONFIG?.HERMES_API_KEY || import.meta.env.VITE_HERMES_API_KEY,
-    HERMES_PROXY_PORT: window.APP_CONFIG?.HERMES_PROXY_PORT || import.meta.env.VITE_HERMES_PROXY_PORT,
+    HERMES_API_URL:
+      window.APP_CONFIG?.HERMES_API_URL || import.meta.env.VITE_HERMES_API_URL,
+    HERMES_API_KEY:
+      window.APP_CONFIG?.HERMES_API_KEY || import.meta.env.VITE_HERMES_API_KEY,
+    HERMES_PROXY_PORT:
+      window.APP_CONFIG?.HERMES_PROXY_PORT ||
+      import.meta.env.VITE_HERMES_PROXY_PORT,
   };
 
   try {
@@ -45,7 +49,10 @@ export const initConfig = async () => {
     }
   } catch (e) {
     // Ignore fetch errors or timeouts, fallback to env/window
-    console.warn("Failed to fetch /api/config, falling back to local env variables.", e);
+    console.warn(
+      "Failed to fetch /api/config, falling back to local env variables.",
+      e,
+    );
   }
 
   const parsed = envSchema.safeParse(rawConfig);
@@ -53,7 +60,9 @@ export const initConfig = async () => {
   if (!parsed.success) {
     console.error("❌ Erro de Configuração de Ambiente:");
     console.error(parsed.error.format());
-    throw new Error("Variáveis de ambiente ausentes ou inválidas. O aplicativo não pode iniciar.");
+    throw new Error(
+      "Variáveis de ambiente ausentes ou inválidas. O aplicativo não pode iniciar.",
+    );
   }
 
   envConfig = parsed.data;

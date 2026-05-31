@@ -1,8 +1,14 @@
-import { useState, useRef, useEffect } from 'react';
-import { Conversation } from '../components/Sidebar';
-import { ChatMessage, sendChatMessageStream, compressSession, PendingApproval, ContentPart } from '../utils/api';
-import { fileToBase64 } from '../utils/imageUtils';
-import { logger } from '../utils/logger';
+import { useState, useRef, useEffect } from "react";
+import { Conversation } from "../components/Sidebar";
+import {
+  ChatMessage,
+  sendChatMessageStream,
+  compressSession,
+  PendingApproval,
+  ContentPart,
+} from "../utils/api";
+import { fileToBase64 } from "../utils/imageUtils";
+import { logger } from "../utils/logger";
 
 export function useHermesStream(
   endpoint: string,
@@ -12,12 +18,17 @@ export function useHermesStream(
   activeConversationId: string,
   setActiveConversationId: React.Dispatch<React.SetStateAction<string>>,
   selectedModel: string,
-  activeMessages: ChatMessage[]
+  activeMessages: ChatMessage[],
 ) {
-  const [generatingStates, setGeneratingStates] = useState<Record<string, boolean>>({});
-  const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
-  const abortControllersRef = useRef<Record<string, AbortController | undefined>>({});
-  
+  const [generatingStates, setGeneratingStates] = useState<
+    Record<string, boolean>
+  >({});
+  const [pendingApproval, setPendingApproval] =
+    useState<PendingApproval | null>(null);
+  const abortControllersRef = useRef<
+    Record<string, AbortController | undefined>
+  >({});
+
   const isGenerating = generatingStates[activeConversationId] || false;
 
   // --- Text-Based Approval Interception ---
@@ -60,7 +71,7 @@ export function useHermesStream(
   }, [activeMessages, isGenerating, activeConversationId, setConversations]);
 
   const handleCleanupConversation = (id: string) => {
-    setGeneratingStates(prev => {
+    setGeneratingStates((prev) => {
       const next = { ...prev };
       delete next[id];
       return next;
@@ -68,7 +79,7 @@ export function useHermesStream(
     abortControllersRef.current[id]?.abort();
     delete abortControllersRef.current[id];
   };
-  
+
   const handleCleanupAllConversations = () => {
     setGeneratingStates({});
     for (const id of Object.keys(abortControllersRef.current)) {
@@ -77,23 +88,33 @@ export function useHermesStream(
     abortControllersRef.current = {};
   };
 
-  const handleRespondApproval = async (choice: "once" | "session" | "always" | "deny") => {
+  const handleRespondApproval = async (
+    choice: "once" | "session" | "always" | "deny",
+  ) => {
     setPendingApproval(null);
     if (choice === "deny") {
-      await handleSendMessage(`[APPROVAL_DENIED] Comando rejeitado pelo usuário. Não execute o comando.`);
+      await handleSendMessage(
+        `[APPROVAL_DENIED] Comando rejeitado pelo usuário. Não execute o comando.`,
+      );
     } else {
-      await handleSendMessage(`[APPROVAL_GRANTED] Permissão concedida pelo usuário. Você pode prosseguir com a execução do comando.`);
+      await handleSendMessage(
+        `[APPROVAL_GRANTED] Permissão concedida pelo usuário. Você pode prosseguir com a execução do comando.`,
+      );
     }
   };
 
   const handleSendMessage = async (text: string, attachments?: File[]) => {
-    if ((!text.trim() && (!attachments || attachments.length === 0)) || isGenerating) return;
+    if (
+      (!text.trim() && (!attachments || attachments.length === 0)) ||
+      isGenerating
+    )
+      return;
 
     let convId = activeConversationId;
     let currentConversations = [...conversations];
 
     // 1. Create a conversation if none exists
-    if (!convId || !currentConversations.find(c => c.id === convId)) {
+    if (!convId || !currentConversations.find((c) => c.id === convId)) {
       convId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const newConv: Conversation = {
         id: convId,
@@ -131,9 +152,9 @@ export function useHermesStream(
         ),
       );
 
-      setGeneratingStates(prev => ({ ...prev, [convId]: true }));
+      setGeneratingStates((prev) => ({ ...prev, [convId]: true }));
       const success = await compressSession(endpoint);
-      setGeneratingStates(prev => ({ ...prev, [convId]: false }));
+      setGeneratingStates((prev) => ({ ...prev, [convId]: false }));
 
       setConversations((prev) =>
         prev.map((c) => {
@@ -216,7 +237,7 @@ export function useHermesStream(
     );
 
     // 4. Fire API call with abort controller
-    setGeneratingStates(prev => ({ ...prev, [convId]: true }));
+    setGeneratingStates((prev) => ({ ...prev, [convId]: true }));
     const controller = new AbortController();
     abortControllersRef.current[convId] = controller;
 
@@ -277,7 +298,13 @@ export function useHermesStream(
                 messages: c.messages.map((m) => {
                   if (m.id === assistantMsgId) {
                     const currentTools = [...(m.tool_calls || [])];
-                    const delta = tcDelta as { index?: number; id: string; type: string; function?: { name?: string; arguments?: string }; status?: 'running' | 'completed' | 'error' };
+                    const delta = tcDelta as {
+                      index?: number;
+                      id: string;
+                      type: string;
+                      function?: { name?: string; arguments?: string };
+                      status?: "running" | "completed" | "error";
+                    };
                     const index = delta.index || 0;
                     if (!currentTools[index]) {
                       currentTools[index] = {
@@ -287,11 +314,12 @@ export function useHermesStream(
                           name: delta.function?.name || "",
                           arguments: delta.function?.arguments || "",
                         },
-                        status: delta.status || 'running'
+                        status: delta.status || "running",
                       };
                     } else {
                       if (delta.function?.arguments) {
-                        currentTools[index].function.arguments += delta.function.arguments;
+                        currentTools[index].function.arguments +=
+                          delta.function.arguments;
                       }
                       if (delta.status) {
                         currentTools[index].status = delta.status;
@@ -321,7 +349,7 @@ export function useHermesStream(
             return c;
           }),
         );
-        setGeneratingStates(prev => ({ ...prev, [convId]: false }));
+        setGeneratingStates((prev) => ({ ...prev, [convId]: false }));
         delete abortControllersRef.current[convId];
       },
       onError: (err) => {
@@ -348,7 +376,7 @@ export function useHermesStream(
             return c;
           }),
         );
-        setGeneratingStates(prev => ({ ...prev, [convId]: false }));
+        setGeneratingStates((prev) => ({ ...prev, [convId]: false }));
         delete abortControllersRef.current[convId];
       },
     });
@@ -360,9 +388,12 @@ export function useHermesStream(
       controller.abort();
 
       // Explicitly tell backend to kill the task
-      fetch(`${endpoint.replace(/\/$/, "")}/api/chat/${activeConversationId}/cancel`, {
-        method: "POST"
-      }).catch(err => console.error("Failed to cancel on backend:", err));
+      fetch(
+        `${endpoint.replace(/\/$/, "")}/api/chat/${activeConversationId}/cancel`,
+        {
+          method: "POST",
+        },
+      ).catch((err) => console.error("Failed to cancel on backend:", err));
 
       setConversations((prev) =>
         prev.map((c) => {
@@ -375,9 +406,12 @@ export function useHermesStream(
             };
           }
           return c;
-        })
+        }),
       );
-      setGeneratingStates(prev => ({ ...prev, [activeConversationId]: false }));
+      setGeneratingStates((prev) => ({
+        ...prev,
+        [activeConversationId]: false,
+      }));
     }
   };
 
@@ -388,6 +422,6 @@ export function useHermesStream(
     handleStopGeneration,
     handleRespondApproval,
     handleCleanupConversation,
-    handleCleanupAllConversations
+    handleCleanupAllConversations,
   };
 }

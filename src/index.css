@@ -1,26 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&family=Outfit:wght@300..800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&family=Outfit:wght@300..800&display=swap");
 
-@import './styles/animations.css';
-@import './styles/prose.css';
-@import './styles/tooltips.css';
+@import "./styles/animations.css";
+@import "./styles/prose.css";
+@import "./styles/tooltips.css";
 
 :root {
   /* Obsidian Glow Design Tokens (Dark-first premium theme) */
-  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans:
+    "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 
   /* HSL Colors */
-  --bg-deep: 224 20% 7%;        /* #0a0b10 */
-  --bg-surface: 222 16% 11%;    /* #12141c */
-  --bg-card: 220 18% 13%;       /* #171b26 */
+  --bg-deep: 224 20% 7%; /* #0a0b10 */
+  --bg-surface: 222 16% 11%; /* #12141c */
+  --bg-card: 220 18% 13%; /* #171b26 */
   --bg-glass: 220 16% 11% / 0.7;
   --border-subtle: 220 14% 18%; /* #212534 */
   --border-glow: 243 75% 64% / 0.2;
-  
-  --accent-primary: 243 75% 59%;   /* Indigo #5850ec */
+
+  --accent-primary: 243 75% 59%; /* Indigo #5850ec */
   --accent-secondary: 263 70% 55%; /* Violet #7c3aed */
   --accent-glow: 243 75% 59% / 0.4;
-  --accent-emerald: 150 80% 40%;  /* Success Status #10b981 */
+  --accent-emerald: 150 80% 40%; /* Success Status #10b981 */
 
   --text-pure: 0 0% 100%;
   --text-main: 220 14% 90%;
@@ -73,7 +74,11 @@ body {
   width: 100vw;
   height: 100dvh;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 0%, hsl(223 24% 12%), hsl(var(--bg-deep)) 70%);
+  background: radial-gradient(
+    circle at 50% 0%,
+    hsl(223 24% 12%),
+    hsl(var(--bg-deep)) 70%
+  );
 }
 
 #root {

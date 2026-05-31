@@ -1,27 +1,61 @@
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideIn {
-  from { transform: translateX(-20px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 15px hsl(var(--accent-primary) / 0.2); }
-  50% { box-shadow: 0 0 25px hsl(var(--accent-primary) / 0.45); }
+  0%,
+  100% {
+    box-shadow: 0 0 15px hsl(var(--accent-primary) / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px hsl(var(--accent-primary) / 0.45);
+  }
 }
 
 @keyframes pulseStatus {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.2); }
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 @keyframes typingDot {
-  0%, 100% { transform: translateY(0px); background-color: hsl(var(--text-muted)); opacity: 0.5; }
-  50% { transform: translateY(-6px); background-color: hsl(var(--accent-primary)); opacity: 1; filter: drop-shadow(0 0 6px hsl(var(--accent-primary))); }
+  0%,
+  100% {
+    transform: translateY(0px);
+    background-color: hsl(var(--text-muted));
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-6px);
+    background-color: hsl(var(--accent-primary));
+    opacity: 1;
+    filter: drop-shadow(0 0 6px hsl(var(--accent-primary)));
+  }
 }
 
 /* Utility Classes */
@@ -51,14 +85,20 @@
 
 /* --- Premium Neural Breathing Animation --- */
 @keyframes neuralGlow {
-  0%, 100% {
+  0%,
+  100% {
     border-color: hsl(var(--accent-primary) / 0.3) !important;
-    box-shadow: 0 0 12px hsl(var(--accent-primary) / 0.1), 0 0 20px rgba(0, 0, 0, 0.4);
+    box-shadow:
+      0 0 12px hsl(var(--accent-primary) / 0.1),
+      0 0 20px rgba(0, 0, 0, 0.4);
     background-color: hsl(var(--bg-card) / 0.45);
   }
   50% {
     border-color: hsl(var(--accent-primary) / 0.8) !important;
-    box-shadow: 0 0 28px hsl(var(--accent-primary) / 0.45), 0 0 40px hsl(var(--accent-secondary) / 0.2), 0 0 30px rgba(0, 0, 0, 0.4);
+    box-shadow:
+      0 0 28px hsl(var(--accent-primary) / 0.45),
+      0 0 40px hsl(var(--accent-secondary) / 0.2),
+      0 0 30px rgba(0, 0, 0, 0.4);
     background-color: hsl(var(--bg-card) / 0.7);
   }
 }

@@ -6,7 +6,7 @@ import { useModels } from "./hooks/useModels";
 import { useHermesStream } from "./hooks/useHermesStream";
 import { useSwipeDrawer } from "./hooks/useSwipeDrawer";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { Toaster } from 'sonner';
+import { Toaster } from "sonner";
 
 export default function App() {
   const HERMES_ENDPOINT = "";
@@ -45,12 +45,8 @@ export default function App() {
     isFetchingModels,
     connectionError,
     handleSelectModel,
-    handleConversationModelChange
-  } = useModels(
-    HERMES_ENDPOINT,
-    activeConversationId,
-    setConversations
-  );
+    handleConversationModelChange,
+  } = useModels(HERMES_ENDPOINT, activeConversationId, setConversations);
 
   const {
     isGenerating,
@@ -59,7 +55,7 @@ export default function App() {
     handleStopGeneration,
     handleRespondApproval,
     handleCleanupConversation,
-    handleCleanupAllConversations
+    handleCleanupAllConversations,
   } = useHermesStream(
     HERMES_ENDPOINT,
     settings,
@@ -68,15 +64,24 @@ export default function App() {
     activeConversationId,
     setActiveConversationId,
     pendingModelId || selectedModel,
-    activeMessages
+    activeMessages,
   );
-
-
 
   if (isInitializing || isFetchingModels) {
     return (
-      <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-base)' }}>
-        <div style={{ color: 'var(--text-muted)' }}>Carregando seu estagiário inteligente...</div>
+      <div
+        style={{
+          display: "flex",
+          height: "100vh",
+          width: "100vw",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "var(--bg-base)",
+        }}
+      >
+        <div style={{ color: "var(--text-muted)" }}>
+          Carregando seu estagiário inteligente...
+        </div>
       </div>
     );
   }
@@ -88,7 +93,7 @@ export default function App() {
         <div
           ref={backdropRef}
           className="sidebar-backdrop"
-          style={{ display: isSidebarOpen ? 'block' : 'none' }}
+          style={{ display: isSidebarOpen ? "block" : "none" }}
           onClick={() => setIsSidebarOpen(false)}
         />
 
@@ -129,7 +134,9 @@ export default function App() {
           isGenerating={isGenerating}
           onSendMessage={handleSendMessage}
           onStopGeneration={handleStopGeneration}
-          selectedModel={activeConversation?.modelId || pendingModelId || selectedModel}
+          selectedModel={
+            activeConversation?.modelId || pendingModelId || selectedModel
+          }
           models={models}
           onSelectModel={handleConversationModelChange}
           isFetchingModels={isFetchingModels}

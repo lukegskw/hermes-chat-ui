@@ -12,7 +12,7 @@ interface State {
 
 export default class ErrorBoundary extends Component<Props, State> {
   public state: State = {
-    hasError: false
+    hasError: false,
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -27,12 +27,21 @@ export default class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: "2rem", color: "white", backgroundColor: "hsl(var(--bg-deep))", height: "100vh" }}>
-          <h2 style={{ color: "hsl(0 80% 60%)" }}>Algo deu errado na interface.</h2>
+        <div
+          style={{
+            padding: "2rem",
+            color: "white",
+            backgroundColor: "hsl(var(--bg-deep))",
+            height: "100vh",
+          }}
+        >
+          <h2 style={{ color: "hsl(0 80% 60%)" }}>
+            Algo deu errado na interface.
+          </h2>
           <p style={{ color: "hsl(var(--text-secondary))", marginTop: "1rem" }}>
             {this.state.error?.message}
           </p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             style={{
               marginTop: "2rem",
@@ -41,7 +50,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               border: "none",
               borderRadius: "4px",
               color: "white",
-              cursor: "pointer"
+              cursor: "pointer",
             }}
           >
             Recarregar Página

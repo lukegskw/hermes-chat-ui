@@ -33,9 +33,15 @@
   user-select: none;
 }
 
-.tool-call-header.type-delegate { color: hsl(280 80% 70%); }
-.tool-call-header.type-execute { color: hsl(150 80% 50%); }
-.tool-call-header.type-default { color: hsl(var(--accent-primary)); }
+.tool-call-header.type-delegate {
+  color: hsl(280 80% 70%);
+}
+.tool-call-header.type-execute {
+  color: hsl(150 80% 50%);
+}
+.tool-call-header.type-default {
+  color: hsl(var(--accent-primary));
+}
 
 .tool-call-name {
   flex: 1;
@@ -61,8 +67,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .tool-call-args {

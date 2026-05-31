@@ -15,14 +15,26 @@
 }
 
 @keyframes pulseBorder {
-  0% { box-shadow: 0 0 0 0 hsl(var(--accent-primary) / 0.4); }
-  70% { box-shadow: 0 0 0 10px hsl(var(--accent-primary) / 0); }
-  100% { box-shadow: 0 0 0 0 hsl(var(--accent-primary) / 0); }
+  0% {
+    box-shadow: 0 0 0 0 hsl(var(--accent-primary) / 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px hsl(var(--accent-primary) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--accent-primary) / 0);
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .approval-card-header {
@@ -43,7 +55,9 @@
   border: 1px solid hsl(var(--border-subtle));
 }
 
-.text-amber { color: #f59e0b; }
+.text-amber {
+  color: #f59e0b;
+}
 
 .approval-card-title h3 {
   margin: 0 0 4px 0;
@@ -118,27 +132,38 @@
   background: hsl(142 70% 45%);
   color: white;
 }
-.approval-btn-allow:hover { background: hsl(142 70% 50%); transform: translateY(-1px); }
+.approval-btn-allow:hover {
+  background: hsl(142 70% 50%);
+  transform: translateY(-1px);
+}
 
 .approval-btn-session {
   background: hsl(var(--accent-primary));
   color: white;
 }
-.approval-btn-session:hover { background: hsl(var(--accent-secondary)); transform: translateY(-1px); }
+.approval-btn-session:hover {
+  background: hsl(var(--accent-secondary));
+  transform: translateY(-1px);
+}
 
 .approval-btn-always {
   background: hsl(var(--bg-deep));
   color: hsl(var(--text-secondary));
   border-color: hsl(var(--border-subtle));
 }
-.approval-btn-always:hover { background: hsl(var(--bg-surface)); color: white; }
+.approval-btn-always:hover {
+  background: hsl(var(--bg-surface));
+  color: white;
+}
 
 .approval-btn-deny {
   background: transparent;
   color: hsl(0 80% 60%);
   border-color: hsl(0 80% 60% / 0.3);
 }
-.approval-btn-deny:hover { background: hsl(0 80% 60% / 0.1); }
+.approval-btn-deny:hover {
+  background: hsl(0 80% 60% / 0.1);
+}
 
 @media (max-width: 600px) {
   .approval-card-actions {

@@ -6,7 +6,7 @@ import {
   createConversation,
   deleteConversation,
   deleteAllConversations,
-  ChatMessage
+  ChatMessage,
 } from "../utils/api";
 import { getApiUrl } from "../config/env";
 
@@ -35,20 +35,23 @@ export function useChatState() {
   const loadConversationsList = useCallback(async () => {
     const list = await fetchConversations(endpoint);
     setConversations((prev) => {
-      const dbIds = new Set(list.map(c => c.id));
-      const mergedList = list.map(apiConv => {
-        const localConv = prev.find(c => c.id === apiConv.id);
+      const dbIds = new Set(list.map((c) => c.id));
+      const mergedList = list.map((apiConv) => {
+        const localConv = prev.find((c) => c.id === apiConv.id);
         if (localConv) {
           return {
             ...apiConv,
             modelId: apiConv.modelId || localConv.modelId,
-            messages: localConv.messages.length > 0 ? localConv.messages : apiConv.messages,
+            messages:
+              localConv.messages.length > 0
+                ? localConv.messages
+                : apiConv.messages,
           } as Conversation;
         }
         return apiConv as Conversation;
       });
       // Keep local conversations that aren't in the DB yet
-      const localOnly = prev.filter(c => !dbIds.has(c.id));
+      const localOnly = prev.filter((c) => !dbIds.has(c.id));
       return [...localOnly, ...mergedList];
     });
     setActiveConversationId((prev) => {
@@ -68,7 +71,9 @@ export function useChatState() {
       }
     };
     void initialLoad();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [loadConversationsList]);
 
   // Load active conversation details from backend
@@ -86,7 +91,9 @@ export function useChatState() {
               // SMART MERGE: Preserve frontend generating states and local-only messages
               const dbMessages = data.messages;
               const mergedMessages = dbMessages.map((dbMsg: ChatMessage) => {
-                const localEquivalent = prevConv.messages.find(m => m.id === dbMsg.id);
+                const localEquivalent = prevConv.messages.find(
+                  (m) => m.id === dbMsg.id,
+                );
                 // If the frontend is actively generating this message, it is the source of truth.
                 if (localEquivalent && localEquivalent.isGenerating) {
                   return localEquivalent;
@@ -95,26 +102,31 @@ export function useChatState() {
               });
 
               // Append purely local messages that aren't in the DB yet
-              const dbMessageIds = new Set(mergedMessages.map((m: ChatMessage) => m.id));
-              const localOnlyMessages = prevConv.messages.filter(m => {
+              const dbMessageIds = new Set(
+                mergedMessages.map((m: ChatMessage) => m.id),
+              );
+              const localOnlyMessages = prevConv.messages.filter((m) => {
                 if (dbMessageIds.has(m.id)) return false;
                 if (m.isGenerating) return true; // Always keep actively generating messages
-                
+
                 // Deduplicate if content exactly matches
-                const isDuplicate = mergedMessages.some((dbMsg: ChatMessage) => 
-                  dbMsg.role === m.role && 
-                  (typeof m.content === 'string' && typeof dbMsg.content === 'string' 
-                    ? dbMsg.content === m.content 
-                    : JSON.stringify(dbMsg.content) === JSON.stringify(m.content))
+                const isDuplicate = mergedMessages.some(
+                  (dbMsg: ChatMessage) =>
+                    dbMsg.role === m.role &&
+                    (typeof m.content === "string" &&
+                    typeof dbMsg.content === "string"
+                      ? dbMsg.content === m.content
+                      : JSON.stringify(dbMsg.content) ===
+                        JSON.stringify(m.content)),
                 );
                 return !isDuplicate;
               });
               mergedMessages.push(...localOnlyMessages);
 
-              const uiData = { 
-                ...data, 
+              const uiData = {
+                ...data,
                 modelId: data.modelId || prevConv.modelId,
-                messages: mergedMessages 
+                messages: mergedMessages,
               } as Conversation;
               return prev.map((c) => (c.id === data.id ? uiData : c));
             });
@@ -134,10 +146,9 @@ export function useChatState() {
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [activeConversationId, endpoint, loadConversationsList]);
-
-
 
   const handleNewChat = async () => {
     const newId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -161,18 +172,18 @@ export function useChatState() {
   const handleDeleteConversation = async (id: string) => {
     const remaining = conversations.filter((c) => c.id !== id);
     setConversations(remaining);
-    
+
     if (activeConversationId === id) {
       setActiveConversationId(remaining.length > 0 ? remaining[0].id : "");
     }
-    
+
     await deleteConversation(endpoint, id);
   };
 
   const handleClearAll = async () => {
     if (
       window.confirm(
-        "Tem certeza de que deseja apagar permanentemente todas as conversas?"
+        "Tem certeza de que deseja apagar permanentemente todas as conversas?",
       )
     ) {
       setConversations([]);
@@ -185,7 +196,8 @@ export function useChatState() {
     setSettings(newSettings);
   };
 
-  const activeConversation = conversations.find(c => c.id === activeConversationId) || null;
+  const activeConversation =
+    conversations.find((c) => c.id === activeConversationId) || null;
   const activeMessages = activeConversation ? activeConversation.messages : [];
 
   return {

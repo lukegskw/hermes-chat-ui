@@ -305,7 +305,9 @@ export async function compressSession(endpoint: string): Promise<boolean> {
 
 // --- Conversations API ---
 
-export async function fetchConversations(endpoint: string): Promise<ConversationAPI[]> {
+export async function fetchConversations(
+  endpoint: string,
+): Promise<ConversationAPI[]> {
   try {
     const res = await fetch(`${endpoint.replace(/\/$/, "")}/api/conversations`);
     if (!res.ok) return [];
@@ -314,7 +316,10 @@ export async function fetchConversations(endpoint: string): Promise<Conversation
     if (parsed.success) {
       return parsed.data;
     } else {
-      logger.error({ error: parsed.error }, "Failed to parse conversations list");
+      logger.error(
+        { error: parsed.error },
+        "Failed to parse conversations list",
+      );
       return [];
     }
   } catch (e) {
@@ -337,7 +342,10 @@ export async function fetchConversation(
     if (parsed.success) {
       return parsed.data;
     } else {
-      logger.error({ error: parsed.error }, "Failed to parse conversation detail");
+      logger.error(
+        { error: parsed.error },
+        "Failed to parse conversation detail",
+      );
       return null;
     }
   } catch (e) {

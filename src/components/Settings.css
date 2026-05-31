@@ -55,7 +55,7 @@
     padding: 0;
     align-items: flex-end;
   }
-  
+
   .settings-modal {
     border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
     border-bottom: none;
@@ -65,7 +65,7 @@
     margin: 0;
     padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   }
-  
+
   .settings-textarea {
     min-height: 150px;
     max-height: 50vh;

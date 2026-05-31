@@ -1,11 +1,10 @@
-
-import { Check, X, Unlock, Lock } from 'lucide-react';
-import { PendingApproval } from '../utils/api';
-import './ApprovalCard.css';
+import { Check, X, Unlock, Lock } from "lucide-react";
+import { PendingApproval } from "../utils/api";
+import "./ApprovalCard.css";
 
 interface ApprovalCardProps {
   approval: PendingApproval;
-  onRespond: (choice: 'once' | 'session' | 'always' | 'deny') => void;
+  onRespond: (choice: "once" | "session" | "always" | "deny") => void;
 }
 
 export function ApprovalCard({ approval, onRespond }: ApprovalCardProps) {
@@ -28,34 +27,36 @@ export function ApprovalCard({ approval, onRespond }: ApprovalCardProps) {
         </div>
         <div className="detail-row">
           <span className="detail-label">Comando:</span>
-          <pre className="detail-code">{approval.command || approval.label || 'N/A'}</pre>
+          <pre className="detail-code">
+            {approval.command || approval.label || "N/A"}
+          </pre>
         </div>
       </div>
 
       <div className="approval-card-actions">
-        <button 
-          onClick={() => onRespond('once')} 
+        <button
+          onClick={() => onRespond("once")}
           className="btn btn-primary approval-btn-allow"
           title="Permitir a execução apenas desta vez"
         >
           <Check size={16} /> Permitir 1x
         </button>
-        <button 
-          onClick={() => onRespond('session')} 
+        <button
+          onClick={() => onRespond("session")}
           className="btn btn-secondary approval-btn-session"
           title="Permitir automaticamente durante esta sessão"
         >
           <Unlock size={16} /> Nesta Sessão
         </button>
-        <button 
-          onClick={() => onRespond('always')} 
+        <button
+          onClick={() => onRespond("always")}
           className="btn btn-tertiary approval-btn-always"
           title="Lembrar permissão e nunca mais perguntar para este comando"
         >
           <Unlock size={16} /> Sempre
         </button>
-        <button 
-          onClick={() => onRespond('deny')} 
+        <button
+          onClick={() => onRespond("deny")}
           className="btn btn-danger approval-btn-deny"
           title="Negar e cancelar execução"
         >

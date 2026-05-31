@@ -8,11 +8,13 @@ trigger: always_on
 
 - The `any` type (use `unknown` + type guards instead)
 - `as` casts of any kind
-- `@ts-ignore` and `@ts-expect-error` without an explanatory comment
-- Excessive non-null assertions `\!` (only allowed after explicit null checks)
+- Non-null assertions `\!`
+- Use of `interface` for defining app specific types
+- Ignore or bypass TypeScript and lint rules with comments such as `eslint-disable-next-line` or `@ts-ignore`
 
 ## Required Patterns
 
+- Use `type` for defining app specific types
 - Validate external API responses using `unknown` + Zod schemas
 - Use generics wherever a function operates on multiple types
 - Prefer type inference over redundant explicit annotations
@@ -30,5 +32,4 @@ When encountering a TypeScript error:
 
 - Always run TypeScript (`npx tsc --noEmit`) and lint checks (`npm run lint`) after you finish a feature. DO NOT EVER SAY THE USER YOU FINISHED A TASK BEFORE DOING THAT.
 - Fix all TypeScript and lint issues that arise
-- Never ignore or bypass TypeScript and lint rules with comments such as `eslint-disable-next-line` or `@ts-ignore`
-- Always format code after your changes
+- Always format code after your changes with prettier
