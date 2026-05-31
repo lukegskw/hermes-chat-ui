@@ -34,7 +34,23 @@ export function useChatState() {
   // Expose reload method for external components and focus sync
   const loadConversationsList = useCallback(async () => {
     const list = await fetchConversations(endpoint);
-    setConversations(list as Conversation[]);
+    setConversations((prev) => {
+      const dbIds = new Set(list.map(c => c.id));
+      const mergedList = list.map(apiConv => {
+        const localConv = prev.find(c => c.id === apiConv.id);
+        if (localConv) {
+          return {
+            ...apiConv,
+            modelId: apiConv.modelId || localConv.modelId,
+            messages: localConv.messages.length > 0 ? localConv.messages : apiConv.messages,
+          } as Conversation;
+        }
+        return apiConv as Conversation;
+      });
+      // Keep local conversations that aren't in the DB yet
+      const localOnly = prev.filter(c => !dbIds.has(c.id));
+      return [...localOnly, ...mergedList];
+    });
     setActiveConversationId((prev) => {
       if (!prev && list.length > 0) return list[0].id;
       return prev;
@@ -80,10 +96,26 @@ export function useChatState() {
 
               // Append purely local messages that aren't in the DB yet
               const dbMessageIds = new Set(mergedMessages.map((m: ChatMessage) => m.id));
-              const localOnlyMessages = prevConv.messages.filter(m => !dbMessageIds.has(m.id));
+              const localOnlyMessages = prevConv.messages.filter(m => {
+                if (dbMessageIds.has(m.id)) return false;
+                if (m.isGenerating) return true; // Always keep actively generating messages
+                
+                // Deduplicate if content exactly matches
+                const isDuplicate = mergedMessages.some((dbMsg: ChatMessage) => 
+                  dbMsg.role === m.role && 
+                  (typeof m.content === 'string' && typeof dbMsg.content === 'string' 
+                    ? dbMsg.content === m.content 
+                    : JSON.stringify(dbMsg.content) === JSON.stringify(m.content))
+                );
+                return !isDuplicate;
+              });
               mergedMessages.push(...localOnlyMessages);
 
-              const uiData = { ...data, messages: mergedMessages } as Conversation;
+              const uiData = { 
+                ...data, 
+                modelId: data.modelId || prevConv.modelId,
+                messages: mergedMessages 
+              } as Conversation;
               return prev.map((c) => (c.id === data.id ? uiData : c));
             });
           }
