@@ -1,82 +1,3 @@
-@media (max-width: 768px) {
-  /* ChatWindow responsive updates */
-  main {
-    width: 100% !important;
-    height: 100dvh !important;
-  }
-
-  .chat-window-header {
-    height: calc(56px + env(safe-area-inset-top, 0px));
-    padding-top: calc(10px + env(safe-area-inset-top, 0px));
-  }
-
-  .mobile-menu-btn {
-    display: flex;
-  }
-
-  /* Safe Area paddings inside Scrollable Chats */
-  main > div:nth-child(2) {
-    padding: 1rem 1rem 1.5rem 1rem !important;
-  }
-
-  /* Safe Area paddings inside Input Bar wrapper */
-  main > div:last-child {
-    padding: 0 1rem calc(0.5rem + env(safe-area-inset-bottom, 0px)) 1rem !important;
-    width: 100% !important;
-  }
-
-  /* Floating quick action suggestions */
-  div[style*="gridTemplateColumns"] {
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
-    max-height: 250px;
-    overflow-y: auto;
-    padding-right: 4px;
-  }
-
-  /* Form input layout on small screens */
-  form {
-    padding: 0.5rem 0.6rem !important;
-  }
-
-  .action-menu-backdrop {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 9999;
-  }
-
-  .action-menu-dropdown {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    top: auto;
-    margin: 0;
-    background-color: hsl(var(--bg-surface));
-    border-radius: 16px 16px 0 0;
-    padding: 16px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
-    z-index: 10000;
-    min-width: auto;
-    border-bottom: none;
-    border-left: none;
-    border-right: none;
-    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
-  }
-
-  .action-menu-item {
-    padding: 16px;
-    font-size: 1rem;
-    gap: 12px;
-    justify-content: center;
-  }
-}
-
 /* --- Global Header Styles --- */
 
 .chat-window-header {
@@ -282,4 +203,83 @@
   font-size: 0.9rem;
   z-index: 10;
   pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  /* ChatWindow responsive updates */
+  main {
+    width: 100% !important;
+    height: 100dvh !important;
+  }
+
+  .chat-window-header {
+    height: calc(56px + env(safe-area-inset-top, 0px));
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  /* Safe Area paddings inside Scrollable Chats */
+  main > div:nth-child(2) {
+    padding: 1rem 1rem 1.5rem 1rem !important;
+  }
+
+  /* Safe Area paddings inside Input Bar wrapper */
+  main > div:last-child {
+    padding: 0 1rem calc(0.5rem + env(safe-area-inset-bottom, 0px)) 1rem !important;
+    width: 100% !important;
+  }
+
+  /* Floating quick action suggestions */
+  div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  /* Form input layout on small screens */
+  form {
+    padding: 0.5rem 0.6rem !important;
+  }
+
+  .action-menu-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+  }
+
+  .action-menu-dropdown {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    margin: 0;
+    background-color: hsl(var(--bg-surface));
+    border-radius: 16px 16px 0 0;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 10000;
+    min-width: auto;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  .action-menu-item {
+    padding: 16px;
+    font-size: 1rem;
+    gap: 12px;
+    justify-content: center;
+  }
 }
