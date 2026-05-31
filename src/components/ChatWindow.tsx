@@ -4,7 +4,6 @@ import {
   Square,
   Sparkles,
   Terminal,
-  ArrowRight,
   Menu,
   DatabaseZap,
   Paperclip,
@@ -33,35 +32,8 @@ export interface ChatWindowProps {
   isFetchingModels?: boolean;
   connectionError?: string;
   pendingApproval?: PendingApproval | null;
-  onRespondApproval?: (choice: 'once' | 'session' | 'always' | 'deny') => void;
+  onRespondApproval?: (choice: "once" | "session" | "always" | "deny") => void;
 }
-
-const SUGGESTIONS = [
-  {
-    title: "💡 Listar Automóveis/Luzes",
-    desc: "Pergunte ao Hermes sobre dispositivos no Home Assistant.",
-    prompt:
-      "Liste todas as automações de luzes configuradas no meu Home Assistant.",
-  },
-  {
-    title: "⚡ Rodar Diagnóstico",
-    desc: "Verifique a integridade do sistema do sandbox local.",
-    prompt:
-      "Execute um diagnóstico do sistema local e relate quaisquer problemas ou status de containers.",
-  },
-  {
-    title: "🧠 Ajuda em Programação",
-    desc: "Crie ou analise trechos de código em Python/JS.",
-    prompt:
-      "Escreva uma função em Python para calcular a diferença de tempo entre dois timestamps do banco de dados SQLite.",
-  },
-  {
-    title: "⚙️ Customizar Skills",
-    desc: "Entenda como gerenciar ferramentas no Hermes.",
-    prompt:
-      "Como posso criar uma nova skill customizada em Python para o Hermes Agent?",
-  },
-];
 
 export default function ChatWindow({
   onToggleSidebar,
@@ -104,17 +76,17 @@ export default function ChatWindow({
   }, [input]);
 
   const addAttachments = async (files: File[]) => {
-    const validFiles = files.filter(f => validateImageFile(f).valid);
+    const validFiles = files.filter((f) => validateImageFile(f).valid);
     if (validFiles.length === 0) return;
-    
-    setPendingAttachments(prev => [...prev, ...validFiles]);
-    
+
+    setPendingAttachments((prev) => [...prev, ...validFiles]);
+
     for (const file of validFiles) {
       try {
         const dataUrl = await fileToBase64(file);
-        setPreviewUrls(prev => [...prev, dataUrl]);
+        setPreviewUrls((prev) => [...prev, dataUrl]);
       } catch (e) {
-        console.error('Failed to parse image', e);
+        console.error("Failed to parse image", e);
       }
     }
   };
@@ -126,14 +98,14 @@ export default function ChatWindow({
   };
 
   const removeAttachment = (index: number) => {
-    setPendingAttachments(prev => prev.filter((_, i) => i !== index));
-    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    setPendingAttachments((prev) => prev.filter((_, i) => i !== index));
+    setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() && pendingAttachments.length === 0) return;
-    
+
     onSendMessage(input.trim(), pendingAttachments);
     setInput("");
     setPendingAttachments([]);
@@ -150,30 +122,49 @@ export default function ChatWindow({
       handleSubmit();
     } else if (e.key === "ArrowUp") {
       const target = e.target as HTMLTextAreaElement;
-      if (target.selectionStart === 0 && target.selectionEnd === 0 || input === "") {
+      if (
+        (target.selectionStart === 0 && target.selectionEnd === 0) ||
+        input === ""
+      ) {
         e.preventDefault();
-        const userMessages = messages.filter(m => m.role === "user");
+        const userMessages = messages.filter((m) => m.role === "user");
         if (userMessages.length > 0) {
           const nextIndex = Math.min(historyIndex + 1, userMessages.length - 1);
           if (nextIndex !== historyIndex) {
             setHistoryIndex(nextIndex);
-            const content = userMessages[userMessages.length - 1 - nextIndex].content;
-            setInput(typeof content === 'string' ? content : content.filter(c => c.type === 'text').map(c => c.text).join('\n'));
+            const content =
+              userMessages[userMessages.length - 1 - nextIndex].content;
+            setInput(
+              typeof content === "string"
+                ? content
+                : content
+                    .filter((c) => c.type === "text")
+                    .map((c) => c.text)
+                    .join("\n"),
+            );
           }
         }
       }
     } else if (e.key === "ArrowDown") {
       if (historyIndex >= 0) {
         e.preventDefault();
-        const userMessages = messages.filter(m => m.role === "user");
+        const userMessages = messages.filter((m) => m.role === "user");
         const nextIndex = historyIndex - 1;
         if (nextIndex === -1) {
           setHistoryIndex(-1);
           setInput("");
         } else {
           setHistoryIndex(nextIndex);
-          const content = userMessages[userMessages.length - 1 - nextIndex].content;
-          setInput(typeof content === 'string' ? content : content.filter(c => c.type === 'text').map(c => c.text).join('\n'));
+          const content =
+            userMessages[userMessages.length - 1 - nextIndex].content;
+          setInput(
+            typeof content === "string"
+              ? content
+              : content
+                  .filter((c) => c.type === "text")
+                  .map((c) => c.text)
+                  .join("\n"),
+          );
         }
       }
     }
@@ -236,7 +227,7 @@ export default function ChatWindow({
         </span>
         <div style={{ flex: 1 }} />
         <button
-          onClick={() => onSendMessage('/compact')}
+          onClick={() => onSendMessage("/compact")}
           style={{
             background: "transparent",
             border: "1px solid hsl(var(--border-subtle))",
@@ -343,71 +334,6 @@ export default function ChatWindow({
               com sua casa inteligente e realizar buscas avançadas. O que
               faremos hoje?
             </p>
-
-            {/* Grid of Action Suggestion Cards */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "12px",
-                width: "100%",
-                maxWidth: "700px",
-              }}
-            >
-              {SUGGESTIONS.map((card, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => onSendMessage(card.prompt)}
-                  className="glass glow-hover"
-                  style={{
-                    padding: "1.1rem",
-                    borderRadius: "var(--border-radius-lg)",
-                    backgroundColor: "hsl(var(--bg-card) / 0.4)",
-                    border: "1px solid hsl(var(--border-subtle))",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    gap: "4px",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  <h4
-                    style={{
-                      fontSize: "0.9rem",
-                      fontWeight: "700",
-                      color: "white",
-                    }}
-                  >
-                    {card.title}
-                  </h4>
-                  <p
-                    style={{
-                      fontSize: "0.78rem",
-                      color: "hsl(var(--text-secondary))",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {card.desc}
-                  </p>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      fontSize: "0.72rem",
-                      color: "hsl(var(--accent-primary))",
-                      fontWeight: "600",
-                      marginTop: "8px",
-                    }}
-                  >
-                    Perguntar ao Hermes
-                    <ArrowRight size={11} />
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>
@@ -423,10 +349,13 @@ export default function ChatWindow({
       >
         {pendingApproval && onRespondApproval && (
           <div style={{ marginBottom: "12px" }}>
-            <ApprovalCard approval={pendingApproval} onRespond={onRespondApproval} />
+            <ApprovalCard
+              approval={pendingApproval}
+              onRespond={onRespondApproval}
+            />
           </div>
         )}
-        
+
         {previewUrls.length > 0 && (
           <div className="attachment-preview-strip">
             {previewUrls.map((url, i) => (
@@ -443,7 +372,7 @@ export default function ChatWindow({
             ))}
           </div>
         )}
-        
+
         <form
           onSubmit={handleSubmit}
           className="glass glow-hover"
@@ -513,7 +442,9 @@ export default function ChatWindow({
                       {selectedModel || "Carregando..."}
                     </option>
                   ) : models.length === 0 && connectionError ? (
-                    <option value="">{connectionError.substring(0, 30)}...</option>
+                    <option value="">
+                      {connectionError.substring(0, 30)}...
+                    </option>
                   ) : models.length === 0 ? (
                     <option value={selectedModel || ""}>
                       {selectedModel || "Sem modelos"}
@@ -558,7 +489,7 @@ export default function ChatWindow({
             {/* Desktop and Mobile Input-adjacent Compact Button */}
             <button
               type="button"
-              onClick={() => onSendMessage('/compact')}
+              onClick={() => onSendMessage("/compact")}
               className="desktop-compact-btn"
               style={{
                 background: "transparent",
@@ -581,11 +512,18 @@ export default function ChatWindow({
             </button>
           </div>
 
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "8px", position: "relative" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: "8px",
+              position: "relative",
+            }}
+          >
             {isDragging && (
               <div className="drop-zone-active">Solte as imagens aqui</div>
             )}
-            
+
             <textarea
               ref={textareaRef}
               rows={1}
@@ -643,7 +581,7 @@ export default function ChatWindow({
               >
                 <Paperclip size={18} />
               </button>
-              
+
               {isGenerating ? (
                 <button
                   type="button"
@@ -673,17 +611,27 @@ export default function ChatWindow({
                     width: "36px",
                     height: "36px",
                     borderRadius: "var(--border-radius-md)",
-                    backgroundColor: (input.trim() || pendingAttachments.length > 0)
-                      ? "hsl(var(--accent-primary))"
-                      : "hsl(var(--bg-deep))",
+                    backgroundColor:
+                      input.trim() || pendingAttachments.length > 0
+                        ? "hsl(var(--accent-primary))"
+                        : "hsl(var(--bg-deep))",
                     border: "none",
-                    color: (input.trim() || pendingAttachments.length > 0) ? "white" : "hsl(var(--text-muted))",
-                    cursor: (input.trim() || pendingAttachments.length > 0) ? "pointer" : "not-allowed",
+                    color:
+                      input.trim() || pendingAttachments.length > 0
+                        ? "white"
+                        : "hsl(var(--text-muted))",
+                    cursor:
+                      input.trim() || pendingAttachments.length > 0
+                        ? "pointer"
+                        : "not-allowed",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     transition: "all 0.25s",
-                    boxShadow: (input.trim() || pendingAttachments.length > 0) ? "var(--shadow-glow)" : "none",
+                    boxShadow:
+                      input.trim() || pendingAttachments.length > 0
+                        ? "var(--shadow-glow)"
+                        : "none",
                   }}
                   title="Enviar mensagem"
                 >
