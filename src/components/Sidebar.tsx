@@ -8,8 +8,6 @@ import {
   Sparkles,
   X,
   Save,
-  MoreHorizontal,
-  Edit2,
 } from "lucide-react";
 import { Model, ChatMessage } from "../utils/api";
 import "./Sidebar.css";
@@ -33,8 +31,6 @@ export interface SidebarProps {
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
   onNewChat: () => void;
-  onDeleteConversation: (id: string) => void;
-  onRenameConversation: (id: string, newTitle: string) => void;
   onClearAll: () => void;
   models: Model[];
   selectedModel: string;
@@ -55,8 +51,6 @@ const Sidebar = forwardRef<HTMLElement, SidebarProps>(
       activeConversationId,
       onSelectConversation,
       onNewChat,
-      onDeleteConversation,
-      onRenameConversation,
       onClearAll,
       models,
       selectedModel,
@@ -73,24 +67,6 @@ const Sidebar = forwardRef<HTMLElement, SidebarProps>(
     const [tempSystemPrompt, setTempSystemPrompt] = useState(
       settings.systemPrompt || "",
     );
-
-    const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-    const [editingConvId, setEditingConvId] = useState<string | null>(null);
-    const [editTitleText, setEditTitleText] = useState("");
-
-    const handleSaveEdit = (e?: React.FormEvent) => {
-      e?.preventDefault();
-      if (editingConvId && editTitleText.trim()) {
-        onRenameConversation(editingConvId, editTitleText.trim());
-      }
-      setEditingConvId(null);
-    };
-
-    const handleStartEdit = (id: string, currentTitle: string) => {
-      setEditingConvId(id);
-      setEditTitleText(currentTitle || "");
-      setActiveMenuId(null);
-    };
 
     const handleSaveSettings = (e: React.FormEvent) => {
       e.preventDefault();
@@ -417,104 +393,20 @@ const Sidebar = forwardRef<HTMLElement, SidebarProps>(
                       }}
                     />
 
-                    {editingConvId === conv.id ? (
-                      <form
-                        onSubmit={handleSaveEdit}
-                        style={{ flex: 1, display: "flex", gap: "4px" }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          value={editTitleText}
-                          onChange={(e) => setEditTitleText(e.target.value)}
-                          autoFocus
-                          onBlur={handleSaveEdit}
-                          style={{
-                            flex: 1,
-                            background: "hsl(var(--bg-deep))",
-                            border: "1px solid hsl(var(--border-subtle))",
-                            color: "hsl(var(--text-pure))",
-                            fontSize: "0.85rem",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            outline: "none",
-                          }}
-                        />
-                      </form>
-                    ) : (
-                      <span
-                        style={{
-                          fontSize: "0.85rem",
-                          color: isActive
-                            ? "hsl(var(--text-pure))"
-                            : "hsl(var(--text-main) / 0.8)",
-                          fontWeight: isActive ? "600" : "400",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {conv.title || "Conversa sem título"}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Options Menu */}
-                  <div style={{ position: "relative" }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveMenuId(
-                          activeMenuId === conv.id ? null : conv.id,
-                        );
-                      }}
+                    <span
                       style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "hsl(var(--text-muted))",
-                        cursor: "pointer",
-                        opacity: isActive || activeMenuId === conv.id ? 0.8 : 0,
-                        transition: "opacity 0.2s",
-                        padding: "2px",
-                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                        color: isActive
+                          ? "hsl(var(--text-pure))"
+                          : "hsl(var(--text-main) / 0.8)",
+                        fontWeight: isActive ? "600" : "400",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
-                      className="more-btn"
-                      title="Opções"
                     >
-                      <MoreHorizontal size={14} />
-                    </button>
-
-                    {activeMenuId === conv.id && (
-                      <>
-                        <div
-                          className="action-menu-backdrop"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveMenuId(null);
-                          }}
-                        />
-                        <div className="action-menu-dropdown">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartEdit(conv.id, conv.title);
-                            }}
-                            className="action-menu-item"
-                          >
-                            <Edit2 size={14} /> Renomear
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteConversation(conv.id);
-                              setActiveMenuId(null);
-                            }}
-                            className="action-menu-item delete-item"
-                          >
-                            <Trash2 size={14} /> Apagar
-                          </button>
-                        </div>
-                      </>
-                    )}
+                      {conv.title || "Conversa sem título"}
+                    </span>
                   </div>
                 </div>
               );

@@ -249,7 +249,7 @@ export function useHermesStream(
     if (existingMessages.length === 0) {
       titleUpdatedRef.current.delete(convId);
       promptToUse +=
-        "\n[CRITICAL INSTRUCTION: This is the first message. Begin your response with <TITLE>A concise 3-5 word title for this chat</TITLE> followed by a line break, and then provide your normal response.]";
+        "\n[CRITICAL INSTRUCTION: This is the first message. You MUST begin your response exactly with the tag <TITLE> followed by a concise 3-5 word title for this chat, followed by </TITLE> and a line break, and then provide your normal response.]";
     }
 
     let assistantMessageContent = "";

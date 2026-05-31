@@ -8,9 +8,17 @@ import {
   DatabaseZap,
   Paperclip,
   X as XIcon,
+  MoreHorizontal,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import MessageBubble from "./MessageBubble";
-import { ChatMessage, PendingApproval, Model } from "../utils/api";
+import {
+  ChatMessage,
+  PendingApproval,
+  Model,
+  ConversationAPI,
+} from "../utils/api";
 import { ApprovalCard } from "./ApprovalCard";
 import { validateImageFile, fileToBase64 } from "../utils/imageUtils";
 import "./ChatWindow.css";
@@ -23,6 +31,9 @@ export interface ChatWindowMessage extends ChatMessage {
 export interface ChatWindowProps {
   onToggleSidebar: () => void;
   messages: ChatWindowMessage[];
+  activeConversation?: ConversationAPI | null;
+  onRenameConversation?: (id: string, newTitle: string) => void;
+  onDeleteConversation?: (id: string) => void;
   isGenerating: boolean;
   onSendMessage: (text: string, attachments?: File[]) => void;
   onStopGeneration: () => void;
@@ -38,6 +49,9 @@ export interface ChatWindowProps {
 export default function ChatWindow({
   onToggleSidebar,
   messages,
+  activeConversation,
+  onRenameConversation,
+  onDeleteConversation,
   isGenerating,
   onSendMessage,
   onStopGeneration,
@@ -50,6 +64,9 @@ export default function ChatWindow({
   onRespondApproval,
 }: ChatWindowProps) {
   const [input, setInput] = useState("");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleText, setEditTitleText] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -57,6 +74,26 @@ export default function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+    }
+  }, [isEditingTitle]);
+
+  const handleSaveTitle = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (
+      isEditingTitle &&
+      editTitleText.trim() &&
+      activeConversation &&
+      onRenameConversation
+    ) {
+      onRenameConversation(activeConversation.id, editTitleText.trim());
+    }
+    setIsEditingTitle(false);
+  };
 
   // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
@@ -197,55 +234,109 @@ export default function ChatWindow({
         }
       }}
     >
-      {/* Mobile-only Header Bar */}
-      <div className="mobile-header-bar" style={{ display: "none" }}>
-        <button
-          onClick={onToggleSidebar}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "white",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "4px",
-          }}
-          title="Menu"
-        >
-          <Menu size={22} />
-        </button>
-        <span
-          style={{
-            fontSize: "0.94rem",
-            fontWeight: "700",
-            color: "white",
-            letterSpacing: "-0.2px",
-          }}
-        >
-          Hermes Console
-        </span>
-        <div style={{ flex: 1 }} />
-        <button
-          onClick={() => onSendMessage("/compact")}
-          style={{
-            background: "transparent",
-            border: "1px solid hsl(var(--border-subtle))",
-            color: "hsl(var(--text-secondary))",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            padding: "4px 8px",
-            borderRadius: "12px",
-            fontSize: "0.75rem",
-            fontWeight: "600",
-            backgroundColor: "hsl(var(--bg-card) / 0.5)",
-          }}
-          title="Compactar Histórico"
-        >
-          <DatabaseZap size={14} /> Compactar
-        </button>
+      {/* Global Unified Header Bar */}
+      <div className="chat-window-header">
+        <div className="header-left">
+          <button
+            onClick={onToggleSidebar}
+            className="mobile-menu-btn"
+            title="Menu"
+          >
+            <Menu size={22} />
+          </button>
+
+          {activeConversation ? (
+            isEditingTitle ? (
+              <form
+                onSubmit={handleSaveTitle}
+                style={{ flex: 1, display: "flex" }}
+              >
+                <input
+                  ref={titleInputRef}
+                  value={editTitleText}
+                  onChange={(e) => setEditTitleText(e.target.value)}
+                  onBlur={handleSaveTitle}
+                  className="header-title-input"
+                  placeholder="Nome da conversa..."
+                />
+              </form>
+            ) : (
+              <span
+                className="header-title"
+                onClick={() => {
+                  setEditTitleText(activeConversation.title || "");
+                  setIsEditingTitle(true);
+                }}
+              >
+                {activeConversation.title || "Conversa sem título"}
+              </span>
+            )
+          ) : (
+            <span className="header-title">Hermes Console</span>
+          )}
+        </div>
+
+        <div className="header-right">
+          {activeConversation && (
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="header-more-btn"
+                title="Mais Opções"
+              >
+                <MoreHorizontal size={20} />
+              </button>
+
+              {isMenuOpen && (
+                <>
+                  <div
+                    className="action-menu-backdrop"
+                    onClick={() => setIsMenuOpen(false)}
+                  />
+                  <div className="action-menu-dropdown header-dropdown">
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setEditTitleText(activeConversation.title || "");
+                        setIsEditingTitle(true);
+                      }}
+                      className="action-menu-item"
+                    >
+                      <Edit2 size={16} /> Renomear
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        onSendMessage("/compact");
+                      }}
+                      className="action-menu-item"
+                    >
+                      <DatabaseZap size={16} /> Compactar
+                    </button>
+                    <div
+                      style={{
+                        height: "1px",
+                        backgroundColor: "hsl(var(--border-subtle))",
+                        margin: "4px 0",
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        if (onDeleteConversation) {
+                          onDeleteConversation(activeConversation.id);
+                        }
+                      }}
+                      className="action-menu-item delete-item"
+                    >
+                      <Trash2 size={16} /> Apagar
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Messages View Area */}
@@ -275,11 +366,21 @@ export default function ChatWindow({
                   msg.role === "assistant" &&
                   typeof msg.content === "string"
                 ) {
+                  let cleanContent = msg.content;
+
+                  // Handle proper tags or tags missing the opening tag
+                  cleanContent = cleanContent
+                    .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
+                    .replace(/^[\s\S]*?<\/TITLE>\n*/i, "");
+
+                  // Handle partial stream (missing closing tag)
+                  if (cleanContent.includes("<TITLE>")) {
+                    cleanContent = cleanContent.replace(/<TITLE>[\s\S]*$/i, "");
+                  }
+
                   filteredMsg = {
                     ...msg,
-                    content: msg.content
-                      .replace(/<TITLE>[\s\S]*?(<\/TITLE>)?\n*/g, "")
-                      .trim(),
+                    content: cleanContent.trim(),
                   };
                 }
                 return <MessageBubble key={msg.id} message={filteredMsg} />;
@@ -497,31 +598,6 @@ export default function ChatWindow({
                 </div>
               </div>
             </div>
-
-            {/* Desktop and Mobile Input-adjacent Compact Button */}
-            <button
-              type="button"
-              onClick={() => onSendMessage("/compact")}
-              className="desktop-compact-btn"
-              style={{
-                background: "transparent",
-                border: "1px solid hsl(var(--border-subtle))",
-                color: "hsl(var(--text-secondary))",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "2px 8px",
-                borderRadius: "10px",
-                fontSize: "0.68rem",
-                fontWeight: "600",
-                backgroundColor: "hsl(var(--bg-card) / 0.5)",
-                transition: "all 0.2s ease",
-              }}
-              title="Compactar Histórico da Sessão"
-            >
-              <DatabaseZap size={12} /> Compactar
-            </button>
           </div>
 
           <div

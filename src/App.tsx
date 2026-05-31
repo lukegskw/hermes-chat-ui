@@ -112,11 +112,6 @@ export default function App() {
             handleNewChat();
             setIsSidebarOpen(false);
           }}
-          onDeleteConversation={(id) => {
-            handleDeleteConversation(id);
-            handleCleanupConversation(id);
-          }}
-          onRenameConversation={handleRenameConversation}
           onClearAll={() => {
             handleClearAll();
             handleCleanupAllConversations();
@@ -133,6 +128,12 @@ export default function App() {
         <ChatWindow
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           messages={activeMessages}
+          activeConversation={activeConversation}
+          onRenameConversation={handleRenameConversation}
+          onDeleteConversation={(id) => {
+            handleDeleteConversation(id);
+            handleCleanupConversation(id);
+          }}
           isGenerating={isGenerating}
           onSendMessage={handleSendMessage}
           onStopGeneration={handleStopGeneration}
