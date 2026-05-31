@@ -40,6 +40,7 @@ export default function App() {
   const {
     models,
     selectedModel,
+    pendingModelId,
     isConnected,
     isFetchingModels,
     connectionError,
@@ -66,16 +67,16 @@ export default function App() {
     setConversations,
     activeConversationId,
     setActiveConversationId,
-    selectedModel,
+    pendingModelId || selectedModel,
     activeMessages
   );
 
 
 
-  if (isInitializing) {
+  if (isInitializing || isFetchingModels) {
     return (
       <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-base)' }}>
-        <div style={{ color: 'var(--text-muted)' }}>Carregando histórico...</div>
+        <div style={{ color: 'var(--text-muted)' }}>Carregando seu estagiário inteligente...</div>
       </div>
     );
   }
@@ -128,7 +129,7 @@ export default function App() {
           isGenerating={isGenerating}
           onSendMessage={handleSendMessage}
           onStopGeneration={handleStopGeneration}
-          selectedModel={activeConversation?.modelId || selectedModel}
+          selectedModel={activeConversation?.modelId || pendingModelId || selectedModel}
           models={models}
           onSelectModel={handleConversationModelChange}
           isFetchingModels={isFetchingModels}

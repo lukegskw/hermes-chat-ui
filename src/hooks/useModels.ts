@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Model, fetchModels } from '../utils/api';
-import { logger } from '../utils/logger';
-import { Conversation } from '../components/Sidebar';
+import { useState, useEffect } from "react";
+import { Model, fetchModels } from "../utils/api";
+import { logger } from "../utils/logger";
+import { Conversation } from "../components/Sidebar";
 
 export function useModels(
   endpoint: string,
   activeConversationId: string,
-  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>
+  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
 ) {
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isFetchingModels, setIsFetchingModels] = useState<boolean>(true);
   const [connectionError, setConnectionError] = useState<string>("");
+  const [pendingModelId, setPendingModelId] = useState<string | null>(null);
 
   const checkConnectionAndFetchModels = async () => {
     try {
@@ -40,7 +41,7 @@ export function useModels(
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     checkConnectionAndFetchModels();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
 
   const handleSelectModel = (modelId: string) => {
@@ -57,7 +58,10 @@ export function useModels(
   };
 
   const handleConversationModelChange = (modelId: string) => {
-    if (!activeConversationId) return;
+    if (!activeConversationId) {
+      setPendingModelId(modelId);
+      return;
+    }
     setConversations((prev) =>
       prev.map((c) => (c.id === activeConversationId ? { ...c, modelId } : c)),
     );
@@ -66,11 +70,12 @@ export function useModels(
   return {
     models,
     selectedModel,
+    pendingModelId,
     isConnected,
     isFetchingModels,
     connectionError,
     handleSelectModel,
     handleConversationModelChange,
-    checkConnectionAndFetchModels
+    checkConnectionAndFetchModels,
   };
 }

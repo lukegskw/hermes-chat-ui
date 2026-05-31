@@ -99,6 +99,7 @@ export function useHermesStream(
         id: convId,
         title: text.substring(0, 30) + (text.length > 30 ? "..." : ""),
         messages: [],
+        modelId: selectedModel,
       };
       currentConversations = [newConv, ...currentConversations];
       setConversations(currentConversations);
