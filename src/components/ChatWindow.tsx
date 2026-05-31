@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Send,
   Square,
@@ -289,11 +290,8 @@ export default function ChatWindow({
 
               {isMenuOpen && (
                 <>
-                  <div
-                    className="action-menu-backdrop"
-                    onClick={() => setIsMenuOpen(false)}
-                  />
-                  <div className="action-menu-dropdown header-dropdown">
+                  {/* Desktop Action Menu (Inline) */}
+                  <div className="action-menu-dropdown desktop-menu">
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
@@ -332,6 +330,56 @@ export default function ChatWindow({
                       <Trash2 size={16} /> Apagar
                     </button>
                   </div>
+
+                  {/* Mobile Action Menu (Portal Bottom Sheet) */}
+                  {createPortal(
+                    <>
+                      <div
+                        className="action-menu-backdrop"
+                        onClick={() => setIsMenuOpen(false)}
+                      />
+                      <div className="action-menu-dropdown mobile-menu">
+                        <button
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setEditTitleText(activeConversation.title || "");
+                            setIsEditingTitle(true);
+                          }}
+                          className="action-menu-item"
+                        >
+                          <Edit2 size={16} /> Renomear
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            onSendMessage("/compact");
+                          }}
+                          className="action-menu-item"
+                        >
+                          <DatabaseZap size={16} /> Compactar
+                        </button>
+                        <div
+                          style={{
+                            height: "1px",
+                            backgroundColor: "hsl(var(--border-subtle))",
+                            margin: "4px 0",
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            if (onDeleteConversation) {
+                              onDeleteConversation(activeConversation.id);
+                            }
+                          }}
+                          className="action-menu-item delete-item"
+                        >
+                          <Trash2 size={16} /> Apagar
+                        </button>
+                      </div>
+                    </>,
+                    document.body,
+                  )}
                 </>
               )}
             </div>

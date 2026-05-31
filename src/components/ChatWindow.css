@@ -87,9 +87,7 @@
   color: hsl(var(--text-main));
 }
 
-/* --- Action Menu Dropdown (Desktop Default) --- */
-
-.action-menu-dropdown {
+.action-menu-dropdown.desktop-menu {
   position: absolute;
   right: 0;
   top: 100%;
@@ -104,6 +102,11 @@
   z-index: 100;
   min-width: 160px;
   box-shadow: var(--shadow-md);
+}
+
+.mobile-menu,
+.action-menu-backdrop {
+  display: none;
 }
 
 .action-menu-item {
@@ -246,6 +249,10 @@
     padding: 0.5rem 0.6rem !important;
   }
 
+  .desktop-menu {
+    display: none !important;
+  }
+
   .action-menu-backdrop {
     display: block;
     position: fixed;
@@ -257,7 +264,9 @@
     z-index: 9999;
   }
 
-  .action-menu-dropdown {
+  .action-menu-dropdown.mobile-menu {
+    display: flex;
+    flex-direction: column;
     position: fixed;
     bottom: 0;
     left: 0;
@@ -276,7 +285,7 @@
     box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
   }
 
-  .action-menu-item {
+  .action-menu-dropdown.mobile-menu .action-menu-item {
     padding: 16px;
     font-size: 1rem;
     gap: 12px;
