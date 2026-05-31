@@ -56,3 +56,99 @@ div[key]:hover .delete-btn {
   color: hsl(0, 80%, 60%) !important;
   background-color: hsl(0 80% 60% / 0.1) !important;
 }
+
+div[key]:hover .more-btn {
+  opacity: 1 !important;
+}
+.more-btn:hover {
+  color: hsl(var(--text-main)) !important;
+  background-color: hsl(var(--bg-deep) / 0.5) !important;
+}
+
+/* Action Menu - Dropdown (Desktop) */
+.action-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background-color: hsl(var(--bg-deep));
+  border: 1px solid hsl(var(--border-subtle));
+  border-radius: var(--border-radius-md);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 100;
+  min-width: 130px;
+  box-shadow: var(--shadow-md);
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: hsl(var(--text-main));
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.action-menu-item:hover {
+  background-color: hsl(var(--bg-card));
+}
+
+.action-menu-item.delete-item {
+  color: hsl(0 80% 60%);
+}
+.action-menu-item.delete-item:hover {
+  background-color: hsl(0 60% 40% / 0.1);
+}
+
+.action-menu-backdrop {
+  display: none;
+}
+
+/* Action Menu - Bottom Sheet (Mobile) */
+@media (max-width: 768px) {
+  .action-menu-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+  }
+
+  .action-menu-dropdown {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    margin: 0;
+    background-color: hsl(var(--bg-surface));
+    border-radius: 16px 16px 0 0;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 10000;
+    min-width: auto;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  .action-menu-item {
+    padding: 16px;
+    font-size: 1rem;
+    gap: 12px;
+    justify-content: center;
+  }
+}

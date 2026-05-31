@@ -6,6 +6,7 @@ import {
   compressSession,
   PendingApproval,
   ContentPart,
+  updateConversationTitle,
 } from "../utils/api";
 import { fileToBase64 } from "../utils/imageUtils";
 import { logger } from "../utils/logger";
@@ -28,6 +29,7 @@ export function useHermesStream(
   const abortControllersRef = useRef<
     Record<string, AbortController | undefined>
   >({});
+  const titleUpdatedRef = useRef<Set<string>>(new Set());
 
   const isGenerating = generatingStates[activeConversationId] || false;
 
@@ -243,26 +245,51 @@ export function useHermesStream(
 
     const actualModel = targetConv?.modelId || selectedModel;
 
+    let promptToUse = settings.systemPrompt || "";
+    if (existingMessages.length === 0) {
+      titleUpdatedRef.current.delete(convId);
+      promptToUse +=
+        "\n[CRITICAL INSTRUCTION: This is the first message. Begin your response with <TITLE>A concise 3-5 word title for this chat</TITLE> followed by a line break, and then provide your normal response.]";
+    }
+
+    let assistantMessageContent = "";
+
     await sendChatMessageStream({
       endpoint,
       model: actualModel,
       messages: updatedMessages,
-      systemPrompt: settings.systemPrompt || "",
+      systemPrompt: promptToUse,
       conversationId: convId,
       signal: controller.signal,
       onChunk: (chunk) => {
+        assistantMessageContent += chunk;
+
+        if (!titleUpdatedRef.current.has(convId)) {
+          const match = assistantMessageContent.match(/<TITLE>(.*?)<\/TITLE>/);
+          if (match) {
+            const extractedTitle = match[1].trim();
+            titleUpdatedRef.current.add(convId);
+            setConversations((prev) =>
+              prev.map((c) =>
+                c.id === convId ? { ...c, title: extractedTitle } : c,
+              ),
+            );
+            updateConversationTitle(endpoint, convId, extractedTitle).catch(
+              console.error,
+            );
+          }
+        }
+
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id === convId) {
-              return {
-                ...c,
-                messages: c.messages.map((m) => {
-                  if (m.id === assistantMsgId) {
-                    return { ...m, content: m.content + chunk };
-                  }
-                  return m;
-                }),
-              };
+              const newMessages = c.messages.map((m) => {
+                if (m.id === assistantMsgId) {
+                  return { ...m, content: m.content + chunk };
+                }
+                return m;
+              });
+              return { ...c, messages: newMessages };
             }
             return c;
           }),

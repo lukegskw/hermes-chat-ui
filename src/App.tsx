@@ -34,6 +34,7 @@ export default function App() {
     handleNewChat,
     handleSelectConversation,
     handleDeleteConversation,
+    handleRenameConversation,
     handleClearAll,
   } = useChatState();
 
@@ -115,6 +116,7 @@ export default function App() {
             handleDeleteConversation(id);
             handleCleanupConversation(id);
           }}
+          onRenameConversation={handleRenameConversation}
           onClearAll={() => {
             handleClearAll();
             handleCleanupAllConversations();

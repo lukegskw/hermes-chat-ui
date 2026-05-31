@@ -269,9 +269,21 @@ export default function ChatWindow({
                   (msg.tool_calls && msg.tool_calls.length > 0) ||
                   msg.isGenerating,
               )
-              .map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
-              ))}
+              .map((msg) => {
+                let filteredMsg = msg;
+                if (
+                  msg.role === "assistant" &&
+                  typeof msg.content === "string"
+                ) {
+                  filteredMsg = {
+                    ...msg,
+                    content: msg.content
+                      .replace(/<TITLE>[\s\S]*?(<\/TITLE>)?\n*/g, "")
+                      .trim(),
+                  };
+                }
+                return <MessageBubble key={msg.id} message={filteredMsg} />;
+              })}
 
             <div ref={messagesEndRef} />
           </div>

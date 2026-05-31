@@ -6,6 +6,7 @@ import {
   createConversation,
   deleteConversation,
   deleteAllConversations,
+  updateConversationTitle,
   ChatMessage,
 } from "../utils/api";
 import { getApiUrl } from "../config/env";
@@ -180,6 +181,15 @@ export function useChatState() {
     await deleteConversation(endpoint, id);
   };
 
+  const handleRenameConversation = async (id: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c)),
+    );
+    await updateConversationTitle(endpoint, id, newTitle);
+  };
+
   const handleClearAll = async () => {
     if (
       window.confirm(
@@ -214,6 +224,7 @@ export function useChatState() {
     handleNewChat,
     handleSelectConversation,
     handleDeleteConversation,
+    handleRenameConversation,
     handleClearAll,
     reloadConversations: loadConversationsList,
   };
