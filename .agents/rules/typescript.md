@@ -32,4 +32,3 @@ When encountering a TypeScript error:
 
 - Always run TypeScript (`npx tsc --noEmit`) and lint checks (`npm run lint`) after you finish a feature. DO NOT EVER SAY THE USER YOU FINISHED A TASK BEFORE DOING THAT.
 - Fix all TypeScript and lint issues that arise
-- Always format code after your changes with prettier
