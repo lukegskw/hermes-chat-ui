@@ -40,6 +40,7 @@ export function useSwipeDrawer(
     let startTime = 0;
     let isTracking = false;
     let isClosing = false;
+    let isDragging = false;
 
     const sidebar = sidebarRef.current;
 
@@ -51,6 +52,7 @@ export function useSwipeDrawer(
       startY = touch.clientY;
       currentX = touch.clientX;
       startTime = Date.now();
+      isDragging = false;
 
       // If closed, only track if starting near left edge
       if (!isOpen && startX <= edgeZone) {
@@ -70,6 +72,16 @@ export function useSwipeDrawer(
       const touch = e.touches[0];
       const deltaX = touch.clientX - startX;
       const deltaY = touch.clientY - startY;
+
+      // Require a minimum movement before we start manipulating the DOM
+      // This prevents taps from triggering DOM updates (which causes flashes and double-taps)
+      if (!isDragging) {
+        if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+          isDragging = true;
+        } else {
+          return;
+        }
+      }
 
       // Angle check - if scrolling vertically, abort tracking
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
@@ -108,13 +120,20 @@ export function useSwipeDrawer(
       if (backdrop) {
         backdrop.style.display = "block";
         backdrop.style.transition = "none";
-        backdrop.style.opacity = (progress * 0.65).toString();
+        // Base CSS is rgba(0,0,0,0.65). Modulate opacity from 0 to 1.
+        backdrop.style.opacity = progress.toString();
       }
     };
 
     const handleTouchEnd = () => {
       if (!isTracking) return;
+      if (!isDragging) {
+        // It was just a tap. Do nothing.
+        isTracking = false;
+        return;
+      }
       isTracking = false;
+      isDragging = false;
 
       const deltaX = currentX - startX;
       const deltaTime = Date.now() - startTime;
@@ -163,7 +182,7 @@ export function useSwipeDrawer(
         } else {
           // Snap back open
           sidebar.style.transform = "translateX(0)";
-          if (backdrop) backdrop.style.opacity = "0.65";
+          if (backdrop) backdrop.style.opacity = "";
         }
       }
 
