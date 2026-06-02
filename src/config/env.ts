@@ -1,10 +1,6 @@
 import { z } from "zod";
-
-export interface AppConfig {
-  HERMES_API_URL?: string;
-  HERMES_API_KEY?: string;
-  HERMES_PROXY_PORT?: string;
-}
+import { AppConfig } from "../types";
+import { logger } from "../utils";
 
 declare global {
   interface Window {
@@ -49,17 +45,19 @@ export const initConfig = async () => {
     }
   } catch (e) {
     // Ignore fetch errors or timeouts, fallback to env/window
-    console.warn(
+    logger.warn(
+      { error: e },
       "Failed to fetch /api/config, falling back to local env variables.",
-      e,
     );
   }
 
   const parsed = envSchema.safeParse(rawConfig);
 
   if (!parsed.success) {
-    console.error("❌ Erro de Configuração de Ambiente:");
-    console.error(parsed.error.format());
+    logger.error(
+      { error: parsed.error.format() },
+      "Erro de Configuração de Ambiente",
+    );
     throw new Error(
       "Variáveis de ambiente ausentes ou inválidas. O aplicativo não pode iniciar.",
     );

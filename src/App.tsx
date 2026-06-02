@@ -1,15 +1,19 @@
 import { useState, useRef } from "react";
-import Sidebar from "./components/Sidebar";
-import { SettingsSheet } from "./components/SettingsSheet";
-import ChatWindow from "./components/ChatWindow";
-import { useChatState } from "./hooks/useChatState";
-import { useModels } from "./hooks/useModels";
-import { useHermesStream } from "./hooks/useHermesStream";
-import { useSwipeDrawer } from "./hooks/useSwipeDrawer";
-import ErrorBoundary from "./components/ErrorBoundary";
+import {
+  Sidebar,
+  SettingsSheet,
+  ChatWindow,
+  ErrorBoundary,
+} from "./components";
+import {
+  useChatState,
+  useModels,
+  useHermesStream,
+  useSwipeDrawer,
+} from "./hooks";
 import { Toaster } from "sonner";
 
-export default function App() {
+export const App = () => {
   const HERMES_ENDPOINT = "";
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -161,4 +165,4 @@ export default function App() {
       </div>
     </ErrorBoundary>
   );
-}
+};

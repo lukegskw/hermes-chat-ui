@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { Conversation, Settings } from "../components/Sidebar";
 import {
   fetchConversations,
   fetchConversation,
@@ -7,15 +6,15 @@ import {
   deleteConversation,
   deleteAllConversations,
   updateConversationTitle,
-  ChatMessage,
-} from "../utils/api";
+} from "../utils";
+import { Conversation, Settings, ChatMessage } from "../types";
 import { getApiUrl } from "../config/env";
 
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt: "",
 };
 
-export function useChatState() {
+export const useChatState = () => {
   const [settings, setSettings] = useState<Settings>(() => {
     const saved = localStorage.getItem("hermes_settings");
     if (saved) {
@@ -243,4 +242,4 @@ export function useChatState() {
     handleClearAll,
     reloadConversations: loadConversationsList,
   };
-}
+};

@@ -6,21 +6,21 @@ import {
   Wrench,
   GitMerge,
   Activity,
-} from "lucide-react";
-import { ToolCall } from "../utils/api";
+} from "../Icons";
+import { ToolCall } from "../../types";
 import "./AgentActivityLog.css";
 
-interface AgentActivityLogProps {
+export type AgentActivityLogProps = {
   toolCalls?: ToolCall[];
   reasoningContent?: string;
   isGenerating?: boolean;
-}
+};
 
-export function AgentActivityLog({
+export const AgentActivityLog = ({
   toolCalls = [],
   reasoningContent,
   isGenerating = false,
-}: AgentActivityLogProps) {
+}: AgentActivityLogProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasContent = toolCalls.length > 0 || !!reasoningContent;
@@ -80,12 +80,7 @@ export function AgentActivityLog({
             return (
               <div className="timeline-node" key={index}>
                 <div
-                  className="node-icon"
-                  style={{
-                    color: isDelegate
-                      ? "hsl(280 80% 60%)"
-                      : "hsl(var(--accent-primary))",
-                  }}
+                  className={`node-icon ${isDelegate ? "delegate-icon" : "default-icon"}`}
                 >
                   <Icon size={12} />
                 </div>
@@ -108,4 +103,4 @@ export function AgentActivityLog({
       )}
     </div>
   );
-}
+};

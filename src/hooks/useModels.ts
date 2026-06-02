@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
-import { Model, fetchModels } from "../utils/api";
-import { logger } from "../utils/logger";
-import { Conversation } from "../components/Sidebar";
+import { fetchModels, logger } from "../utils";
+import { Conversation, Model } from "../types";
 
-export function useModels(
+export const useModels = (
   endpoint: string,
   activeConversationId: string,
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
-) {
+) => {
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -78,4 +77,4 @@ export function useModels(
     handleConversationModelChange,
     checkConnectionAndFetchModels,
   };
-}
+};

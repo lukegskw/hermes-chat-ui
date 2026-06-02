@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Settings as SettingsIcon, X, Save } from "lucide-react";
-import { Settings } from "../Sidebar";
+import { Settings as SettingsIcon, X, Save } from "../Icons";
+import { Settings } from "../../types";
 import "./SettingsSheet.css";
 
 export type SettingsSheetProps = {
@@ -70,7 +70,7 @@ export const SettingsSheet = ({
             />
           </div>
 
-          <button type="submit" className="settings-save-btn glow-hover">
+          <button type="submit" className="settings-save-btn">
             <Save size={18} />
             Salvar Configurações
           </button>

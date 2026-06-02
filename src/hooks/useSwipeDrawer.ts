@@ -1,21 +1,11 @@
 import { useEffect, RefObject } from "react";
+import { SwipeDrawerOptions } from "../types";
 
-interface SwipeDrawerOptions {
-  edgeZone?: number;
-  threshold?: number;
-  velocityThreshold?: number;
-  sidebarWidth?: number;
-  onOpen: () => void;
-  onClose: () => void;
-  isOpen: boolean;
-  enabled?: boolean;
-}
-
-export function useSwipeDrawer(
+export const useSwipeDrawer = (
   sidebarRef: RefObject<HTMLElement | null>,
   backdropRef: RefObject<HTMLElement | null>,
   options: SwipeDrawerOptions,
-) {
+) => {
   const {
     edgeZone = 30,
     threshold = 0.4,
@@ -227,4 +217,4 @@ export function useSwipeDrawer(
     sidebarRef,
     backdropRef,
   ]);
-}
+};

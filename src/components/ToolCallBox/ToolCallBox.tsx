@@ -8,16 +8,16 @@ import {
   ChevronDown,
   ChevronRight,
   XCircle,
-} from "lucide-react";
-import { ToolCall } from "../utils/api";
+} from "../Icons";
+import { ToolCall } from "../../types";
 import "./ToolCallBox.css";
 
-interface ToolCallBoxProps {
+export type ToolCallBoxProps = {
   toolCall: ToolCall;
   isGenerating?: boolean;
-}
+};
 
-export function ToolCallBox({ toolCall, isGenerating }: ToolCallBoxProps) {
+export const ToolCallBox = ({ toolCall, isGenerating }: ToolCallBoxProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const name = toolCall.function.name;
 
@@ -76,4 +76,4 @@ export function ToolCallBox({ toolCall, isGenerating }: ToolCallBoxProps) {
       )}
     </div>
   );
-}
+};

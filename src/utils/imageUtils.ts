@@ -1,3 +1,5 @@
+import { ImageValidationResult } from "../types";
+
 export const MAX_IMAGE_SIZE_MB = 4;
 export const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
@@ -8,12 +10,7 @@ export const VALID_IMAGE_TYPES = [
   "image/webp",
 ];
 
-export interface ImageValidationResult {
-  valid: boolean;
-  error?: string;
-}
-
-export function validateImageFile(file: File): ImageValidationResult {
+export const validateImageFile = (file: File): ImageValidationResult => {
   if (!VALID_IMAGE_TYPES.includes(file.type)) {
     return {
       valid: false,
@@ -29,22 +26,28 @@ export function validateImageFile(file: File): ImageValidationResult {
   }
 
   return { valid: true };
-}
+};
 
-export function fileToBase64(file: File): Promise<string> {
+export const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Failed to convert file to base64"));
+      }
+    };
     reader.onerror = (error) => reject(error);
   });
-}
+};
 
 // Optional resizing if needed for large images
-export function resizeImage(
+export const resizeImage = (
   dataUrl: string,
   maxDimension = 1600,
-): Promise<string> {
+): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = dataUrl;
@@ -79,4 +82,4 @@ export function resizeImage(
     };
     img.onerror = reject;
   });
-}
+};

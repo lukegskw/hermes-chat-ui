@@ -1,13 +1,13 @@
-import { Check, X, Unlock, Lock } from "lucide-react";
-import { PendingApproval } from "../utils/api";
+import { Check, X, Unlock, Lock } from "../Icons";
+import { PendingApproval } from "../../types";
 import "./ApprovalCard.css";
 
-interface ApprovalCardProps {
+export type ApprovalCardProps = {
   approval: PendingApproval;
   onRespond: (choice: "once" | "session" | "always" | "deny") => void;
-}
+};
 
-export function ApprovalCard({ approval, onRespond }: ApprovalCardProps) {
+export const ApprovalCard = ({ approval, onRespond }: ApprovalCardProps) => {
   return (
     <div className="approval-card glass animate-slide-up">
       <div className="approval-card-header">
@@ -65,4 +65,4 @@ export function ApprovalCard({ approval, onRespond }: ApprovalCardProps) {
       </div>
     </div>
   );
-}
+};

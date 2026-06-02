@@ -5,12 +5,10 @@
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   z-index: 1000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease-out;
+  transition: opacity 0.2s ease-out;
 }
 
 .settings-sheet-backdrop.open {
@@ -23,12 +21,12 @@
   z-index: 1001;
   display: flex;
   flex-direction: column;
-  background-color: hsl(var(--bg-card) / 0.95);
-  border: 1px solid hsl(var(--border-subtle));
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+  background-color: #ffffff;
+  border: 3px solid #000000;
+  box-shadow: 8px 8px 0px #000000;
   transition:
-    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.35s ease;
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.3s ease;
 }
 
 @media (max-width: 768px) {
@@ -37,7 +35,7 @@
     right: 0;
     bottom: 0;
     height: 85vh;
-    border-radius: 20px 20px 0 0;
+    border-radius: 0;
     transform: translateY(100%);
     padding: max(20px, env(safe-area-inset-top)) 20px
       max(20px, env(safe-area-inset-bottom)) 20px;
@@ -54,7 +52,7 @@
     left: 50%;
     width: 600px;
     height: 70vh;
-    border-radius: var(--border-radius-lg);
+    border-radius: 0;
     transform: translate(-50%, -40%);
     opacity: 0;
     pointer-events: none;
@@ -73,32 +71,41 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid #000000;
 }
 
 .settings-sheet-title {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: hsl(var(--text-pure));
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #000000;
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
+  text-transform: uppercase;
+}
+
+.text-secondary {
+  color: #000000;
 }
 
 .settings-sheet-close {
   background: transparent;
-  border: none;
-  color: hsl(var(--text-muted));
+  border: 3px solid transparent;
+  color: #000000;
   cursor: pointer;
   padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s;
+  transition: all 0.1s;
 }
 
 .settings-sheet-close:hover {
-  color: hsl(var(--text-main));
+  background-color: #ff0000;
+  color: #ffffff;
+  border: 3px solid #000000;
 }
 
 .settings-sheet-content {
@@ -116,54 +123,53 @@
 }
 
 .settings-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: hsl(var(--text-secondary));
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #000000;
+  text-transform: uppercase;
 }
 
 .settings-textarea-large {
   flex: 1;
   width: 100%;
-  background-color: hsl(var(--bg-deep) / 0.5);
-  border: 1px solid hsl(var(--border-subtle));
-  border-radius: var(--border-radius-md);
+  background-color: #ffffff;
+  border: 3px solid #000000;
+  border-radius: 0;
   padding: 12px;
-  color: hsl(var(--text-main));
-  font-family: inherit;
-  font-size: 0.95rem;
+  color: #000000;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 500;
   line-height: 1.5;
   resize: none;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.1s;
+  box-shadow: 4px 4px 0px #000000;
 }
 
 .settings-textarea-large:focus {
-  border-color: hsl(var(--accent-primary));
+  border-color: #5ee79d;
 }
 
 .settings-save-btn {
   padding: 1rem;
-  border-radius: var(--border-radius-md);
-  background-color: hsl(var(--accent-primary));
-  border: none;
-  color: white;
+  border-radius: 0;
+  background-color: #5ee79d; /* Pastel Green */
+  border: 3px solid #000000;
+  color: #000000;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 800;
+  text-transform: uppercase;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  box-shadow: var(--shadow-md);
-  transition:
-    transform 0.2s,
-    background-color 0.2s;
-}
-
-.settings-save-btn:hover {
-  background-color: hsl(var(--accent-secondary));
+  box-shadow: 4px 4px 0px #000000;
+  transition: all 0.1s;
 }
 
 .settings-save-btn:active {
-  transform: scale(0.98);
+  box-shadow: 0px 0px 0px #000000;
+  transform: translate(4px, 4px);
 }

@@ -3,6 +3,12 @@
  */
 import { z } from "zod";
 import { logger } from "./logger";
+import {
+  Model,
+  ChatMessage,
+  ConversationAPI,
+  SendChatMessageStreamOptions,
+} from "../types";
 
 export const ModelSchema = z.object({
   id: z.string(),
@@ -12,36 +18,10 @@ export const ModelSchema = z.object({
   label: z.string().optional(),
 });
 
-export type Model = z.infer<typeof ModelSchema>;
-
 const ModelsResponseSchema = z.object({
   data: z.array(ModelSchema).optional(),
   default_model: z.string().optional(),
 });
-
-export interface ToolCall {
-  id: string;
-  type: string;
-  function: {
-    name: string;
-    arguments: string;
-  };
-  status?: "running" | "completed" | "error";
-}
-
-export type ContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
-
-export interface ChatMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string | ContentPart[];
-  reasoning_content?: string;
-  tool_calls?: ToolCall[];
-  isGenerating?: boolean;
-  timestamp?: string;
-}
 
 export const ConversationSchema = z.object({
   id: z.string(),
@@ -51,29 +31,13 @@ export const ConversationSchema = z.object({
   updated_at: z.string().optional(),
 });
 
-export type ConversationAPI = z.infer<typeof ConversationSchema>;
-
-export interface SendChatMessageStreamOptions {
-  endpoint: string;
-  model: string;
-  messages: ChatMessage[];
-  systemPrompt: string;
-  conversationId?: string;
-  onChunk: (chunk: string) => void;
-  onReasoningChunk?: (chunk: string) => void;
-  onToolCallChunk?: (toolCallDelta: unknown) => void;
-  onDone: () => void;
-  onError: (error: Error) => void;
-  signal?: AbortSignal;
-}
-
 /**
  * Fetch models from hermes-agent's proxy endpoint (if available).
  * Falls back to /v1/models if the proxy is unreachable.
  */
-export async function fetchModels(
+export const fetchModels = async (
   endpoint: string,
-): Promise<{ models: Model[]; defaultModel: string }> {
+): Promise<{ models: Model[]; defaultModel: string }> => {
   try {
     const response = await fetch(`${endpoint}/api/models`);
     if (!response.ok) {
@@ -92,9 +56,9 @@ export async function fetchModels(
     logger.debug({ error }, "Failed to fetch models");
   }
   return { models: [], defaultModel: "" };
-}
+};
 
-export async function sendChatMessageStream({
+export const sendChatMessageStream = async ({
   endpoint,
   model,
   messages,
@@ -106,7 +70,7 @@ export async function sendChatMessageStream({
   onDone,
   onError,
   signal,
-}: SendChatMessageStreamOptions): Promise<void> {
+}: SendChatMessageStreamOptions): Promise<void> => {
   try {
     // Prepare conversation messages payload
     const payloadMessages: Omit<ChatMessage, "id">[] = [];
@@ -277,18 +241,9 @@ export async function sendChatMessageStream({
       onError(error instanceof Error ? error : new Error(String(error)));
     }
   }
-}
+};
 
-export interface PendingApproval {
-  id: string;
-  tool: string;
-  command: string;
-  label?: string;
-  risk_level?: string;
-  session_id?: string;
-}
-
-export async function compressSession(endpoint: string): Promise<boolean> {
+export const compressSession = async (endpoint: string): Promise<boolean> => {
   try {
     const response = await fetch(
       `${endpoint.replace(/\/$/, "")}/api/session/compress`,
@@ -301,13 +256,13 @@ export async function compressSession(endpoint: string): Promise<boolean> {
     logger.error({ error }, "Failed to compress session");
     return false;
   }
-}
+};
 
 // --- Conversations API ---
 
-export async function fetchConversations(
+export const fetchConversations = async (
   endpoint: string,
-): Promise<ConversationAPI[]> {
+): Promise<ConversationAPI[]> => {
   try {
     const res = await fetch(`${endpoint.replace(/\/$/, "")}/api/conversations`);
     if (!res.ok) return [];
@@ -326,12 +281,12 @@ export async function fetchConversations(
     logger.error({ error: e }, "Failed to fetch conversations");
     return [];
   }
-}
+};
 
-export async function fetchConversation(
+export const fetchConversation = async (
   endpoint: string,
   id: string,
-): Promise<ConversationAPI | null> {
+): Promise<ConversationAPI | null> => {
   try {
     const res = await fetch(
       `${endpoint.replace(/\/$/, "")}/api/conversations/${id}`,
@@ -352,12 +307,12 @@ export async function fetchConversation(
     logger.error({ error: e }, "Failed to fetch conversation details");
     return null;
   }
-}
+};
 
-export async function createConversation(
+export const createConversation = async (
   endpoint: string,
   conversation: unknown,
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     const res = await fetch(
       `${endpoint.replace(/\/$/, "")}/api/conversations`,
@@ -372,12 +327,12 @@ export async function createConversation(
     logger.error({ error: e }, "Failed to create conversation");
     return false;
   }
-}
+};
 
-export async function deleteConversation(
+export const deleteConversation = async (
   endpoint: string,
   id: string,
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     const res = await fetch(
       `${endpoint.replace(/\/$/, "")}/api/conversations/${id}`,
@@ -390,11 +345,11 @@ export async function deleteConversation(
     logger.error({ error: e }, "Failed to delete conversation");
     return false;
   }
-}
+};
 
-export async function deleteAllConversations(
+export const deleteAllConversations = async (
   endpoint: string,
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     const res = await fetch(
       `${endpoint.replace(/\/$/, "")}/api/conversations`,
@@ -407,13 +362,13 @@ export async function deleteAllConversations(
     logger.error({ error: e }, "Failed to delete all conversations");
     return false;
   }
-}
+};
 
-export async function updateConversationTitle(
+export const updateConversationTitle = async (
   endpoint: string,
   id: string,
   title: string,
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     const res = await fetch(
       `${endpoint.replace(/\/$/, "")}/api/conversations/${id}`,
@@ -428,4 +383,4 @@ export async function updateConversationTitle(
     logger.error({ error: e }, "Failed to update conversation title");
     return false;
   }
-}
+};

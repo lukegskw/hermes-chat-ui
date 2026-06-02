@@ -1,10 +1,12 @@
 /* src/components/AgentActivityLog.css */
 .activity-log {
   margin-bottom: 12px;
-  background-color: hsl(var(--bg-deep) / 0.5);
-  border: 1px solid hsl(var(--border-subtle));
-  border-radius: var(--border-radius-md);
+  background-color: #ffffff;
+  border: 3px solid #000000;
+  border-radius: 0;
   overflow: hidden;
+  box-shadow: 4px 4px 0px #000000;
+  color: #000000;
 }
 
 .activity-log-summary {
@@ -13,17 +15,19 @@
   justify-content: space-between;
   padding: 8px 12px;
   cursor: pointer;
-  background-color: hsl(var(--bg-card));
+  background-color: #5ee79d; /* Pastel Green */
   font-size: 0.8rem;
-  font-weight: 600;
-  color: hsl(var(--text-secondary));
-  transition: all 0.2s;
+  font-weight: 800;
+  color: #000000;
+  transition: all 0.1s;
   user-select: none;
+  text-transform: uppercase;
+  border-bottom: 3px solid #000000;
 }
 
 .activity-log-summary:hover {
-  background-color: hsl(var(--bg-card) / 0.8);
-  color: hsl(var(--text-main));
+  background-color: #5461ee;
+  color: #ffffff;
 }
 
 .summary-text {
@@ -37,7 +41,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-top: 1px solid hsl(var(--border-subtle));
+  background-color: #ffffff;
 }
 
 .timeline-node {
@@ -52,8 +56,8 @@
   left: 7px;
   top: 18px;
   bottom: -10px;
-  width: 2px;
-  background-color: hsl(var(--border-subtle));
+  width: 3px;
+  background-color: #000000;
 }
 
 .timeline-node:last-child::before {
@@ -63,33 +67,44 @@
 .node-icon {
   width: 16px;
   height: 16px;
-  border-radius: 50%;
-  background-color: hsl(var(--bg-card));
+  border-radius: 0;
+  background-color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: hsl(var(--accent-primary));
+  color: #000000;
   position: relative;
   z-index: 1;
   margin-top: 2px;
+  border: 2px solid #000000;
+}
+
+.delegate-icon {
+  background-color: #ff8702;
+}
+
+.default-icon {
+  background-color: #ffffff;
 }
 
 .node-content {
   flex: 1;
   font-size: 0.85rem;
-  color: hsl(var(--text-main));
+  color: #000000;
   padding-bottom: 4px;
 }
 
 .node-title {
-  font-weight: 600;
+  font-weight: 800;
   margin-bottom: 2px;
+  text-transform: uppercase;
 }
 
 .node-description {
-  color: hsl(var(--text-muted));
+  color: #000000;
   font-size: 0.8rem;
   font-style: italic;
+  font-weight: 600;
   white-space: pre-wrap;
   word-break: break-word;
 }

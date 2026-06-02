@@ -1,20 +1,22 @@
 import { useState, useRef, useEffect } from "react";
-import { Conversation } from "../components/Sidebar";
 import {
-  ChatMessage,
   sendChatMessageStream,
   compressSession,
+  updateConversationTitle,
+  fileToBase64,
+  logger,
+} from "../utils";
+import {
+  Conversation,
+  ChatMessage,
   PendingApproval,
   ContentPart,
-  updateConversationTitle,
-} from "../utils/api";
-import { fileToBase64 } from "../utils/imageUtils";
-import { logger } from "../utils/logger";
+} from "../types";
 
 export const CRITICAL_INSTRUCTION =
   '\n\nCRITICAL INSTRUCTION: Se uma ferramenta retornar um erro com o status "approval_required", você DEVE pedir permissão ao usuário imprimindo EXATAMENTE a seguinte string no final da sua resposta: [APPROVAL_REQUIRED: <comando_a_executar>]\nApós imprimir essa string, pare a geração e aguarde a resposta do usuário.';
 
-export function useHermesStream(
+export const useHermesStream = (
   endpoint: string,
   settings: { systemPrompt?: string },
   conversations: Conversation[],
@@ -23,7 +25,7 @@ export function useHermesStream(
   setActiveConversationId: React.Dispatch<React.SetStateAction<string>>,
   selectedModel: string,
   activeMessages: ChatMessage[],
-) {
+) => {
   const [generatingStates, setGeneratingStates] = useState<
     Record<string, boolean>
   >({});
@@ -455,4 +457,4 @@ export function useHermesStream(
     handleCleanupConversation,
     handleCleanupAllConversations,
   };
-}
+};

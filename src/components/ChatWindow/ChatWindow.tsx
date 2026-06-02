@@ -12,24 +12,23 @@ import {
   MoreHorizontal,
   Edit2,
   Trash2,
-} from "lucide-react";
-import MessageBubble from "./MessageBubble";
+} from "../Icons";
+import { MessageBubble, ApprovalCard } from "..";
 import {
   ChatMessage,
   PendingApproval,
   Model,
   ConversationAPI,
-} from "../utils/api";
-import { ApprovalCard } from "./ApprovalCard";
-import { validateImageFile, fileToBase64 } from "../utils/imageUtils";
+} from "../../types";
+import { validateImageFile, fileToBase64 } from "../../utils";
 import "./ChatWindow.css";
 
-export interface ChatWindowMessage extends ChatMessage {
+export type ChatWindowMessage = ChatMessage & {
   id: string;
   isGenerating?: boolean;
-}
+};
 
-export interface ChatWindowProps {
+export type ChatWindowProps = {
   onToggleSidebar: () => void;
   messages: ChatWindowMessage[];
   activeConversation?: ConversationAPI | null;
@@ -45,9 +44,9 @@ export interface ChatWindowProps {
   connectionError?: string;
   pendingApproval?: PendingApproval | null;
   onRespondApproval?: (choice: "once" | "session" | "always" | "deny") => void;
-}
+};
 
-export default function ChatWindow({
+export const ChatWindow = ({
   onToggleSidebar,
   messages,
   activeConversation,
@@ -63,7 +62,7 @@ export default function ChatWindow({
   connectionError,
   pendingApproval,
   onRespondApproval,
-}: ChatWindowProps) {
+}: ChatWindowProps) => {
   const [input, setInput] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -210,15 +209,7 @@ export default function ChatWindow({
 
   return (
     <main
-      style={{
-        flex: 1,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        backgroundColor: "hsl(var(--bg-deep))",
-        position: "relative",
-        overflow: "hidden",
-      }}
+      className="chat-window-main"
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -248,10 +239,7 @@ export default function ChatWindow({
 
           {activeConversation ? (
             isEditingTitle ? (
-              <form
-                onSubmit={handleSaveTitle}
-                style={{ flex: 1, display: "flex" }}
-              >
+              <form onSubmit={handleSaveTitle} className="header-title-form">
                 <input
                   ref={titleInputRef}
                   value={editTitleText}
@@ -311,13 +299,7 @@ export default function ChatWindow({
                     >
                       <DatabaseZap size={16} /> Compactar
                     </button>
-                    <div
-                      style={{
-                        height: "1px",
-                        backgroundColor: "hsl(var(--border-subtle))",
-                        margin: "4px 0",
-                      }}
-                    />
+                    <div className="action-menu-divider" />
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
@@ -358,13 +340,7 @@ export default function ChatWindow({
                         >
                           <DatabaseZap size={16} /> Compactar
                         </button>
-                        <div
-                          style={{
-                            height: "1px",
-                            backgroundColor: "hsl(var(--border-subtle))",
-                            margin: "4px 0",
-                          }}
-                        />
+                        <div className="action-menu-divider" />
                         <button
                           onClick={() => {
                             setIsMenuOpen(false);
@@ -388,17 +364,9 @@ export default function ChatWindow({
       </div>
 
       {/* Messages View Area */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "1.5rem 2rem",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+      <div className="messages-view-area">
         {messages.length > 0 ? (
-          <div style={{ maxWidth: "850px", width: "100%", margin: "0 auto" }}>
+          <div className="messages-container">
             {messages
               .filter(
                 (msg) =>
@@ -438,59 +406,14 @@ export default function ChatWindow({
           </div>
         ) : (
           /* High-Fidelity Welcome & Suggestions Dashboard */
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              maxWidth: "800px",
-              width: "100%",
-              margin: "0 auto",
-              textAlign: "center",
-              padding: "2rem 1rem",
-            }}
-          >
+          <div className="welcome-dashboard">
             {/* Glowing Icon */}
-            <div
-              style={{
-                width: "72px",
-                height: "72px",
-                borderRadius: "24px",
-                background:
-                  "linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 0 35px hsl(var(--accent-primary) / 0.3)",
-                marginBottom: "1.5rem",
-                animation: "pulseGlow 4s infinite",
-              }}
-            >
+            <div className="welcome-icon-container">
               <Sparkles size={36} color="white" />
             </div>
 
-            <h2
-              style={{
-                fontSize: "2rem",
-                fontWeight: "800",
-                color: "hsl(var(--text-pure))",
-                marginBottom: "0.5rem",
-                letterSpacing: "-0.7px",
-              }}
-            >
-              Olá! Eu sou o Hermes Agent.
-            </h2>
-            <p
-              style={{
-                fontSize: "1rem",
-                color: "hsl(var(--text-secondary))",
-                maxWidth: "540px",
-                marginBottom: "2.5rem",
-                lineHeight: 1.5,
-              }}
-            >
+            <h2 className="welcome-title">Olá! Eu sou o Hermes Agent.</h2>
+            <p className="welcome-subtitle">
               Como assistente autônomo local, posso rodar comandos, integrar-me
               com sua casa inteligente e realizar buscas avançadas. O que
               faremos hoje?
@@ -500,16 +423,9 @@ export default function ChatWindow({
       </div>
 
       {/* Input controls Container */}
-      <div
-        style={{
-          padding: "0 2rem 2rem 2rem",
-          maxWidth: "900px",
-          width: "100%",
-          margin: "0 auto",
-        }}
-      >
+      <div className="input-controls-container">
         {pendingApproval && onRespondApproval && (
-          <div style={{ marginBottom: "12px" }}>
+          <div className="approval-card-wrapper">
             <ApprovalCard
               approval={pendingApproval}
               onRespond={onRespondApproval}
@@ -534,68 +450,17 @@ export default function ChatWindow({
           </div>
         )}
 
-        <form
-          onSubmit={handleSubmit}
-          className="glass glow-hover"
-          style={{
-            backgroundColor: "hsl(var(--bg-card) / 0.7)",
-            borderRadius: "var(--border-radius-lg)",
-            border: "1px solid hsl(var(--border-subtle))",
-            padding: "0.6rem 0.8rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-            boxShadow: "var(--shadow-md)",
-          }}
-        >
+        <form onSubmit={handleSubmit} className="chat-input-form">
           {/* Active Model Indicator inside Input Bar */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              fontSize: "0.68rem",
-              fontFamily: "var(--font-mono)",
-              color: "hsl(var(--text-secondary))",
-              fontWeight: "600",
-              padding: "0 4px",
-              borderBottom: "1px solid hsl(var(--border-subtle) / 0.4)",
-              paddingBottom: "6px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Terminal
-                size={11}
-                style={{ color: "hsl(var(--accent-primary))" }}
-              />
+          <div className="model-indicator-bar">
+            <div className="model-indicator-content">
+              <Terminal size={11} className="terminal-icon" />
               EXECUTANDO COM:
-              <div
-                style={{
-                  position: "relative",
-                  display: "inline-flex",
-                  marginLeft: "2px",
-                  maxWidth: "calc(100vw - 120px)",
-                }}
-              >
+              <div className="model-select-wrapper">
                 <select
                   value={selectedModel}
                   onChange={(e) => onSelectModel(e.target.value)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "hsl(var(--text-secondary))",
-                    fontFamily: "var(--font-mono)",
-                    fontWeight: "600",
-                    fontSize: "0.68rem",
-                    outline: "none",
-                    cursor: "pointer",
-                    width: "auto",
-                    maxWidth: "100%",
-                    textOverflow: "ellipsis",
-                    borderBottom: "1px dashed hsl(var(--border-subtle))",
-                    appearance: "none",
-                    paddingRight: "14px",
-                  }}
+                  className="model-select-input"
                   disabled={models.length === 0}
                 >
                   {models.length === 0 && isFetchingModels ? (
@@ -618,16 +483,7 @@ export default function ChatWindow({
                     ))
                   )}
                 </select>
-                <div
-                  style={{
-                    position: "absolute",
-                    right: "2px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    pointerEvents: "none",
-                    color: "hsl(var(--text-secondary))",
-                  }}
-                >
+                <div className="model-select-arrow">
                   <svg
                     width="8"
                     height="5"
@@ -648,14 +504,7 @@ export default function ChatWindow({
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              gap: "8px",
-              position: "relative",
-            }}
-          >
+          <div className="chat-input-actions">
             {isDragging && (
               <div className="drop-zone-active">Solte as imagens aqui</div>
             )}
@@ -672,22 +521,10 @@ export default function ChatWindow({
                 }
               }}
               placeholder="Envie uma mensagem para o Hermes..."
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                color: "white",
-                fontSize: "0.94rem",
-                lineHeight: "1.5",
-                resize: "none",
-                padding: "6px 4px",
-                fontFamily: "var(--font-sans)",
-                maxHeight: "180px",
-              }}
+              className="chat-textarea"
             />
 
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div className="chat-action-buttons">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -699,20 +536,7 @@ export default function ChatWindow({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "var(--border-radius-md)",
-                  backgroundColor: "transparent",
-                  border: "none",
-                  color: "hsl(var(--text-muted))",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.2s",
-                }}
-                className="glow-hover"
+                className="btn-attach"
                 title="Anexar imagem"
               >
                 <Paperclip size={18} />
@@ -722,53 +546,16 @@ export default function ChatWindow({
                 <button
                   type="button"
                   onClick={onStopGeneration}
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "var(--border-radius-md)",
-                    backgroundColor: "hsl(0 60% 40% / 0.2)",
-                    border: "1px solid hsl(0 60% 40% / 0.4)",
-                    color: "hsl(0 80% 60%)",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all 0.2s",
-                  }}
+                  className="btn-stop"
                   title="Interromper geração"
                 >
-                  <Square size={16} fill="hsl(0 80% 60%)" />
+                  <Square size={16} fill="currentColor" />
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={!input.trim()}
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "var(--border-radius-md)",
-                    backgroundColor:
-                      input.trim() || pendingAttachments.length > 0
-                        ? "hsl(var(--accent-primary))"
-                        : "hsl(var(--bg-deep))",
-                    border: "none",
-                    color:
-                      input.trim() || pendingAttachments.length > 0
-                        ? "white"
-                        : "hsl(var(--text-muted))",
-                    cursor:
-                      input.trim() || pendingAttachments.length > 0
-                        ? "pointer"
-                        : "not-allowed",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all 0.25s",
-                    boxShadow:
-                      input.trim() || pendingAttachments.length > 0
-                        ? "var(--shadow-glow)"
-                        : "none",
-                  }}
+                  className={`btn-send ${input.trim() || pendingAttachments.length > 0 ? "active" : ""}`}
                   title="Enviar mensagem"
                 >
                   <Send size={16} />
@@ -780,4 +567,4 @@ export default function ChatWindow({
       </div>
     </main>
   );
-}
+};

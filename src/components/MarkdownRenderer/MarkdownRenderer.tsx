@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { Check, Copy } from "lucide-react";
-import { logger } from "../utils/logger";
+import { Check, Copy } from "../Icons";
+import { logger } from "../../utils";
 
-interface CodeBlockProps {
+type CodeBlockProps = {
   language: string;
   code: string;
-}
+};
 
 const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
   const [copied, setCopied] = useState(false);
@@ -63,8 +63,8 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
         <button className="copy-btn" onClick={handleCopy} title="Copy code">
           {copied ? (
             <>
-              <Check size={13} className="text-emerald" />
-              <span style={{ color: "#10b981" }}>Copied!</span>
+              <Check size={13} className="code-icon-success" />
+              <span className="code-text-success">Copied!</span>
             </>
           ) : (
             <>
@@ -81,19 +81,17 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
   );
 };
 
-interface Part {
+type Part = {
   type: "markdown" | "code";
   language?: string;
   value: string;
-}
+};
 
-export interface MarkdownRendererProps {
+export type MarkdownRendererProps = {
   content?: string;
-}
+};
 
-export default function MarkdownRenderer({
-  content = "",
-}: MarkdownRendererProps) {
+export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
   if (!content) return null;
 
   // Split content by code blocks to separate code and text
@@ -147,12 +145,9 @@ export default function MarkdownRenderer({
       if (listItems.length > 0) {
         const Tag = listType === "ol" ? "ol" : "ul";
         elements.push(
-          <Tag
-            key={`list-${key}`}
-            style={{ marginLeft: "1.5rem", marginBottom: "0.75rem" }}
-          >
+          <Tag key={`list-${key}`} className="md-list">
             {listItems.map((item, idx) => (
-              <li key={idx} style={{ marginBottom: "0.25rem" }}>
+              <li key={idx} className="md-list-item">
                 {renderInline(item)}
               </li>
             ))}
@@ -208,10 +203,7 @@ export default function MarkdownRenderer({
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    color: "hsl(var(--accent-primary))",
-                    textDecoration: "none",
-                  }}
+                  className="md-link"
                 >
                   {text}
                 </a>,
@@ -242,45 +234,21 @@ export default function MarkdownRenderer({
       if (trimmed.startsWith("# ")) {
         flushList(idx);
         elements.push(
-          <h1
-            key={idx}
-            style={{
-              fontSize: "1.5rem",
-              fontWeight: 600,
-              color: "white",
-              margin: "1.2rem 0 0.5rem",
-            }}
-          >
+          <h1 key={idx} className="md-h1">
             {renderInline(trimmed.substring(2))}
           </h1>,
         );
       } else if (trimmed.startsWith("## ")) {
         flushList(idx);
         elements.push(
-          <h2
-            key={idx}
-            style={{
-              fontSize: "1.25rem",
-              fontWeight: 600,
-              color: "white",
-              margin: "1.1rem 0 0.5rem",
-            }}
-          >
+          <h2 key={idx} className="md-h2">
             {renderInline(trimmed.substring(3))}
           </h2>,
         );
       } else if (trimmed.startsWith("### ")) {
         flushList(idx);
         elements.push(
-          <h3
-            key={idx}
-            style={{
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              color: "white",
-              margin: "1rem 0 0.4rem",
-            }}
-          >
+          <h3 key={idx} className="md-h3">
             {renderInline(trimmed.substring(4))}
           </h3>,
         );
@@ -289,21 +257,7 @@ export default function MarkdownRenderer({
       else if (trimmed.startsWith(">")) {
         flushList(idx);
         elements.push(
-          <blockquote
-            key={idx}
-            style={{
-              borderLeft: "3px solid hsl(var(--accent-primary))",
-              paddingLeft: "0.75rem",
-              margin: "0.75rem 0",
-              color: "hsl(var(--text-secondary))",
-              fontStyle: "italic",
-              background: "hsl(var(--bg-surface) / 0.4)",
-              borderRadius:
-                "0 var(--border-radius-sm) var(--border-radius-sm) 0",
-              paddingTop: "4px",
-              paddingBottom: "4px",
-            }}
-          >
+          <blockquote key={idx} className="md-blockquote">
             {renderInline(trimmed.substring(1).trim())}
           </blockquote>,
         );
@@ -335,7 +289,7 @@ export default function MarkdownRenderer({
       else {
         flushList(idx);
         elements.push(
-          <p key={idx} style={{ marginBottom: "0.75rem", lineHeight: 1.6 }}>
+          <p key={idx} className="md-p">
             {renderInline(line)}
           </p>,
         );
@@ -369,4 +323,4 @@ export default function MarkdownRenderer({
       })}
     </div>
   );
-}
+};

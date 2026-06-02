@@ -21,16 +21,6 @@
   }
 }
 
-@keyframes pulseGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 15px hsl(var(--accent-primary) / 0.2);
-  }
-  50% {
-    box-shadow: 0 0 25px hsl(var(--accent-primary) / 0.45);
-  }
-}
-
 @keyframes pulseStatus {
   0%,
   100% {
@@ -47,14 +37,13 @@
   0%,
   100% {
     transform: translateY(0px);
-    background-color: hsl(var(--text-muted));
+    background-color: var(--color-black);
     opacity: 0.5;
   }
   50% {
     transform: translateY(-6px);
-    background-color: hsl(var(--accent-primary));
+    background-color: var(--color-primary);
     opacity: 1;
-    filter: drop-shadow(0 0 6px hsl(var(--accent-primary)));
   }
 }
 
@@ -67,43 +56,14 @@
   animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.glass {
-  background: hsl(var(--bg-glass));
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid hsl(var(--border-subtle));
+/* Neo-brutalist button press effect */
+.btn-press {
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
 }
 
-.glow-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.glow-hover:hover {
-  border-color: hsl(var(--accent-primary) / 0.4);
-  box-shadow: 0 0 15px hsl(var(--accent-primary) / 0.1);
-  transform: translateY(-1px);
-}
-
-/* --- Premium Neural Breathing Animation --- */
-@keyframes neuralGlow {
-  0%,
-  100% {
-    border-color: hsl(var(--accent-primary) / 0.3) !important;
-    box-shadow:
-      0 0 12px hsl(var(--accent-primary) / 0.1),
-      0 0 20px rgba(0, 0, 0, 0.4);
-    background-color: hsl(var(--bg-card) / 0.45);
-  }
-  50% {
-    border-color: hsl(var(--accent-primary) / 0.8) !important;
-    box-shadow:
-      0 0 28px hsl(var(--accent-primary) / 0.45),
-      0 0 40px hsl(var(--accent-secondary) / 0.2),
-      0 0 30px rgba(0, 0, 0, 0.4);
-    background-color: hsl(var(--bg-card) / 0.7);
-  }
-}
-
-.neural-breathing {
-  animation: neuralGlow 2.5s ease-in-out infinite !important;
-  transition: all 0.3s ease;
+.btn-press:active {
+  transform: translate(var(--shadow-offset), var(--shadow-offset)) !important;
+  box-shadow: none !important;
 }
