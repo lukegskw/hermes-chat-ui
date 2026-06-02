@@ -421,13 +421,13 @@ const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             gap: "10px",
           }}
         >
-          {/* Buttons Row */}
-          <div style={{ display: "flex", gap: "8px" }}>
+          {/* Buttons Column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <button
               onClick={onOpenSettings}
               className="glow-hover"
               style={{
-                flex: 1,
+                width: "100%",
                 padding: "0.6rem",
                 borderRadius: "var(--border-radius-sm)",
                 border: "1px solid hsl(var(--border-subtle))",
@@ -449,21 +449,27 @@ const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             {conversations.length > 0 && (
               <button
                 onClick={onClearAll}
+                className="glow-hover"
                 style={{
+                  width: "100%",
                   padding: "0.6rem",
                   borderRadius: "var(--border-radius-sm)",
                   border: "1px solid hsl(0 60% 40% / 0.3)",
                   backgroundColor: "hsl(0 60% 40% / 0.1)",
                   color: "hsl(0 80% 60%)",
+                  fontSize: "0.8rem",
+                  fontWeight: "600",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  gap: "6px",
                   transition: "all 0.2s",
                 }}
                 title="Limpar todas as conversas"
               >
                 <Trash2 size={14} />
+                Apagar Chats
               </button>
             )}
           </div>

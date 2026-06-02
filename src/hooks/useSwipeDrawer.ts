@@ -49,6 +49,7 @@ export function useSwipeDrawer(
       const touch = e.touches[0];
       startX = touch.clientX;
       startY = touch.clientY;
+      currentX = touch.clientX;
       startTime = Date.now();
 
       // If closed, only track if starting near left edge
