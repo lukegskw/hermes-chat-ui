@@ -80,14 +80,36 @@ export const App = () => {
       <div
         style={{
           display: "flex",
+          flexDirection: "column",
           height: "100vh",
           width: "100vw",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "var(--bg-base)",
+          backgroundColor: "#1C1C1C",
+          color: "#FFFFFF",
+          fontFamily: "'Space Grotesk', sans-serif",
         }}
       >
-        <div style={{ color: "var(--text-muted)" }}>
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            border: "4px solid #000000",
+            borderTopColor: "#5EE79D",
+            backgroundColor: "#FFFFFF",
+            boxShadow: "4px 4px 0 #000000",
+            animation: "spin 1s linear infinite",
+            marginBottom: 24,
+          }}
+        ></div>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: "18px",
+            letterSpacing: "-0.5px",
+            textTransform: "uppercase",
+          }}
+        >
           Carregando seu estagiário inteligente...
         </div>
       </div>
