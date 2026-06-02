@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import Sidebar from "./components/Sidebar";
-import SettingsSheet from "./components/SettingsSheet";
+import { SettingsSheet } from "./components/SettingsSheet";
 import ChatWindow from "./components/ChatWindow";
 import { useChatState } from "./hooks/useChatState";
 import { useModels } from "./hooks/useModels";

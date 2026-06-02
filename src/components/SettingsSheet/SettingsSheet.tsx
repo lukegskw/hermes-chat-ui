@@ -3,19 +3,19 @@ import { Settings as SettingsIcon, X, Save } from "lucide-react";
 import { Settings } from "../Sidebar";
 import "./SettingsSheet.css";
 
-export interface SettingsSheetProps {
+export type SettingsSheetProps = {
   isOpen: boolean;
   onClose: () => void;
   settings: Settings;
   onSaveSettings: (settings: Settings) => void;
-}
+};
 
-export default function SettingsSheet({
+export const SettingsSheet = ({
   isOpen,
   onClose,
   settings,
   onSaveSettings,
-}: SettingsSheetProps) {
+}: SettingsSheetProps) => {
   const [tempSystemPrompt, setTempSystemPrompt] = useState(
     settings.systemPrompt || "",
   );
@@ -78,4 +78,4 @@ export default function SettingsSheet({
       </div>
     </>
   );
-}
+};
