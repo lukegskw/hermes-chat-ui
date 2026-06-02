@@ -12,14 +12,29 @@ import {
 import { getApiUrl } from "../config/env";
 
 const DEFAULT_SETTINGS: Settings = {
-  systemPrompt:
-    'Você é o Hermes, um assistente autônomo de inteligência artificial poderoso e prestativo. Responda em Português do Brasil.\n\nCRITICAL INSTRUCTION: Se uma ferramenta retornar um erro com o status "approval_required", você DEVE pedir permissão ao usuário imprimindo EXATAMENTE a seguinte string no final da sua resposta: [APPROVAL_REQUIRED: <comando_a_executar>]\nApós imprimir essa string, pare a geração e aguarde a resposta do usuário.',
+  systemPrompt: "",
 };
 
 export function useChatState() {
   const [settings, setSettings] = useState<Settings>(() => {
     const saved = localStorage.getItem("hermes_settings");
-    return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (
+          parsed.systemPrompt &&
+          parsed.systemPrompt.includes(
+            'CRITICAL INSTRUCTION: Se uma ferramenta retornar um erro com o status "approval_required"',
+          )
+        ) {
+          parsed.systemPrompt = "";
+        }
+        return parsed;
+      } catch {
+        return DEFAULT_SETTINGS;
+      }
+    }
+    return DEFAULT_SETTINGS;
   });
 
   const [conversations, setConversations] = useState<Conversation[]>([]);

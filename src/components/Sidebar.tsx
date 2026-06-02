@@ -1,4 +1,4 @@
-import React, { useState, forwardRef } from "react";
+import { forwardRef } from "react";
 import {
   Bot,
   Plus,
@@ -7,7 +7,6 @@ import {
   MessageSquare,
   Sparkles,
   X,
-  Save,
 } from "lucide-react";
 import { Model, ChatMessage } from "../utils/api";
 import "./Sidebar.css";
@@ -38,8 +37,7 @@ export interface SidebarProps {
   isConnected: boolean;
   isFetchingModels?: boolean;
   connectionError?: string;
-  settings: Settings;
-  onSaveSettings: (settings: Settings) => void;
+  onOpenSettings: () => void;
 }
 
 const Sidebar = forwardRef<HTMLElement, SidebarProps>(
@@ -58,24 +56,10 @@ const Sidebar = forwardRef<HTMLElement, SidebarProps>(
       isConnected,
       isFetchingModels,
       connectionError,
-      settings,
-      onSaveSettings,
+      onOpenSettings,
     },
     ref,
   ) => {
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [tempSystemPrompt, setTempSystemPrompt] = useState(
-      settings.systemPrompt || "",
-    );
-
-    const handleSaveSettings = (e: React.FormEvent) => {
-      e.preventDefault();
-      onSaveSettings({
-        systemPrompt: tempSystemPrompt,
-      });
-      setIsSettingsOpen(false);
-    };
-
     return (
       <aside
         ref={ref}
@@ -440,7 +424,7 @@ const Sidebar = forwardRef<HTMLElement, SidebarProps>(
           {/* Buttons Row */}
           <div style={{ display: "flex", gap: "8px" }}>
             <button
-              onClick={() => setIsSettingsOpen(true)}
+              onClick={onOpenSettings}
               className="glow-hover"
               style={{
                 flex: 1,
@@ -484,95 +468,6 @@ const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             )}
           </div>
         </div>
-
-        {/* Settings Dialog Modal/Drawer */}
-        {isSettingsOpen && (
-          <div className="settings-overlay">
-            <form
-              onSubmit={handleSaveSettings}
-              className="glass settings-modal"
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "4px",
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: "1rem",
-                    fontWeight: "700",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <SettingsIcon size={16} className="text-secondary" />
-                  Configurações da API
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsSettingsOpen(false)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "hsl(var(--text-muted))",
-                    cursor: "pointer",
-                  }}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-              >
-                <label
-                  style={{
-                    fontSize: "0.72rem",
-                    fontWeight: "600",
-                    color: "hsl(var(--text-secondary))",
-                  }}
-                >
-                  Prompt de Sistema (Opcional)
-                </label>
-                <textarea
-                  className="settings-textarea"
-                  rows={8}
-                  value={tempSystemPrompt}
-                  onChange={(e) => setTempSystemPrompt(e.target.value)}
-                  placeholder="Você é o Hermes, um assistente de IA prestativo..."
-                />
-              </div>
-
-              <button
-                type="submit"
-                style={{
-                  marginTop: "6px",
-                  padding: "0.75rem",
-                  borderRadius: "var(--border-radius-md)",
-                  backgroundColor: "hsl(var(--accent-primary))",
-                  border: "none",
-                  color: "white",
-                  fontSize: "0.85rem",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  boxShadow: "var(--shadow-sm)",
-                }}
-              >
-                <Save size={15} />
-                Salvar Configurações
-              </button>
-            </form>
-          </div>
-        )}
       </aside>
     );
   },

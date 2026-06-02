@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import Sidebar from "./components/Sidebar";
+import SettingsSheet from "./components/SettingsSheet";
 import ChatWindow from "./components/ChatWindow";
 import { useChatState } from "./hooks/useChatState";
 import { useModels } from "./hooks/useModels";
@@ -12,6 +13,8 @@ export default function App() {
   const HERMES_ENDPOINT = "";
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isSettingsSheetOpen, setIsSettingsSheetOpen] =
+    useState<boolean>(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -122,8 +125,10 @@ export default function App() {
           isConnected={isConnected}
           isFetchingModels={isFetchingModels}
           connectionError={connectionError}
-          settings={settings}
-          onSaveSettings={handleSaveSettings}
+          onOpenSettings={() => {
+            setIsSettingsSheetOpen(true);
+            setIsSidebarOpen(false);
+          }}
         />
         <ChatWindow
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
@@ -146,6 +151,12 @@ export default function App() {
           connectionError={connectionError}
           pendingApproval={pendingApproval}
           onRespondApproval={handleRespondApproval}
+        />
+        <SettingsSheet
+          isOpen={isSettingsSheetOpen}
+          onClose={() => setIsSettingsSheetOpen(false)}
+          settings={settings}
+          onSaveSettings={handleSaveSettings}
         />
       </div>
     </ErrorBoundary>

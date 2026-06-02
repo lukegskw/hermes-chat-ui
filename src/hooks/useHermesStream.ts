@@ -11,6 +11,9 @@ import {
 import { fileToBase64 } from "../utils/imageUtils";
 import { logger } from "../utils/logger";
 
+export const CRITICAL_INSTRUCTION =
+  '\n\nCRITICAL INSTRUCTION: Se uma ferramenta retornar um erro com o status "approval_required", você DEVE pedir permissão ao usuário imprimindo EXATAMENTE a seguinte string no final da sua resposta: [APPROVAL_REQUIRED: <comando_a_executar>]\nApós imprimir essa string, pare a geração e aguarde a resposta do usuário.';
+
 export function useHermesStream(
   endpoint: string,
   settings: { systemPrompt?: string },
@@ -245,7 +248,8 @@ export function useHermesStream(
 
     const actualModel = targetConv?.modelId || selectedModel;
 
-    let promptToUse = settings.systemPrompt || "";
+    let promptToUse = (settings.systemPrompt || "").trim();
+    promptToUse += CRITICAL_INSTRUCTION;
     if (existingMessages.length === 0) {
       titleUpdatedRef.current.delete(convId);
       promptToUse +=

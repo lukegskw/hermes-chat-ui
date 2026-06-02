@@ -119,7 +119,7 @@ export function useSwipeDrawer(
       const deltaTime = Date.now() - startTime;
       const velocity = Math.abs(deltaX / deltaTime);
 
-      const isFastFlick = velocity > velocityThreshold;
+      const isFastFlick = velocity > velocityThreshold && Math.abs(deltaX) > 10;
       const pastThreshold = Math.abs(deltaX) > sidebarWidth * threshold;
 
       const backdrop = backdropRef.current;
