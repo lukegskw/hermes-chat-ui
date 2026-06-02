@@ -13,6 +13,7 @@ trigger: always_on
 - Ignore or bypass TypeScript and lint rules with comments such as `eslint-disable-next-line` or `@ts-ignore`
 - Importing from nested directories like `import { logger } from "../utils/logger";`
 - Default exports
+- Functions declared with keyword `function`
 
 ## Required Patterns
 
@@ -24,6 +25,7 @@ trigger: always_on
 - Use generics wherever a function operates on multiple types
 - Prefer type inference over redundant explicit annotations
 - Resolve type errors by fixing the type definition or adding a type guard — never by widening to `any`
+- Use arrow functions (const func = () => {}) instead of functions declared with keyword `function`
 
 ## Error Resolution Priority
 
