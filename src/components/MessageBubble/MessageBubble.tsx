@@ -169,7 +169,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               <div className="typing-dot dot-2" />
               <div className="typing-dot dot-3" />
             </div>
-            <span className="typing-text">Processando dados neurais...</span>
+            <span className="typing-text">Pensando...</span>
           </div>
         )}
 
