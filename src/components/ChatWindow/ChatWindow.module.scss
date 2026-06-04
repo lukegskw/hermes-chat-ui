@@ -124,7 +124,8 @@
 }
 
 .headerMoreBtn {
-  @include s.neo-button(s.$color-white);
+  @include s.neo-button(s.$color-dark-gray);
+  color: s.$color-white;
   padding: 6px;
   display: flex;
   align-items: center;
@@ -134,7 +135,7 @@
 /* Action Menu */
 .actionMenuDropdown {
   @include s.neo-card;
-  background-color: s.$color-white;
+  background-color: s.$color-dark-gray;
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -193,7 +194,7 @@
   padding: 10px 12px;
   background: transparent;
   border: none;
-  color: s.$color-black;
+  color: s.$color-white;
   font-family: s.$font-primary;
   font-size: 0.9rem;
   font-weight: 700;
@@ -303,7 +304,7 @@
   width: 64px;
   height: 64px;
   @include s.neo-card(2px);
-  background-color: s.$color-white;
+  background-color: s.$color-dark-gray;
   flex-shrink: 0;
 
   img {
@@ -331,7 +332,7 @@
   max-width: 800px;
   margin: 0 auto;
   @include s.neo-card;
-  background-color: s.$color-white;
+  background-color: s.$color-dark-gray;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -357,7 +358,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: s.$color-black;
+  color: s.$color-white;
 
   .terminalIcon {
     opacity: 0.7;
@@ -377,14 +378,14 @@
   font-family: s.$font-primary;
   font-weight: 800;
   font-size: 0.7rem;
-  color: s.$color-primary;
-  cursor: pointer;
-  padding-right: 14px;
+  color: s.$color-white;
+  padding-right: 16px;
   outline: none;
-  
+  cursor: pointer;
+
   &:disabled {
     cursor: default;
-    color: s.$color-black;
+    color: s.$color-white;
     opacity: 0.5;
   }
 }
@@ -426,11 +427,11 @@
   min-height: 24px;
   max-height: 180px;
   @include s.body-text;
-  color: s.$color-black;
+  color: s.$color-white;
   padding: 0 12px 0 0;
   
   &::placeholder {
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.5);
   }
 }
 
@@ -441,7 +442,7 @@
 }
 
 .btnAttach {
-  @include s.neo-icon-button(s.$color-white, s.$color-black, 36px);
+  @include s.neo-icon-button(s.$color-dark-gray, s.$color-white, 36px);
 }
 
 .btnSend {
