@@ -11,12 +11,12 @@
     flex-direction: row-reverse;
 
     .avatarContainer {
-      background: s.$color-white;
+      background: s.$color-surface;
     }
     
     .content {
-      background-color: s.$color-white;
-      color: s.$color-black;
+      background-color: s.$color-surface;
+      color: s.$color-white;
     }
   }
 
@@ -47,11 +47,7 @@
   flex-shrink: 0;
 }
 
-.avatarIconUser {
-  color: s.$color-black;
-}
-
-.avatarIconHermes {
+.avatarIcon {
   color: s.$color-white;
 }
 
@@ -83,13 +79,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-
-  .isUser & {
-    color: s.$color-black;
-  }
-  .isHermes & {
-    color: s.$color-white;
-  }
+  color: s.$color-white;
 }
 
 .sparklesIcon {
@@ -125,25 +115,17 @@
   @include s.flex-center;
   opacity: 0.5;
   transition: all 0.2s;
+  color: s.$color-white;
 
   &:hover {
     opacity: 1;
     transform: scale(1.1);
   }
 
-  .isUser & {
-    color: s.$color-black;
-  }
-  .isHermes & {
-    color: s.$color-white;
-  }
 }
 
 .copyIconSuccess {
   color: s.$color-secondary;
-}
-
-.copyIcon {
 }
 
 .reasoningContainer {

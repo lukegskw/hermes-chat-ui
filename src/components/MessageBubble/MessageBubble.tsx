@@ -84,9 +84,9 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
       {/* Avatar Container */}
       <div className={styles.avatarContainer}>
         {isUser ? (
-          <User size={16} className={styles.avatarIconUser} />
+          <User size={16} className={styles.avatarIcon} />
         ) : (
-          <Bot size={16} className={styles.avatarIconHermes} />
+          <Bot size={16} className={styles.avatarIcon} />
         )}
       </div>
 
