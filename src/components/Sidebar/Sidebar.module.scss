@@ -142,7 +142,7 @@
 
 .modelSelectionBox {
   @include s.neo-card;
-  background-color: s.$color-dark-gray;
+  background-color: s.$color-surface;
   padding: 0.5rem 0.75rem;
   display: flex;
   flex-direction: column;
@@ -217,7 +217,7 @@
     
 .conversationItem {
   @include s.neo-card(2px);
-  background-color: s.$color-dark-gray;
+  background-color: s.$color-surface;
   color: s.$color-white;
   cursor: pointer;
   padding: 10px 12px;

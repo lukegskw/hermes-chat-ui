@@ -15,6 +15,7 @@ trigger: always_on
 - **Secondary (Highlights/Buttons):** `#5EE79D` (Pastel Green) — "New Chat" buttons, send button, "Online" status.
 - **Action/Warning:** `#FF8702` (Flush Orange) — "Settings" button, "New Chat" button on mobile, alerts.
 - **Main Background:** `#1C1C1C` (Dark Charcoal) — Overall app background and sidebar.
+- **Surface/Cards:** `#1A1B23` (Dark Navy Gray) — Input forms, dropdowns, secondary backgrounds, and elevated surfaces.
 - **Text/User Cards:** `#FFFFFF` (Pure White) — User message cards, text on dark backgrounds.
 - **Borders/Shadows:** `#000000` (Pure Black) — All borders and hard shadows.
 
