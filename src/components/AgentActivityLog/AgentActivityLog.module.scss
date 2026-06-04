@@ -1,0 +1,107 @@
+@use '@styles' as s;
+
+.log {
+  @include s.neo-card;
+  margin-bottom: 12px;
+  background-color: s.$color-white;
+  overflow: hidden;
+  color: s.$color-black;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  background-color: s.$color-secondary;
+  color: s.$color-black;
+  transition: all 0.1s;
+  user-select: none;
+  @include s.label-style;
+  font-size: 0.8rem;
+  font-weight: 800; // override label-style slightly
+  border-bottom: s.$border-width solid s.$color-black;
+
+  &:hover {
+    background-color: s.$color-primary;
+    color: s.$color-white;
+  }
+}
+
+.summaryText {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: s.$color-white;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.node {
+  display: flex;
+  gap: 12px;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 18px;
+    bottom: -10px;
+    width: 3px;
+    background-color: s.$color-black;
+  }
+
+  &:last-child::before {
+    display: none;
+  }
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  @include s.flex-center;
+  color: s.$color-black;
+  position: relative;
+  z-index: 1;
+  margin-top: 2px;
+  border: 2px solid s.$color-black;
+
+  &.delegate {
+    background-color: s.$color-action;
+  }
+
+  &.default {
+    background-color: s.$color-white;
+  }
+}
+
+.content {
+  flex: 1;
+  font-size: 0.85rem;
+  color: s.$color-black;
+  padding-bottom: 4px;
+}
+
+.title {
+  font-weight: 800;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+
+.description {
+  color: s.$color-black;
+  font-size: 0.8rem;
+  font-style: italic;
+  font-weight: 600;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

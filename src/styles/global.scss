@@ -1,0 +1,168 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap");
+
+:root {
+  /* Neo-brutalist Design Tokens */
+  --font-primary: #{v.$font-primary};
+  --font-mono: #{v.$font-mono};
+  --font-sans: #{v.$font-sans};
+
+  /* Colors */
+  --color-primary: #{v.$color-primary};
+  --color-secondary: #{v.$color-secondary};
+  --color-action: #{v.$color-action};
+  --color-bg: #{v.$color-bg};
+  --color-white: #{v.$color-white};
+  --color-black: #{v.$color-black};
+  --color-danger: #{v.$color-danger};
+
+  /* Text Colors */
+  --text-main: var(--color-black);
+  --text-inverse: var(--color-white);
+
+  /* Elevation & Borders */
+  --border-width: #{v.$border-width};
+  --border-radius: #{v.$border-radius};
+  --shadow-offset: #{v.$shadow-offset};
+  --shadow-hard: var(--shadow-offset) var(--shadow-offset) 0 var(--color-black);
+
+  /* Spacing */
+  --space-xs: #{v.$space-xs};
+  --space-sm: #{v.$space-sm};
+  --space-md: #{v.$space-md};
+  --space-lg: #{v.$space-lg};
+  --space-xl: #{v.$space-xl};
+
+  --sidebar-width: #{v.$sidebar-width};
+
+  /* Global Setup */
+  font-family: var(--font-primary);
+  color-scheme: dark;
+  color: var(--text-main);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-black) var(--color-bg);
+}
+
+/* Custom Scrollbars Neo-brutalist style */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-white);
+  border-left: var(--border-width) solid var(--color-black);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-black);
+  border: 2px solid var(--color-white);
+}
+
+body {
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Sidebar Drawer Overlay backdrop (used in App.tsx) */
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: #{v.$sidebar-width-mobile};
+  }
+
+  body {
+    padding: 0;
+    margin: 0;
+  }
+
+  .sidebar-backdrop {
+    @include m.overlay-backdrop(999);
+    animation: fadeIn 0.2s ease-out;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
+
+/* Loading Screen inline styles converted to class */
+.loadingScreen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  align-items: center;
+  justify-content: center;
+  background-color: v.$color-bg;
+  color: v.$color-white;
+  font-family: v.$font-primary;
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid v.$color-black;
+    border-top-color: v.$color-secondary;
+    background-color: v.$color-white;
+    box-shadow: v.$shadow-hard;
+    animation: spin 1s linear infinite;
+    margin-bottom: 24px;
+  }
+
+  .text {
+    @include m.label-style;
+    font-size: 1.125rem;
+  }
+}
+
+/* Tooltips */
+[data-tooltip] {
+  position: relative;
+  
+  &::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-6px);
+    background: v.$color-white;
+    color: v.$color-black;
+    padding: 4px 8px;
+    @include m.label-style;
+    border-radius: 0;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    border: v.$border-width solid v.$color-black;
+    box-shadow: v.$shadow-offset v.$shadow-offset 0 v.$color-black;
+    z-index: 100;
+  }
+
+  &:hover::before {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-2px);
+  }
+}

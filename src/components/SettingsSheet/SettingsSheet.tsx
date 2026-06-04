@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Settings as SettingsIcon, X, Save } from "../Icons";
 import { Settings } from "../../types";
-import "./SettingsSheet.css";
+import styles from "./SettingsSheet.module.scss";
 
 export type SettingsSheetProps = {
   isOpen: boolean;
@@ -39,38 +39,32 @@ export const SettingsSheet = ({
   return (
     <>
       <div
-        className={`settings-sheet-backdrop ${isOpen ? "open" : ""}`}
+        className={`${styles.backdrop} ${isOpen ? styles.open : ""}`}
         onClick={onClose}
       />
-      <div className={`settings-sheet glass ${isOpen ? "open" : ""}`}>
-        <div className="settings-sheet-header">
-          <h3 className="settings-sheet-title">
-            <SettingsIcon size={20} className="text-secondary" />
+      <div className={`${styles.sheet} ${isOpen ? styles.open : ""}`}>
+        <div className={styles.header}>
+          <h3 className={styles.title}>
+            <SettingsIcon size={20} className={styles.textSecondary} />
             Configurações
           </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="settings-sheet-close"
-          >
+          <button type="button" onClick={onClose} className={styles.close}>
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSaveSettings} className="settings-sheet-content">
-          <div className="settings-field">
-            <label className="settings-label">
-              Prompt de Sistema (Opcional)
-            </label>
+        <form onSubmit={handleSaveSettings} className={styles.content}>
+          <div className={styles.field}>
+            <label className={styles.label}>Prompt de Sistema (Opcional)</label>
             <textarea
-              className="settings-textarea-large"
+              className={styles.textareaLarge}
               value={tempSystemPrompt}
               onChange={(e) => setTempSystemPrompt(e.target.value)}
               placeholder="Digite seu prompt customizado aqui..."
             />
           </div>
 
-          <button type="submit" className="settings-save-btn">
+          <button type="submit" className={styles.saveBtn}>
             <Save size={18} />
             Salvar Configurações
           </button>

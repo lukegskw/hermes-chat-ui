@@ -10,7 +10,7 @@ import {
   XCircle,
 } from "../Icons";
 import { ToolCall } from "../../types";
-import "./ToolCallBox.css";
+import styles from "./ToolCallBox.module.scss";
 
 export type ToolCallBoxProps = {
   toolCall: ToolCall;
@@ -26,14 +26,14 @@ export const ToolCallBox = ({ toolCall, isGenerating }: ToolCallBoxProps) => {
   const isExecute = name === "execute_code" || name === "run_python";
   const isMcp = name.startsWith("mcp_");
 
-  let typeClass = "type-default";
+  let typeClass = "";
   let Icon = isMcp ? TerminalSquare : Wrench;
 
   if (isDelegate) {
-    typeClass = "type-delegate";
+    typeClass = styles.typeDelegate;
     Icon = GitMerge;
   } else if (isExecute) {
-    typeClass = "type-execute";
+    typeClass = styles.typeExecute;
     Icon = Code;
   }
 
@@ -43,9 +43,9 @@ export const ToolCallBox = ({ toolCall, isGenerating }: ToolCallBoxProps) => {
   const isError = toolCall.status === "error";
 
   return (
-    <div className={`tool-call-box ${typeClass}`}>
+    <div className={`${styles.box} ${typeClass}`}>
       <div
-        className={`tool-call-header ${typeClass}`}
+        className={styles.header}
         onClick={() => setIsExpanded(!isExpanded)}
         title={name}
       >
@@ -56,13 +56,13 @@ export const ToolCallBox = ({ toolCall, isGenerating }: ToolCallBoxProps) => {
         )}
         <Icon size={14} />
 
-        <span className="tool-call-name">{name}</span>
+        <span className={styles.name}>{name}</span>
 
-        <div className="tool-call-status">
+        <div className={styles.status}>
           {isRunning ? (
-            <div className="status-spinner" />
+            <div className={styles.spinner} />
           ) : isError ? (
-            <XCircle size={14} style={{ color: "hsl(0 80% 60%)" }} />
+            <XCircle size={14} style={{ color: "var(--color-danger)" }} />
           ) : (
             <CheckCircle2 size={14} opacity={0.7} />
           )}
@@ -70,9 +70,7 @@ export const ToolCallBox = ({ toolCall, isGenerating }: ToolCallBoxProps) => {
       </div>
 
       {isExpanded && toolCall.function.arguments && (
-        <div className="tool-call-args animate-fade">
-          {toolCall.function.arguments}
-        </div>
+        <div className={styles.args}>{toolCall.function.arguments}</div>
       )}
     </div>
   );

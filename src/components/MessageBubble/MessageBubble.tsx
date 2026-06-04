@@ -17,7 +17,7 @@ import {
 } from "..";
 import { ToolCall } from "../../types";
 import { logger } from "../../utils";
-import "./MessageBubble.css";
+import styles from "./MessageBubble.module.scss";
 
 export type MessageBubbleProps = {
   message: ChatWindowMessage;
@@ -79,38 +79,38 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
 
   return (
     <div
-      className={`animate-fade message-bubble-wrapper ${isUser ? "is-user" : "is-hermes"}`}
+      className={`${styles.wrapper} ${isUser ? styles.isUser : styles.isHermes}`}
     >
       {/* Avatar Container */}
-      <div className="avatar-container">
+      <div className={styles.avatarContainer}>
         {isUser ? (
-          <User size={16} className="avatar-icon-user" />
+          <User size={16} className={styles.avatarIconUser} />
         ) : (
-          <Bot size={16} className="avatar-icon-hermes" />
+          <Bot size={16} className={styles.avatarIconHermes} />
         )}
       </div>
 
       {/* Bubble Content Card */}
-      <div className="bubble-content">
+      <div className={styles.content}>
         {/* Role label / Action header */}
-        <div className="bubble-header">
-          <span className="bubble-role">
-            {!isUser && <Sparkles size={10} className="sparkles-icon" />}
+        <div className={styles.header}>
+          <span className={styles.role}>
+            {!isUser && <Sparkles size={10} className={styles.sparklesIcon} />}
             {isUser ? "Você" : "Hermes"}
           </span>
 
-          <div className="bubble-actions">
-            <span className="bubble-time">{formatTime(timestamp)}</span>
+          <div className={styles.actions}>
+            <span className={styles.time}>{formatTime(timestamp)}</span>
 
             <button
               onClick={handleCopy}
               title="Copiar mensagem"
-              className="msg-copy-btn"
+              className={styles.copyBtn}
             >
               {copied ? (
-                <Check size={12} className="copy-icon-success" />
+                <Check size={12} className={styles.copyIconSuccess} />
               ) : (
-                <Copy size={12} className="copy-icon" />
+                <Copy size={12} className={styles.copyIcon} />
               )}
             </button>
           </div>
@@ -120,21 +120,21 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
         {!isUser &&
           (message.reasoning_content ||
             (message.tool_calls && message.tool_calls.length > 0)) && (
-            <div className="reasoning-container">
+            <div className={styles.reasoningContainer}>
               <AgentActivityLog
                 toolCalls={message.tool_calls}
                 reasoningContent={message.reasoning_content}
               />
 
               {message.reasoning_content && (
-                <div className="reasoning-block">
+                <div className={styles.reasoningBlock}>
                   <button
                     onClick={() => setShowReasoning(!showReasoning)}
-                    className="reasoning-toggle"
+                    className={styles.reasoningToggle}
                   >
-                    <BrainCircuit size={15} className="reasoning-icon" />
+                    <BrainCircuit size={15} className={styles.reasoningIcon} />
                     Processo de Raciocínio
-                    <div className="reasoning-chevron">
+                    <div className={styles.reasoningChevron}>
                       {showReasoning ? (
                         <ChevronDown size={15} />
                       ) : (
@@ -143,7 +143,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                     </div>
                   </button>
                   {showReasoning && (
-                    <div className="reasoning-content">
+                    <div className={styles.reasoningContent}>
                       {message.reasoning_content}
                     </div>
                   )}
@@ -163,34 +163,34 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
 
         {/* Inline thinking animation - shown while waiting for first content token */}
         {!isUser && message.isGenerating && !message.content && (
-          <div className="typing-indicator-container">
-            <div className="typing-dots">
-              <div className="typing-dot dot-1" />
-              <div className="typing-dot dot-2" />
-              <div className="typing-dot dot-3" />
+          <div className={styles.typingIndicatorContainer}>
+            <div className={styles.typingDots}>
+              <div className={`${styles.typingDot} ${styles.dot1}`} />
+              <div className={`${styles.typingDot} ${styles.dot2}`} />
+              <div className={`${styles.typingDot} ${styles.dot3}`} />
             </div>
-            <span className="typing-text">Pensando...</span>
+            <span className={styles.typingText}>Pensando...</span>
           </div>
         )}
 
         {/* Message body */}
-        <div className="bubble-body">
+        <div className={styles.body}>
           {isUser ? (
-            <div className="bubble-body-user">
+            <div className={styles.bodyUser}>
               {typeof content === "string" ? (
                 <p>{content}</p>
               ) : (
-                <div className="bubble-content-parts">
+                <div className={styles.contentParts}>
                   {content.map((part, idx) => {
                     if (part.type === "text") {
                       return <p key={idx}>{part.text}</p>;
                     } else {
                       return (
-                        <div key={idx} className="bubble-image-wrapper">
+                        <div key={idx} className={styles.imageWrapper}>
                           <img
                             src={part.image_url.url}
                             alt="anexo"
-                            className="bubble-image"
+                            className={styles.image}
                           />
                         </div>
                       );

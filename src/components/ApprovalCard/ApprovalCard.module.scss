@@ -1,0 +1,119 @@
+@use '@styles' as s;
+
+.card {
+  @include s.neo-card;
+  padding: 1.2rem;
+  background-color: s.$color-action;
+  color: s.$color-black;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.icon {
+  @include s.neo-card(2px);
+  width: 36px;
+  height: 36px;
+  background-color: s.$color-white;
+  @include s.flex-center;
+}
+
+.textAmber {
+  color: s.$color-action;
+}
+
+.title {
+  h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.05rem;
+    color: s.$color-black;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: s.$color-black;
+    font-weight: 600;
+  }
+}
+
+.details {
+  @include s.neo-card;
+  background-color: s.$color-white;
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detailLabel {
+  @include s.label-style;
+  font-size: 0.75rem;
+  color: s.$color-black;
+  font-weight: 800;
+}
+
+.detailCode {
+  margin: 0;
+  font-family: s.$font-mono;
+  font-size: 0.85rem;
+  color: s.$color-white;
+  background-color: s.$color-bg;
+  padding: 8px;
+  border: s.$border-width solid s.$color-black;
+  border-radius: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.btnAllow {
+  @include s.neo-button(s.$color-secondary);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.btnSession {
+  @include s.neo-button(s.$color-primary, s.$color-white);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.btnAlways {
+  @include s.neo-button(s.$color-white);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.btnDeny {
+  @include s.neo-button(s.$color-danger, s.$color-white);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}

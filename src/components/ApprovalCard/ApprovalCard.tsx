@@ -1,6 +1,6 @@
 import { Check, X, Unlock, Lock } from "../Icons";
 import { PendingApproval } from "../../types";
-import "./ApprovalCard.css";
+import styles from "./ApprovalCard.module.scss";
 
 export type ApprovalCardProps = {
   approval: PendingApproval;
@@ -9,55 +9,55 @@ export type ApprovalCardProps = {
 
 export const ApprovalCard = ({ approval, onRespond }: ApprovalCardProps) => {
   return (
-    <div className="approval-card glass animate-slide-up">
-      <div className="approval-card-header">
-        <div className="approval-card-icon pulse-attention">
-          <Lock size={18} className="text-amber" />
+    <div className={styles.card}>
+      <div className={styles.header}>
+        <div className={styles.icon}>
+          <Lock size={18} className={styles.textAmber} />
         </div>
-        <div className="approval-card-title">
+        <div className={styles.title}>
           <h3>Ação Requer Aprovação</h3>
           <p>O agente solicitou permissão para executar uma ferramenta.</p>
         </div>
       </div>
 
-      <div className="approval-card-details">
-        <div className="detail-row">
-          <span className="detail-label">Ferramenta:</span>
-          <code className="detail-value text-accent">{approval.tool}</code>
+      <div className={styles.details}>
+        <div className={styles.detailRow}>
+          <span className={styles.detailLabel}>Ferramenta:</span>
+          <code className={styles.detailCode}>{approval.tool}</code>
         </div>
-        <div className="detail-row">
-          <span className="detail-label">Comando:</span>
-          <pre className="detail-code">
+        <div className={styles.detailRow}>
+          <span className={styles.detailLabel}>Comando:</span>
+          <pre className={styles.detailCode}>
             {approval.command || approval.label || "N/A"}
           </pre>
         </div>
       </div>
 
-      <div className="approval-card-actions">
+      <div className={styles.actions}>
         <button
           onClick={() => onRespond("once")}
-          className="btn btn-primary approval-btn-allow"
+          className={styles.btnAllow}
           title="Permitir a execução apenas desta vez"
         >
           <Check size={16} /> Permitir 1x
         </button>
         <button
           onClick={() => onRespond("session")}
-          className="btn btn-secondary approval-btn-session"
+          className={styles.btnSession}
           title="Permitir automaticamente durante esta sessão"
         >
           <Unlock size={16} /> Nesta Sessão
         </button>
         <button
           onClick={() => onRespond("always")}
-          className="btn btn-tertiary approval-btn-always"
+          className={styles.btnAlways}
           title="Lembrar permissão e nunca mais perguntar para este comando"
         >
           <Unlock size={16} /> Sempre
         </button>
         <button
           onClick={() => onRespond("deny")}
-          className="btn btn-danger approval-btn-deny"
+          className={styles.btnDeny}
           title="Negar e cancelar execução"
         >
           <X size={16} /> Negar

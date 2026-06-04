@@ -1,6 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { logger } from "../../utils";
-import "./ErrorBoundary.css";
+import styles from "./ErrorBoundary.module.scss";
 
 type Props = {
   children?: ReactNode;
@@ -17,7 +17,6 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true, error };
   }
 
@@ -28,14 +27,12 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="error-boundary-container">
-          <h2 className="error-boundary-title">
-            Algo deu errado na interface.
-          </h2>
-          <p className="error-boundary-message">{this.state.error?.message}</p>
+        <div className={styles.container}>
+          <h2 className={styles.title}>Algo deu errado na interface.</h2>
+          <p className={styles.message}>{this.state.error?.message}</p>
           <button
             onClick={() => window.location.reload()}
-            className="error-boundary-button"
+            className={styles.button}
           >
             Recarregar Página
           </button>

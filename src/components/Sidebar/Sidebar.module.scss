@@ -1,0 +1,289 @@
+@use '@styles' as s;
+
+.container {
+  width: s.$sidebar-width;
+  height: 100dvh;
+  background-color: s.$color-bg;
+  border-right: s.$border-width solid s.$color-black;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1000;
+
+  @media (max-width: s.$breakpoint-mobile) {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: none;
+
+    &.open {
+      transform: translateX(0);
+      box-shadow: s.$shadow-hard;
+    }
+  }
+}
+
+.header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: s.$border-width solid s.$color-black;
+  background-color: transparent;
+  color: s.$color-white;
+
+  @media (max-width: s.$breakpoint-mobile) {
+    padding-top: max(20px, env(safe-area-inset-top));
+  }
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoCircle {
+  width: 40px;
+  height: 40px;
+  background-color: s.$color-primary;
+  @include s.flex-center;
+  border: 3px solid s.$color-black;
+  box-shadow: 4px 4px 0px s.$color-black;
+  border-radius: 0;
+}
+
+.title {
+  @include s.headline-large;
+  font-size: 1.25rem;
+  margin: 0;
+  letter-spacing: -0.5px;
+  color: s.$color-white;
+}
+
+.statusContainer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.statusIndicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid s.$color-white;
+
+  &.online {
+    background-color: s.$color-secondary;
+  }
+  &.offline {
+    background-color: s.$color-danger;
+  }
+  &.fetching {
+    background-color: s.$color-action;
+    animation: pulseStatus 1.5s infinite;
+  }
+}
+
+.statusText {
+  @include s.label-style;
+  font-size: 0.65rem;
+
+  &.online {
+    color: s.$color-secondary;
+  }
+  &.offline {
+    color: s.$color-danger;
+  }
+  &.fetching {
+    color: s.$color-action;
+  }
+}
+
+.mobileCloseBtn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: s.$color-white;
+  cursor: pointer;
+  padding: 4px;
+  
+  @media (max-width: s.$breakpoint-mobile) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.newChatContainer {
+  padding: 16px;
+  border-bottom: s.$border-width solid s.$color-black;
+  background-color: s.$color-bg;
+
+  .btnPrimary {
+    @include s.neo-button(s.$color-secondary);
+    width: 100%;
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+}
+
+.modelSelectionContainer {
+  padding: 12px 16px;
+  border-bottom: s.$border-width solid s.$color-black;
+  background-color: s.$color-bg;
+}
+
+.modelSelectionBox {
+  @include s.neo-card;
+  background-color: s.$color-white;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.modelLabel {
+  @include s.label-style;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: s.$color-black;
+}
+
+.sparklesIconSmall {
+  color: s.$color-action;
+}
+
+.modelSelect {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: s.$color-black;
+  font-size: 0.82rem;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  padding-right: 12px;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.selectArrowContainer {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  pointer-events: none;
+  color: s.$color-black;
+}
+
+.conversationsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conversationsHeading {
+  @include s.label-style;
+  color: s.$color-white;
+  opacity: 0.7;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.conversationsEmpty {
+  font-size: 0.85rem;
+  color: s.$color-white;
+  opacity: 0.5;
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+}
+
+.conversationItem {
+  @include s.neo-card(2px);
+  background-color: s.$color-white;
+  color: s.$color-black;
+  cursor: pointer;
+  padding: 10px 12px;
+  transition: all 0.1s;
+  user-select: none;
+
+  &:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 s.$color-black;
+  }
+
+  &:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 s.$color-black;
+  }
+
+  &.active {
+    background-color: s.$color-action;
+    box-shadow: 0 0 0 s.$color-black;
+    transform: translate(2px, 2px);
+
+    &:hover {
+      transform: translate(2px, 2px);
+      box-shadow: 0 0 0 s.$color-black;
+    }
+  }
+}
+
+.conversationItemContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conversationIcon {
+  opacity: 0.7;
+}
+
+.conversationTitle {
+  font-weight: 700;
+  font-size: 0.85rem;
+  @include s.text-truncate;
+}
+
+.footer {
+  padding: 16px;
+  border-top: s.$border-width solid s.$color-black;
+  background-color: s.$color-bg;
+}
+
+.footerButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+
+  .btnWarning {
+    @include s.neo-button(s.$color-action);
+    padding: 10px;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+
+  .btnDanger {
+    @include s.neo-button(s.$color-danger, s.$color-white);
+    padding: 10px;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+}

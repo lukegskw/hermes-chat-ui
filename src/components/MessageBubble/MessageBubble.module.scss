@@ -1,0 +1,263 @@
+@use '@styles' as s;
+
+.wrapper {
+  display: flex;
+  gap: 16px;
+  max-width: 100%;
+  margin-bottom: 24px;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  &.isUser {
+    flex-direction: row-reverse;
+
+    .avatarContainer {
+      background: s.$color-white;
+    }
+    
+    .content {
+      background-color: s.$color-white;
+      color: s.$color-black;
+    }
+  }
+
+  &.isHermes {
+    flex-direction: row;
+
+    .avatarContainer {
+      background: s.$color-primary;
+    }
+    
+    .content {
+      background-color: s.$color-primary;
+      color: s.$color-white;
+    }
+  }
+
+  @media (max-width: 768px) {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+}
+
+.avatarContainer {
+  width: 36px;
+  height: 36px;
+  @include s.neo-card;
+  @include s.flex-center;
+  flex-shrink: 0;
+}
+
+.avatarIconUser {
+  color: s.$color-black;
+}
+
+.avatarIconHermes {
+  color: s.$color-white;
+}
+
+.content {
+  max-width: 75%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  @include s.neo-card;
+  padding: 0.88rem 1.1rem;
+
+  @media (max-width: 768px) {
+    max-width: 85%;
+    padding: 0.75rem 0.9rem;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.role {
+  @include s.label-style;
+  font-size: 0.7rem;
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .isUser & {
+    color: s.$color-black;
+  }
+  .isHermes & {
+    color: s.$color-white;
+  }
+}
+
+.sparklesIcon {
+  color: s.$color-secondary;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.time {
+  @include s.label-style;
+  font-size: 0.65rem;
+  opacity: 0.6;
+  text-transform: none;
+  font-weight: 500;
+
+  .isUser & {
+    color: s.$color-black;
+  }
+  .isHermes & {
+    color: s.$color-white;
+  }
+}
+
+.copyBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  @include s.flex-center;
+  opacity: 0.5;
+  transition: all 0.2s;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  .isUser & {
+    color: s.$color-black;
+  }
+  .isHermes & {
+    color: s.$color-white;
+  }
+}
+
+.copyIconSuccess {
+  color: s.$color-secondary;
+}
+
+.copyIcon {
+}
+
+.reasoningContainer {
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 12px;
+}
+
+.reasoningBlock {
+  margin-bottom: 8px;
+}
+
+.reasoningToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  color: s.$color-white;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.15s;
+  width: 100%;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+}
+
+.reasoningIcon {
+  opacity: 0.8;
+}
+
+.reasoningChevron {
+  margin-left: auto;
+}
+
+.reasoningContent {
+  background: rgba(0, 0, 0, 0.2);
+  color: s.$color-white;
+  padding: 12px;
+  font-size: 0.8rem;
+  font-family: s.$font-mono;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-top: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.typingIndicatorContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.typingDots {
+  display: flex;
+  gap: 4px;
+}
+
+.typingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: s.$color-white;
+  animation: typingDot 1.4s infinite ease-in-out both;
+
+  &.dot1 { animation-delay: -0.32s; }
+  &.dot2 { animation-delay: -0.16s; }
+}
+
+.typingText {
+  @include s.label-style;
+  font-size: 0.75rem;
+  color: s.$color-white;
+  opacity: 0.8;
+}
+
+.body {
+  width: 100%;
+}
+
+.bodyUser {
+  @include s.body-text;
+  font-size: 0.95rem;
+
+  p {
+    margin-bottom: 0.5rem;
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.contentParts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.imageWrapper {
+  max-width: 100%;
+  @include s.neo-card;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.image {
+  max-width: 100%;
+  display: block;
+  object-fit: contain;
+}

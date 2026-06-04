@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Check, Copy } from "../Icons";
 import { logger } from "../../utils";
+import styles from "./MarkdownRenderer.module.scss";
 
 type CodeBlockProps = {
   language: string;
@@ -57,14 +58,18 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
   };
 
   return (
-    <div className="code-block-wrapper">
-      <div className="code-block-header">
-        <span className="lang">{language || "code"}</span>
-        <button className="copy-btn" onClick={handleCopy} title="Copy code">
+    <div className={styles.codeBlockWrapper}>
+      <div className={styles.codeBlockHeader}>
+        <span className={styles.lang}>{language || "code"}</span>
+        <button
+          className={styles.copyBtn}
+          onClick={handleCopy}
+          title="Copy code"
+        >
           {copied ? (
             <>
-              <Check size={13} className="code-icon-success" />
-              <span className="code-text-success">Copied!</span>
+              <Check size={13} className={styles.codeIconSuccess} />
+              <span className={styles.codeTextSuccess}>Copied!</span>
             </>
           ) : (
             <>
@@ -74,8 +79,8 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
           )}
         </button>
       </div>
-      <pre>
-        <code>{highlightCode(code)}</code>
+      <pre className={styles.codeBlockPre}>
+        <code className={styles.codeBlockCode}>{highlightCode(code)}</code>
       </pre>
     </div>
   );
@@ -145,9 +150,9 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
       if (listItems.length > 0) {
         const Tag = listType === "ol" ? "ol" : "ul";
         elements.push(
-          <Tag key={`list-${key}`} className="md-list">
+          <Tag key={`list-${key}`} className={styles.list}>
             {listItems.map((item, idx) => (
-              <li key={idx} className="md-list-item">
+              <li key={idx} className={styles.listItem}>
                 {renderInline(item)}
               </li>
             ))}
@@ -170,7 +175,9 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
           const closeIdx = str.indexOf("`", i + 1);
           if (closeIdx !== -1) {
             parts.push(
-              <code key={`code-${i}`}>{str.substring(i + 1, closeIdx)}</code>,
+              <code key={`code-${i}`} className={styles.inlineCode}>
+                {str.substring(i + 1, closeIdx)}
+              </code>,
             );
             i = closeIdx + 1;
             continue;
@@ -203,7 +210,7 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="md-link"
+                  className={styles.link}
                 >
                   {text}
                 </a>,
@@ -234,21 +241,21 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
       if (trimmed.startsWith("# ")) {
         flushList(idx);
         elements.push(
-          <h1 key={idx} className="md-h1">
+          <h1 key={idx} className={styles.h1}>
             {renderInline(trimmed.substring(2))}
           </h1>,
         );
       } else if (trimmed.startsWith("## ")) {
         flushList(idx);
         elements.push(
-          <h2 key={idx} className="md-h2">
+          <h2 key={idx} className={styles.h2}>
             {renderInline(trimmed.substring(3))}
           </h2>,
         );
       } else if (trimmed.startsWith("### ")) {
         flushList(idx);
         elements.push(
-          <h3 key={idx} className="md-h3">
+          <h3 key={idx} className={styles.h3}>
             {renderInline(trimmed.substring(4))}
           </h3>,
         );
@@ -257,7 +264,7 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
       else if (trimmed.startsWith(">")) {
         flushList(idx);
         elements.push(
-          <blockquote key={idx} className="md-blockquote">
+          <blockquote key={idx} className={styles.blockquote}>
             {renderInline(trimmed.substring(1).trim())}
           </blockquote>,
         );
@@ -289,7 +296,7 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
       else {
         flushList(idx);
         elements.push(
-          <p key={idx} className="md-p">
+          <p key={idx} className={styles.p}>
             {renderInline(line)}
           </p>,
         );
@@ -303,7 +310,7 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
   };
 
   return (
-    <div className="prose">
+    <div className={styles.prose}>
       {parts.map((part, index) => {
         if (part.type === "code") {
           return (

@@ -1,0 +1,33 @@
+// Colors
+$color-primary: #5461ee;
+$color-secondary: #5ee79d;
+$color-action: #ff8702;
+$color-bg: #1c1c1c;
+$color-white: #ffffff;
+$color-black: #000000;
+$color-danger: #ff0000;
+
+// Typography
+$font-primary: "Space Grotesk", sans-serif;
+$font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+$font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+// Spacing
+$space-xs: 4px;
+$space-sm: 8px;
+$space-md: 16px;
+$space-lg: 24px;
+$space-xl: 32px;
+
+// Elevation
+$border-width: 3px;
+$border-radius: 0px;
+$shadow-offset: 4px;
+$shadow-hard: $shadow-offset $shadow-offset 0 $color-black;
+
+// Layout
+$sidebar-width: 280px;
+$sidebar-width-mobile: 290px;
+
+// Breakpoints
+$breakpoint-mobile: 768px;

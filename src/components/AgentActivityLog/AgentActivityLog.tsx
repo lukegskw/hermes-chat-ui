@@ -8,7 +8,7 @@ import {
   Activity,
 } from "../Icons";
 import { ToolCall } from "../../types";
-import "./AgentActivityLog.css";
+import styles from "./AgentActivityLog.module.scss";
 
 export type AgentActivityLogProps = {
   toolCalls?: ToolCall[];
@@ -45,12 +45,12 @@ export const AgentActivityLog = ({
   const summaryText = summaryParts.join(" · ");
 
   return (
-    <div className="activity-log">
+    <div className={styles.log}>
       <div
-        className="activity-log-summary"
+        className={styles.summary}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="summary-text">
+        <div className={styles.summaryText}>
           <Activity size={14} />
           <span>Atividade do Agente: {summaryText}</span>
         </div>
@@ -58,15 +58,15 @@ export const AgentActivityLog = ({
       </div>
 
       {isExpanded && (
-        <div className="activity-timeline animate-fade">
+        <div className={styles.timeline}>
           {reasoningContent && (
-            <div className="timeline-node">
-              <div className="node-icon">
+            <div className={styles.node}>
+              <div className={`${styles.icon} ${styles.default}`}>
                 <Brain size={12} />
               </div>
-              <div className="node-content">
-                <div className="node-title">Processo de Pensamento</div>
-                <div className="node-description">{reasoningContent}</div>
+              <div className={styles.content}>
+                <div className={styles.title}>Processo de Pensamento</div>
+                <div className={styles.description}>{reasoningContent}</div>
               </div>
             </div>
           )}
@@ -78,15 +78,15 @@ export const AgentActivityLog = ({
             const Icon = isDelegate ? GitMerge : Wrench;
 
             return (
-              <div className="timeline-node" key={index}>
+              <div className={styles.node} key={index}>
                 <div
-                  className={`node-icon ${isDelegate ? "delegate-icon" : "default-icon"}`}
+                  className={`${styles.icon} ${isDelegate ? styles.delegate : styles.default}`}
                 >
                   <Icon size={12} />
                 </div>
-                <div className="node-content">
-                  <div className="node-title">{tc.function.name}</div>
-                  <div className="node-description">
+                <div className={styles.content}>
+                  <div className={styles.title}>{tc.function.name}</div>
+                  <div className={styles.description}>
                     {isGenerating
                       ? isDelegate
                         ? "Delegando tarefa..."

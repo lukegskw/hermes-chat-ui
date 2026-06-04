@@ -1,0 +1,29 @@
+@use 'variables' as v;
+
+@mixin headline-bold {
+  font-family: v.$font-primary;
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+@mixin headline-large {
+  font-family: v.$font-primary;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+@mixin body-text {
+  font-family: v.$font-primary;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+@mixin label-bold {
+  font-family: v.$font-primary;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}

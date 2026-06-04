@@ -1,0 +1,115 @@
+@use '@styles' as s;
+
+.backdrop {
+  @include s.overlay-backdrop(40);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background-color: rgba(0, 0, 0, 0.5);
+
+  &.open {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.sheet {
+  @include s.neo-card;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -45%) scale(0.95);
+  width: 90%;
+  max-width: 500px;
+  background-color: s.$color-white;
+  z-index: 50;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  color: s.$color-black;
+
+  &.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    top: 0;
+    left: 0;
+    transform: translateY(100%);
+    border-radius: 0;
+    border: none;
+
+    &.open {
+      transform: translateY(0);
+    }
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: s.$border-width solid s.$color-black;
+  background-color: s.$color-bg;
+  color: s.$color-white;
+}
+
+.title {
+  @include s.headline-large;
+  font-size: 1.25rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.textSecondary {
+  color: s.$color-secondary;
+}
+
+.close {
+  @include s.neo-icon-button(s.$color-action, s.$color-white, 32px);
+}
+
+.content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background-color: s.$color-white;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  @include s.label-style;
+  font-size: 0.85rem;
+  color: s.$color-black;
+}
+
+.textareaLarge {
+  @include s.neo-input;
+  min-height: 150px;
+  padding: 12px;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.saveBtn {
+  @include s.neo-button(s.$color-secondary);
+  padding: 14px;
+  font-size: 1rem;
+  margin-top: 8px;
+}

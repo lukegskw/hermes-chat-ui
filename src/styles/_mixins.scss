@@ -1,0 +1,80 @@
+@use 'variables' as v;
+
+// === PRIMITIVES ===
+
+@mixin neo-card($shadow-size: v.$shadow-offset) {
+  border: v.$border-width solid v.$color-black;
+  border-radius: v.$border-radius;
+  box-shadow: $shadow-size $shadow-size 0 v.$color-black;
+}
+
+@mixin neo-press($offset: v.$shadow-offset) {
+  transition: all 0.1s;
+  &:active {
+    box-shadow: 0px 0px 0px v.$color-black;
+    transform: translate($offset, $offset);
+  }
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@mixin label-style {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// === COMPOSITES ===
+
+@mixin neo-button($bg, $color: v.$color-black, $shadow-size: v.$shadow-offset) {
+  @include neo-card($shadow-size);
+  @include neo-press($shadow-size);
+  @include flex-center;
+  background-color: $bg;
+  color: $color;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  gap: 8px;
+}
+
+@mixin neo-icon-button($bg, $color: v.$color-black, $size: 36px) {
+  @include neo-button($bg, $color);
+  width: $size;
+  height: $size;
+  padding: 0;
+}
+
+@mixin neo-input {
+  @include neo-card;
+  background-color: v.$color-white;
+  color: v.$color-black;
+  outline: none;
+  font-family: v.$font-primary;
+
+  &:focus {
+    border-color: v.$color-secondary;
+  }
+}
+
+@mixin overlay-backdrop($z-index: 999) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  z-index: $z-index;
+}

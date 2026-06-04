@@ -1,0 +1,173 @@
+@use '@styles' as s;
+
+// Prose container styles (absorbed from prose.css)
+.prose {
+  @include s.body-text;
+  font-size: 0.95rem;
+
+  @media (max-width: s.$breakpoint-mobile) {
+    font-size: 0.92rem;
+  }
+}
+
+.h1 {
+  @include s.headline-large;
+  font-size: 1.5rem;
+  margin: 1.2rem 0 0.5rem;
+  color: inherit;
+  letter-spacing: -0.5px;
+}
+
+.h2 {
+  @include s.headline-large;
+  font-size: 1.25rem;
+  margin: 1.1rem 0 0.5rem;
+  color: inherit;
+  letter-spacing: -0.3px;
+}
+
+.h3 {
+  @include s.headline-large;
+  font-size: 1.1rem;
+  margin: 1rem 0 0.4rem;
+  color: inherit;
+}
+
+.p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+  font-weight: 500;
+  color: inherit;
+}
+
+.list {
+  margin-left: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: inherit;
+  font-weight: 500;
+}
+
+.listItem {
+  margin-bottom: 0.25rem;
+}
+
+.link {
+  font-weight: 700;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: all 0.1s;
+
+  &:hover {
+    background-color: s.$color-black;
+    color: s.$color-white;
+  }
+}
+
+.blockquote {
+  border-left: 4px solid s.$color-black;
+  padding-left: 0.75rem;
+  margin: 0.75rem 0;
+  font-style: italic;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.05);
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+// Inline code
+.inlineCode {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 4px;
+  font-family: s.$font-mono;
+  font-size: 0.85em;
+  font-weight: 700;
+  border: 1px solid s.$color-black;
+}
+
+// Code block
+.codeBlockWrapper {
+  @include s.neo-card;
+  margin: 0.75rem 0;
+  background-color: s.$color-bg;
+  overflow: hidden;
+}
+
+.codeBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background-color: s.$color-white;
+  border-bottom: s.$border-width solid s.$color-black;
+  color: s.$color-black;
+
+  .lang {
+    font-weight: 800;
+    font-family: s.$font-mono;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+  }
+}
+
+.copyBtn {
+  background: transparent;
+  border: 2px solid transparent;
+  color: s.$color-black;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  transition: all 0.1s;
+
+  &:hover {
+    border: 2px solid s.$color-black;
+    background-color: s.$color-secondary;
+  }
+}
+
+.codeIconSuccess {
+  color: s.$color-primary;
+}
+
+.codeTextSuccess {
+  color: s.$color-primary;
+}
+
+.codeBlockPre {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.codeBlockCode {
+  font-family: s.$font-mono;
+  font-size: 0.85rem;
+  color: s.$color-white;
+  line-height: 1.5;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+// Syntax Highlighting tokens
+:global {
+  .code-keyword {
+    color: s.$color-secondary;
+    font-weight: bold;
+  }
+  .code-string {
+    color: s.$color-action;
+  }
+  .code-comment {
+    color: #888888;
+    font-style: italic;
+  }
+  .code-number {
+    color: s.$color-primary;
+    font-weight: bold;
+  }
+}

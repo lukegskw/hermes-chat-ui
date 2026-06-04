@@ -9,8 +9,7 @@ import {
   X,
 } from "../Icons";
 import { Model, ChatMessage } from "../../types";
-import "./Sidebar.css";
-import "./Settings.css";
+import styles from "./Sidebar.module.scss";
 
 export type Conversation = {
   id: string;
@@ -63,22 +62,22 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
     return (
       <aside
         ref={ref}
-        className={`sidebar-container ${isSidebarOpen ? "sidebar-open" : ""}`}
+        className={`${styles.container} ${isSidebarOpen ? styles.open : ""}`}
       >
         {/* Sidebar Header with Notch Support */}
-        <div className="sidebar-header">
-          <div className="sidebar-logo-container">
-            <div className="sidebar-logo-circle">
+        <div className={styles.header}>
+          <div className={styles.logoContainer}>
+            <div className={styles.logoCircle}>
               <Bot size={20} color="white" />
             </div>
             <div>
-              <h1 className="sidebar-title">Hermes Chat</h1>
-              <div className="sidebar-status-container">
+              <h1 className={styles.title}>Hermes Chat</h1>
+              <div className={styles.statusContainer}>
                 <div
-                  className={`status-indicator ${isFetchingModels ? "fetching" : isConnected ? "online" : "offline"}`}
+                  className={`${styles.statusIndicator} ${isFetchingModels ? styles.fetching : isConnected ? styles.online : styles.offline}`}
                 />
                 <span
-                  className={`status-text ${isFetchingModels ? "fetching" : isConnected ? "online" : "offline"}`}
+                  className={`${styles.statusText} ${isFetchingModels ? styles.fetching : isConnected ? styles.online : styles.offline}`}
                 >
                   {isFetchingModels
                     ? "Conectando..."
@@ -93,7 +92,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
           {/* Mobile-only Close Drawer Button */}
           <button
             onClick={onToggleSidebar}
-            className="mobile-close-sidebar-btn"
+            className={styles.mobileCloseBtn}
             title="Fechar painel"
           >
             <X size={20} />
@@ -101,24 +100,24 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
         </div>
 
         {/* New Chat Button */}
-        <div className="new-chat-container">
-          <button onClick={onNewChat} className="btn-primary">
+        <div className={styles.newChatContainer}>
+          <button onClick={onNewChat} className={styles.btnPrimary}>
             <Plus size={16} />
             Nova Conversa
           </button>
         </div>
 
         {/* Model Selection */}
-        <div className="model-selection-container">
-          <div className="model-selection-box">
-            <label className="model-label">
-              <Sparkles size={11} className="sparkles-icon-small" />
+        <div className={styles.modelSelectionContainer}>
+          <div className={styles.modelSelectionBox}>
+            <label className={styles.modelLabel}>
+              <Sparkles size={11} className={styles.sparklesIconSmall} />
               Modelo Ativo
             </label>
             <select
               value={selectedModel}
               onChange={(e) => onSelectModel(e.target.value)}
-              className="model-select"
+              className={styles.modelSelect}
               disabled={
                 (!isConnected && !isFetchingModels) || models.length === 0
               }
@@ -144,7 +143,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
               )}
             </select>
             {/* Custom dropdown arrow */}
-            <div className="select-arrow-container">
+            <div className={styles.selectArrowContainer}>
               <svg
                 width="10"
                 height="6"
@@ -165,8 +164,8 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
         </div>
 
         {/* Conversations List */}
-        <div className="conversations-list">
-          <div className="conversations-heading">Conversas Recentes</div>
+        <div className={styles.conversationsList}>
+          <div className={styles.conversationsHeading}>Conversas Recentes</div>
 
           {conversations.length > 0 ? (
             conversations.map((conv) => {
@@ -175,12 +174,15 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
                 <div
                   key={conv.id}
                   onClick={() => onSelectConversation(conv.id)}
-                  className={`conversation-item ${isActive ? "active" : ""}`}
+                  className={`${styles.conversationItem} ${isActive ? styles.active : ""}`}
                 >
-                  <div className="conversation-item-content">
-                    <MessageSquare size={15} className="conversation-icon" />
+                  <div className={styles.conversationItemContent}>
+                    <MessageSquare
+                      size={15}
+                      className={styles.conversationIcon}
+                    />
 
-                    <span className="conversation-title">
+                    <span className={styles.conversationTitle}>
                       {conv.title || "Conversa sem título"}
                     </span>
                   </div>
@@ -188,15 +190,17 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
               );
             })
           ) : (
-            <div className="conversations-empty">Nenhuma conversa iniciada</div>
+            <div className={styles.conversationsEmpty}>
+              Nenhuma conversa iniciada
+            </div>
           )}
         </div>
 
         {/* Sidebar Footer (Settings and Actions) */}
-        <div className="sidebar-footer">
+        <div className={styles.footer}>
           {/* Buttons Column */}
-          <div className="sidebar-footer-buttons">
-            <button onClick={onOpenSettings} className="btn-warning">
+          <div className={styles.footerButtons}>
+            <button onClick={onOpenSettings} className={styles.btnWarning}>
               <SettingsIcon size={14} />
               Ajustes
             </button>
@@ -204,7 +208,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             {conversations.length > 0 && (
               <button
                 onClick={onClearAll}
-                className="btn-danger"
+                className={styles.btnDanger}
                 title="Limpar todas as conversas"
               >
                 <Trash2 size={14} />

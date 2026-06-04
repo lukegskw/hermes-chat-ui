@@ -1,0 +1,32 @@
+@use '@styles' as s;
+
+.container {
+  padding: 2rem;
+  color: s.$color-white;
+  background-color: s.$color-bg;
+  height: 100vh;
+  @include s.flex-center;
+  flex-direction: column;
+}
+
+.title {
+  color: s.$color-danger;
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.message {
+  color: s.$color-white;
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.button {
+  @include s.neo-button(s.$color-secondary);
+  margin-top: 2rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}

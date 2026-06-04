@@ -21,7 +21,7 @@ import {
   ConversationAPI,
 } from "../../types";
 import { validateImageFile, fileToBase64 } from "../../utils";
-import "./ChatWindow.css";
+import styles from "./ChatWindow.module.scss";
 
 export type ChatWindowMessage = ChatMessage & {
   id: string;
@@ -209,7 +209,7 @@ export const ChatWindow = ({
 
   return (
     <main
-      className="chat-window-main"
+      className={styles.main}
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -227,11 +227,11 @@ export const ChatWindow = ({
       }}
     >
       {/* Global Unified Header Bar */}
-      <div className="chat-window-header">
-        <div className="header-left">
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
           <button
             onClick={onToggleSidebar}
-            className="mobile-menu-btn"
+            className={styles.mobileMenuBtn}
             title="Menu"
           >
             <Menu size={22} />
@@ -239,19 +239,22 @@ export const ChatWindow = ({
 
           {activeConversation ? (
             isEditingTitle ? (
-              <form onSubmit={handleSaveTitle} className="header-title-form">
+              <form
+                onSubmit={handleSaveTitle}
+                className={styles.headerTitleForm}
+              >
                 <input
                   ref={titleInputRef}
                   value={editTitleText}
                   onChange={(e) => setEditTitleText(e.target.value)}
                   onBlur={handleSaveTitle}
-                  className="header-title-input"
+                  className={styles.headerTitleInput}
                   placeholder="Nome da conversa..."
                 />
               </form>
             ) : (
               <span
-                className="header-title"
+                className={styles.headerTitle}
                 onClick={() => {
                   setEditTitleText(activeConversation.title || "");
                   setIsEditingTitle(true);
@@ -261,16 +264,16 @@ export const ChatWindow = ({
               </span>
             )
           ) : (
-            <span className="header-title">Hermes Console</span>
+            <span className={styles.headerTitle}>Hermes Console</span>
           )}
         </div>
 
-        <div className="header-right">
+        <div className={styles.headerRight}>
           {activeConversation && (
             <div style={{ position: "relative" }}>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="header-more-btn"
+                className={styles.headerMoreBtn}
                 title="Mais Opções"
               >
                 <MoreHorizontal size={20} />
@@ -279,14 +282,16 @@ export const ChatWindow = ({
               {isMenuOpen && (
                 <>
                   {/* Desktop Action Menu (Inline) */}
-                  <div className="action-menu-dropdown desktop-menu">
+                  <div
+                    className={`${styles.actionMenuDropdown} ${styles.desktopMenu}`}
+                  >
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
                         setEditTitleText(activeConversation.title || "");
                         setIsEditingTitle(true);
                       }}
-                      className="action-menu-item"
+                      className={styles.actionMenuItem}
                     >
                       <Edit2 size={16} /> Renomear
                     </button>
@@ -295,11 +300,11 @@ export const ChatWindow = ({
                         setIsMenuOpen(false);
                         onSendMessage("/compact");
                       }}
-                      className="action-menu-item"
+                      className={styles.actionMenuItem}
                     >
                       <DatabaseZap size={16} /> Compactar
                     </button>
-                    <div className="action-menu-divider" />
+                    <div className={styles.actionMenuDivider} />
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
@@ -307,7 +312,7 @@ export const ChatWindow = ({
                           onDeleteConversation(activeConversation.id);
                         }
                       }}
-                      className="action-menu-item delete-item"
+                      className={`${styles.actionMenuItem} ${styles.deleteItem}`}
                     >
                       <Trash2 size={16} /> Apagar
                     </button>
@@ -317,17 +322,19 @@ export const ChatWindow = ({
                   {createPortal(
                     <>
                       <div
-                        className="action-menu-backdrop"
+                        className={styles.actionMenuBackdrop}
                         onClick={() => setIsMenuOpen(false)}
                       />
-                      <div className="action-menu-dropdown mobile-menu">
+                      <div
+                        className={`${styles.actionMenuDropdown} ${styles.mobileMenu}`}
+                      >
                         <button
                           onClick={() => {
                             setIsMenuOpen(false);
                             setEditTitleText(activeConversation.title || "");
                             setIsEditingTitle(true);
                           }}
-                          className="action-menu-item"
+                          className={styles.actionMenuItem}
                         >
                           <Edit2 size={16} /> Renomear
                         </button>
@@ -336,11 +343,11 @@ export const ChatWindow = ({
                             setIsMenuOpen(false);
                             onSendMessage("/compact");
                           }}
-                          className="action-menu-item"
+                          className={styles.actionMenuItem}
                         >
                           <DatabaseZap size={16} /> Compactar
                         </button>
-                        <div className="action-menu-divider" />
+                        <div className={styles.actionMenuDivider} />
                         <button
                           onClick={() => {
                             setIsMenuOpen(false);
@@ -348,7 +355,7 @@ export const ChatWindow = ({
                               onDeleteConversation(activeConversation.id);
                             }
                           }}
-                          className="action-menu-item delete-item"
+                          className={`${styles.actionMenuItem} ${styles.deleteItem}`}
                         >
                           <Trash2 size={16} /> Apagar
                         </button>
@@ -364,9 +371,9 @@ export const ChatWindow = ({
       </div>
 
       {/* Messages View Area */}
-      <div className="messages-view-area">
+      <div className={styles.messagesViewArea}>
         {messages.length > 0 ? (
-          <div className="messages-container">
+          <div className={styles.messagesContainer}>
             {messages
               .filter(
                 (msg) =>
@@ -406,14 +413,14 @@ export const ChatWindow = ({
           </div>
         ) : (
           /* High-Fidelity Welcome & Suggestions Dashboard */
-          <div className="welcome-dashboard">
+          <div className={styles.welcomeDashboard}>
             {/* Glowing Icon */}
-            <div className="welcome-icon-container">
+            <div className={styles.welcomeIconContainer}>
               <Sparkles size={36} color="white" />
             </div>
 
-            <h2 className="welcome-title">Olá! Eu sou o Hermes Agent.</h2>
-            <p className="welcome-subtitle">
+            <h2 className={styles.welcomeTitle}>Olá! Eu sou o Hermes Agent.</h2>
+            <p className={styles.welcomeSubtitle}>
               Como assistente autônomo local, posso rodar comandos, integrar-me
               com sua casa inteligente e realizar buscas avançadas. O que
               faremos hoje?
@@ -423,9 +430,9 @@ export const ChatWindow = ({
       </div>
 
       {/* Input controls Container */}
-      <div className="input-controls-container">
+      <div className={styles.inputControlsContainer}>
         {pendingApproval && onRespondApproval && (
-          <div className="approval-card-wrapper">
+          <div className={styles.approvalCardWrapper}>
             <ApprovalCard
               approval={pendingApproval}
               onRespond={onRespondApproval}
@@ -434,14 +441,14 @@ export const ChatWindow = ({
         )}
 
         {previewUrls.length > 0 && (
-          <div className="attachment-preview-strip">
+          <div className={styles.attachmentPreviewStrip}>
             {previewUrls.map((url, i) => (
-              <div key={i} className="attachment-thumbnail">
+              <div key={i} className={styles.attachmentThumbnail}>
                 <img src={url} alt={`Anexo ${i}`} />
                 <button
                   type="button"
                   onClick={() => removeAttachment(i)}
-                  className="remove-btn"
+                  className={styles.removeBtn}
                 >
                   <XIcon size={12} />
                 </button>
@@ -450,17 +457,17 @@ export const ChatWindow = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="chat-input-form">
+        <form onSubmit={handleSubmit} className={styles.chatInputForm}>
           {/* Active Model Indicator inside Input Bar */}
-          <div className="model-indicator-bar">
-            <div className="model-indicator-content">
-              <Terminal size={11} className="terminal-icon" />
+          <div className={styles.modelIndicatorBar}>
+            <div className={styles.modelIndicatorContent}>
+              <Terminal size={11} className={styles.terminalIcon} />
               EXECUTANDO COM:
-              <div className="model-select-wrapper">
+              <div className={styles.modelSelectWrapper}>
                 <select
                   value={selectedModel}
                   onChange={(e) => onSelectModel(e.target.value)}
-                  className="model-select-input"
+                  className={styles.modelSelectInput}
                   disabled={models.length === 0}
                 >
                   {models.length === 0 && isFetchingModels ? (
@@ -483,7 +490,7 @@ export const ChatWindow = ({
                     ))
                   )}
                 </select>
-                <div className="model-select-arrow">
+                <div className={styles.modelSelectArrow}>
                   <svg
                     width="8"
                     height="5"
@@ -504,9 +511,9 @@ export const ChatWindow = ({
             </div>
           </div>
 
-          <div className="chat-input-actions">
+          <div className={styles.chatInputActions}>
             {isDragging && (
-              <div className="drop-zone-active">Solte as imagens aqui</div>
+              <div className={styles.dropZoneActive}>Solte as imagens aqui</div>
             )}
 
             <textarea
@@ -521,10 +528,10 @@ export const ChatWindow = ({
                 }
               }}
               placeholder="Envie uma mensagem para o Hermes..."
-              className="chat-textarea"
+              className={styles.chatTextarea}
             />
 
-            <div className="chat-action-buttons">
+            <div className={styles.chatActionButtons}>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -536,7 +543,7 @@ export const ChatWindow = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="btn-attach"
+                className={styles.btnAttach}
                 title="Anexar imagem"
               >
                 <Paperclip size={18} />
@@ -546,7 +553,7 @@ export const ChatWindow = ({
                 <button
                   type="button"
                   onClick={onStopGeneration}
-                  className="btn-stop"
+                  className={styles.btnStop}
                   title="Interromper geração"
                 >
                   <Square size={16} fill="currentColor" />
@@ -555,7 +562,7 @@ export const ChatWindow = ({
                 <button
                   type="submit"
                   disabled={!input.trim()}
-                  className={`btn-send ${input.trim() || pendingAttachments.length > 0 ? "active" : ""}`}
+                  className={`${styles.btnSend} ${input.trim() || pendingAttachments.length > 0 ? styles.active : ""}`}
                   title="Enviar mensagem"
                 >
                   <Send size={16} />
