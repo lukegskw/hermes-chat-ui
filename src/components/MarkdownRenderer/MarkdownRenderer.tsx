@@ -74,7 +74,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
           ) : (
             <>
               <Copy size={13} />
-              <span>Copy</span>
+              <span>Copiar</span>
             </>
           )}
         </button>
