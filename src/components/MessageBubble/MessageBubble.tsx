@@ -16,7 +16,7 @@ import {
   ToolCallBox,
 } from "..";
 import { ToolCall } from "../../types";
-import { logger } from "../../utils";
+import { useClipboard } from "../../hooks";
 import styles from "./MessageBubble.module.scss";
 
 export type MessageBubbleProps = {
@@ -26,10 +26,10 @@ export type MessageBubbleProps = {
 export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const { role, content, timestamp } = message;
   const isUser = role === "user";
-  const [copied, setCopied] = useState(false);
   const [showReasoning, setShowReasoning] = useState(true);
+  const { copied, copyToClipboard } = useClipboard();
 
-  const handleCopy = async () => {
+  const handleCopy = () => {
     const textContent =
       typeof content === "string"
         ? content
@@ -37,31 +37,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
             .filter((c) => c.type === "text")
             .map((c) => c.text)
             .join("\n");
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(textContent);
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = textContent;
-        // Move outside of viewport
-        textArea.style.position = "absolute";
-        textArea.style.left = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {
-          document.execCommand("copy");
-        } catch (err) {
-          logger.error({ error: err }, "Fallback: Oops, unable to copy");
-        }
-        document.body.removeChild(textArea);
-      }
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch (err) {
-      logger.error({ error: err }, "Failed to copy: ");
-    }
+    void copyToClipboard(textContent);
   };
 
   const formatTime = (timeStr?: string) => {

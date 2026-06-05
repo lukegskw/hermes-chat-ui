@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { Check, Copy } from "../Icons";
-import { logger } from "../../utils";
+import { useClipboard } from "../../hooks";
 import styles from "./MarkdownRenderer.module.scss";
 
 type CodeBlockProps = {
@@ -9,17 +9,7 @@ type CodeBlockProps = {
 };
 
 const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      logger.error({ error: err }, "Failed to copy text");
-    }
-  };
+  const { copied, copyToClipboard } = useClipboard();
 
   // Simple, elegant syntax highlighting simulation
   const highlightCode = (rawCode: string) => {
@@ -54,7 +44,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
         <span className={styles.lang}>{language || "code"}</span>
         <button
           className={styles.copyBtn}
-          onClick={handleCopy}
+          onClick={() => void copyToClipboard(code)}
           title="Copy code"
         >
           {copied ? (

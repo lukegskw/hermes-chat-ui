@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   Send,
@@ -75,6 +75,11 @@ export const ChatWindow = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const isTouchDevice = useMemo(
+    () => window.matchMedia("(pointer: coarse)").matches,
+    [],
+  );
 
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
@@ -154,7 +159,7 @@ export const ChatWindow = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !isTouchDevice) {
       e.preventDefault();
       handleSubmit();
     } else if (e.key === "ArrowUp") {
