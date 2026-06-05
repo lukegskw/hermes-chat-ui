@@ -1,7 +1,7 @@
 @use '@styles' as s;
 
 .backdrop {
-  @include s.overlay-backdrop(40);
+  @include s.overlay-backdrop(1000);
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -21,8 +21,8 @@
   transform: translate(-50%, -45%) scale(0.95);
   width: 90%;
   max-width: 500px;
-  background-color: s.$color-white;
-  z-index: 50;
+  background-color: s.$color-bg;
+  z-index: 1000;
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -74,7 +74,7 @@
 }
 
 .close {
-  @include s.neo-icon-button(s.$color-action, s.$color-white, 32px);
+  @include s.neo-icon-button(s.$color-action, s.$color-black, 32px);
 }
 
 .content {
@@ -82,7 +82,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  background-color: s.$color-white;
+  background-color: s.$color-bg;
   max-height: calc(100vh - 80px);
   overflow-y: auto;
 }
@@ -96,7 +96,7 @@
 .label {
   @include s.label-style;
   font-size: 0.85rem;
-  color: s.$color-black;
+  color: s.$color-white;
 }
 
 .textareaLarge {

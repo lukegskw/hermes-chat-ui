@@ -101,13 +101,7 @@
   opacity: 0.6;
   text-transform: none;
   font-weight: 500;
-
-  .isUser & {
-    color: s.$color-black;
-  }
-  .isHermes & {
-    color: s.$color-white;
-  }
+  color: s.$color-white;
 }
 
 .copyBtn {

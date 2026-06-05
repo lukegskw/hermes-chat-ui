@@ -59,8 +59,8 @@
 
 @mixin neo-input {
   @include neo-card;
-  background-color: v.$color-white;
-  color: v.$color-black;
+  background-color: v.$color-surface;
+  color: v.$color-white;
   outline: none;
   font-family: v.$font-primary;
 

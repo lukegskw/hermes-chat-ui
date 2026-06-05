@@ -81,10 +81,3 @@ async def get_models(request: Request):
             unique_models.append(m)
 
     return {"data": unique_models, "default_model": active_model}
-
-@router.get("/api/config")
-async def get_config():
-    """Returns the runtime configuration for the UI."""
-    return {
-        "auth_required": False
-    }

@@ -25,33 +25,24 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
   const highlightCode = (rawCode: string) => {
     if (!rawCode) return "";
 
-    // Quick regex replacements for basic token highlighting (safe & fast)
     let escaped = rawCode
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    // Highlights keywords
-    const keywords =
-      /\b(const|let|var|function|return|import|export|from|default|class|extends|if|else|for|while|try|catch|async|await|new|this|typeof|instanceof|true|false|null|undefined)\b/g;
-    escaped = escaped.replace(keywords, '<span class="code-keyword">$1</span>');
+    // Match comments, strings, keywords, numbers in one pass to avoid overlapping replacements
+    const tokenRegex =
+      /(\/\/.*|\/\*[\s\S]*?\*\/)|(["'`])(?:(?!\2)[^\\]|\\.)*\2|\b(const|let|var|function|return|import|export|from|default|class|extends|if|else|for|while|try|catch|async|await|new|this|typeof|instanceof|true|false|null|undefined|public|private|protected|static|void|interface|implements|package|def|self|pass|None)\b|\b(\d+)\b/g;
 
-    // Highlights strings
     escaped = escaped.replace(
-      /(["'`])(.*?)\1/g,
-      '<span class="code-string">"$2"</span>',
-    );
-
-    // Highlights comments
-    escaped = escaped.replace(
-      /(\/\/.*|\/\*[\s\S]*?\*\/)/g,
-      '<span class="code-comment">$1</span>',
-    );
-
-    // Highlights numbers
-    escaped = escaped.replace(
-      /\b(\d+)\b/g,
-      '<span class="code-number">$1</span>',
+      tokenRegex,
+      (match, comment, quote, keyword, number) => {
+        if (comment) return `<span class="code-comment">${match}</span>`;
+        if (quote) return `<span class="code-string">${match}</span>`;
+        if (keyword) return `<span class="code-keyword">${match}</span>`;
+        if (number) return `<span class="code-number">${match}</span>`;
+        return match;
+      },
     );
 
     return <span dangerouslySetInnerHTML={{ __html: escaped }} />;
@@ -69,7 +60,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
           {copied ? (
             <>
               <Check size={13} className={styles.codeIconSuccess} />
-              <span className={styles.codeTextSuccess}>Copied!</span>
+              <span className={styles.codeTextSuccess}>Copiado!</span>
             </>
           ) : (
             <>
