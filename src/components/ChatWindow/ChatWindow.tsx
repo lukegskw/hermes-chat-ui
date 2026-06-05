@@ -264,7 +264,7 @@ export const ChatWindow = ({
               </span>
             )
           ) : (
-            <span className={styles.headerTitle}>Hermes Console</span>
+            <span className={styles.headerTitle}>Hermes Chat</span>
           )}
         </div>
 
