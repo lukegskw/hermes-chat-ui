@@ -78,7 +78,6 @@ export const App = () => {
   if (isInitializing || isFetchingModels) {
     return (
       <div className="loadingScreen">
-        <div className="spinner"></div>
         <div className="text">Carregando seu estagiário inteligente...</div>
       </div>
     );

@@ -4,6 +4,8 @@
 .prose {
   @include s.body-text;
   font-size: 0.95rem;
+  min-width: 0;
+  overflow-wrap: break-word;
 
   @media (max-width: s.$breakpoint-mobile) {
     font-size: 0.92rem;
@@ -83,6 +85,7 @@
   font-size: 0.85em;
   font-weight: 700;
   border: 1px solid s.$color-black;
+  word-break: break-all;
 }
 
 // Code block

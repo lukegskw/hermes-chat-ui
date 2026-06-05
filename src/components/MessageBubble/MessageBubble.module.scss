@@ -5,6 +5,7 @@
   gap: 16px;
   max-width: 100%;
   margin-bottom: 24px;
+  min-width: 0;
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 
   &.isUser {
@@ -58,6 +59,8 @@
   position: relative;
   @include s.neo-card;
   padding: 0.88rem 1.1rem;
+  min-width: 0;
+  overflow: hidden;
 
   @media (max-width: 768px) {
     max-width: 85%;
@@ -211,6 +214,8 @@
 
 .body {
   width: 100%;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .bodyUser {

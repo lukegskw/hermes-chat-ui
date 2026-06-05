@@ -106,7 +106,6 @@ body {
   }
 }
 
-/* Loading Screen inline styles converted to class */
 .loadingScreen {
   display: flex;
   flex-direction: column;
@@ -118,20 +117,22 @@ body {
   color: v.$color-white;
   font-family: v.$font-primary;
 
-  .spinner {
-    width: 48px;
-    height: 48px;
-    border: 4px solid v.$color-black;
-    border-top-color: v.$color-secondary;
-    background-color: v.$color-white;
-    box-shadow: v.$shadow-hard;
-    animation: spin 1s linear infinite;
-    margin-bottom: 24px;
-  }
-
   .text {
     @include m.label-style;
     font-size: 1.125rem;
+    animation: blink 5s infinite;
+
+    @keyframes blink {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
   }
 }
 
