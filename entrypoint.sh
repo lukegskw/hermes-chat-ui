@@ -1,16 +1,30 @@
 #!/bin/sh
 
-# Path where the public files are served
-CONFIG_FILE="/usr/share/nginx/html/config.js"
+# Start hermes-agent gateway in background
+echo "Starting Hermes Agent gateway..."
+if [ "$(id -u)" = "0" ]; then
+    echo "Running as root, dropping privileges using shim..."
+    /opt/hermes/docker/entrypoint.sh hermes gateway run --accept-hooks &
+else
+    echo "Running as $(whoami), starting directly..."
+    hermes gateway run --accept-hooks &
+fi
 
-# Generate runtime window.APP_CONFIG from container environment variables
-echo "window.APP_CONFIG = {" > "$CONFIG_FILE"
-echo "  HERMES_API_URL: \"${HERMES_API_URL:-http://localhost:8642}\"," >> "$CONFIG_FILE"
-echo "  HERMES_API_KEY: \"${HERMES_API_KEY:-hermes-secure-api-key-2026}\"," >> "$CONFIG_FILE"
-echo "  HERMES_PROXY_PORT: \"${HERMES_PROXY_PORT:-8643}\"" >> "$CONFIG_FILE"
-echo "};" >> "$CONFIG_FILE"
+# Wait for gateway to be ready
+echo "Waiting for Hermes Agent gateway to become ready..."
+BACKEND_PORT=${API_SERVER_PORT:-8642}
+export HERMES_API_URL="${HERMES_API_URL:-http://localhost:8642}"
+export HERMES_API_KEY="${HERMES_API_KEY}"
+export HERMES_PROXY_PORT="${HERMES_PROXY_PORT:-8643}"
+for i in $(seq 1 30); do
+  if curl -s http://localhost:${BACKEND_PORT}/v1/models > /dev/null 2>&1; then
+    echo "Hermes Agent gateway is ready."
+    break
+  fi
+  sleep 1
+done
 
-echo "Runtime configuration generated successfully at $CONFIG_FILE"
-
-# Execute Nginx (CMD arguments)
-exec "$@"
+# Start the FastAPI proxy (serves UI + API)
+echo "Starting Hermes Proxy and UI..."
+cd /app
+exec python3 -m backend.main

@@ -9,6 +9,7 @@ import {
   X,
 } from "../Icons";
 import { Model, ChatMessage } from "../../types";
+import { useTranslation } from "react-i18next";
 import styles from "./Sidebar.module.scss";
 
 export type Conversation = {
@@ -59,6 +60,8 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
     },
     ref,
   ) => {
+    const { t } = useTranslation();
+
     return (
       <aside
         ref={ref}
@@ -80,10 +83,10 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
                   className={`${styles.statusText} ${isFetchingModels ? styles.fetching : isConnected ? styles.online : styles.offline}`}
                 >
                   {isFetchingModels
-                    ? "Conectando..."
+                    ? t("common.connecting")
                     : isConnected
-                      ? "Online"
-                      : "Offline"}
+                      ? t("common.online")
+                      : t("common.offline")}
                 </span>
               </div>
             </div>
@@ -93,7 +96,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
           <button
             onClick={onToggleSidebar}
             className={styles.mobileCloseBtn}
-            title="Fechar painel"
+            title={t("sidebar.closePanel")}
           >
             <X size={20} />
           </button>
@@ -103,7 +106,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
         <div className={styles.newChatContainer}>
           <button onClick={onNewChat} className={styles.btnPrimary}>
             <Plus size={16} />
-            Nova Conversa
+            {t("sidebar.newChat")}
           </button>
         </div>
 
@@ -112,7 +115,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
           <div className={styles.modelSelectionBox}>
             <label className={styles.modelLabel}>
               <Sparkles size={11} className={styles.sparklesIconSmall} />
-              Modelo Ativo
+              {t("sidebar.activeModel")}
             </label>
             <select
               value={selectedModel}
@@ -124,16 +127,16 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             >
               {models.length === 0 && isFetchingModels ? (
                 <option value={selectedModel}>
-                  {selectedModel || "Buscando Modelos..."}
+                  {selectedModel || t("sidebar.fetchingModels")}
                 </option>
               ) : models.length === 0 && connectionError ? (
                 <option value="">{connectionError.substring(0, 30)}...</option>
               ) : models.length === 0 && isConnected ? (
                 <option value={selectedModel}>
-                  {selectedModel || "Sem Modelos"}
+                  {selectedModel || t("sidebar.noModels")}
                 </option>
               ) : models.length === 0 && !isConnected ? (
-                <option value="">Hermes desconectado</option>
+                <option value="">{t("sidebar.disconnected")}</option>
               ) : (
                 models.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -165,7 +168,9 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
 
         {/* Conversations List */}
         <div className={styles.conversationsList}>
-          <div className={styles.conversationsHeading}>Conversas Recentes</div>
+          <div className={styles.conversationsHeading}>
+            {t("sidebar.recentChats")}
+          </div>
 
           {conversations.length > 0 ? (
             conversations.map((conv) => {
@@ -183,7 +188,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
                     />
 
                     <span className={styles.conversationTitle}>
-                      {conv.title || "Conversa sem título"}
+                      {conv.title || t("sidebar.untitledChat")}
                     </span>
                   </div>
                 </div>
@@ -191,7 +196,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             })
           ) : (
             <div className={styles.conversationsEmpty}>
-              Nenhuma conversa iniciada
+              {t("sidebar.noChats")}
             </div>
           )}
         </div>
@@ -202,17 +207,17 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
           <div className={styles.footerButtons}>
             <button onClick={onOpenSettings} className={styles.btnWarning}>
               <SettingsIcon size={14} />
-              Ajustes
+              {t("sidebar.settings")}
             </button>
 
             {conversations.length > 0 && (
               <button
                 onClick={onClearAll}
                 className={styles.btnDanger}
-                title="Limpar todas as conversas"
+                title={t("sidebar.deleteChats")}
               >
                 <Trash2 size={14} />
-                Apagar Chats
+                {t("sidebar.deleteChats")}
               </button>
             )}
           </div>

@@ -1,5 +1,6 @@
 import { Check, X, Unlock, Lock } from "../Icons";
 import { PendingApproval } from "../../types";
+import { useTranslation } from "react-i18next";
 import styles from "./ApprovalCard.module.scss";
 
 export type ApprovalCardProps = {
@@ -8,6 +9,7 @@ export type ApprovalCardProps = {
 };
 
 export const ApprovalCard = ({ approval, onRespond }: ApprovalCardProps) => {
+  const { t } = useTranslation();
   return (
     <div className={styles.card}>
       <div className={styles.header}>
@@ -15,18 +17,18 @@ export const ApprovalCard = ({ approval, onRespond }: ApprovalCardProps) => {
           <Lock size={18} className={styles.textAmber} />
         </div>
         <div className={styles.title}>
-          <h3>Ação Requer Aprovação</h3>
-          <p>O agente solicitou permissão para executar uma ferramenta.</p>
+          <h3>{t("approval.title")}</h3>
+          <p>{t("approval.description")}</p>
         </div>
       </div>
 
       <div className={styles.details}>
         <div className={styles.detailRow}>
-          <span className={styles.detailLabel}>Ferramenta:</span>
+          <span className={styles.detailLabel}>{t("approval.tool")}</span>
           <code className={styles.detailCode}>{approval.tool}</code>
         </div>
         <div className={styles.detailRow}>
-          <span className={styles.detailLabel}>Comando:</span>
+          <span className={styles.detailLabel}>{t("approval.command")}</span>
           <pre className={styles.detailCode}>
             {approval.command || approval.label || "N/A"}
           </pre>
@@ -37,30 +39,30 @@ export const ApprovalCard = ({ approval, onRespond }: ApprovalCardProps) => {
         <button
           onClick={() => onRespond("once")}
           className={styles.btnAllow}
-          title="Permitir a execução apenas desta vez"
+          title={t("approval.allowOnceTitle")}
         >
-          <Check size={16} /> Permitir 1x
+          <Check size={16} /> {t("approval.allowOnce")}
         </button>
         <button
           onClick={() => onRespond("session")}
           className={styles.btnSession}
-          title="Permitir automaticamente durante esta sessão"
+          title={t("approval.thisSessionTitle")}
         >
-          <Unlock size={16} /> Nesta Sessão
+          <Unlock size={16} /> {t("approval.thisSession")}
         </button>
         <button
           onClick={() => onRespond("always")}
           className={styles.btnAlways}
-          title="Lembrar permissão e nunca mais perguntar para este comando"
+          title={t("approval.alwaysTitle")}
         >
-          <Unlock size={16} /> Sempre
+          <Unlock size={16} /> {t("approval.always")}
         </button>
         <button
           onClick={() => onRespond("deny")}
           className={styles.btnDeny}
-          title="Negar e cancelar execução"
+          title={t("approval.denyTitle")}
         >
-          <X size={16} /> Negar
+          <X size={16} /> {t("approval.deny")}
         </button>
       </div>
     </div>

@@ -19,7 +19,7 @@ ENV PATH="/opt/hermes/.venv/bin:$PATH"
 COPY --from=build /app/dist /app/static/
 
 COPY backend /app/backend
-COPY entrypoint.unified.sh /app/entrypoint.sh
+COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8643

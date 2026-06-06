@@ -12,9 +12,7 @@ import {
   PendingApproval,
   ContentPart,
 } from "../types";
-
-export const CRITICAL_INSTRUCTION =
-  '\n\nCRITICAL INSTRUCTION: Se uma ferramenta retornar um erro com o status "approval_required", você DEVE pedir permissão ao usuário imprimindo EXATAMENTE a seguinte string no final da sua resposta: [APPROVAL_REQUIRED: <comando_a_executar>]\nApós imprimir essa string, pare a geração e aguarde a resposta do usuário.';
+import i18n from "../i18n";
 
 export const useHermesStream = (
   endpoint: string,
@@ -64,8 +62,7 @@ export const useHermesStream = (
                   content:
                     (lastMsg.content as string)
                       .replace(/\[APPROVAL_REQUIRED:\s*(.*?)\]/g, "")
-                      .trim() ||
-                    "⚠️ O comando acima precisa de aprovação manual para prosseguir.",
+                      .trim() || i18n.t("errors.approvalRequired"),
                 };
                 return { ...c, messages: msgs };
               }
@@ -100,13 +97,9 @@ export const useHermesStream = (
   ) => {
     setPendingApproval(null);
     if (choice === "deny") {
-      await handleSendMessage(
-        `[APPROVAL_DENIED] Comando rejeitado pelo usuário. Não execute o comando.`,
-      );
+      await handleSendMessage(i18n.t("errors.approvalDenied"));
     } else {
-      await handleSendMessage(
-        `[APPROVAL_GRANTED] Permissão concedida pelo usuário. Você pode prosseguir com a execução do comando.`,
-      );
+      await handleSendMessage(i18n.t("errors.approvalGranted"));
     }
   };
 
@@ -148,7 +141,7 @@ export const useHermesStream = (
       const systemMsg: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: "system",
-        content: "⏳ Compactando contexto da sessão...",
+        content: i18n.t("errors.compressingContext"),
       };
 
       setConversations((prev) =>
@@ -170,8 +163,8 @@ export const useHermesStream = (
             msgs[msgs.length - 1] = {
               ...msgs[msgs.length - 1],
               content: success
-                ? "✅ Contexto compactado com sucesso pelo agente."
-                : "❌ Falha ao compactar contexto da sessão.",
+                ? i18n.t("errors.compressSuccess")
+                : i18n.t("errors.compressFailed"),
             };
             return { ...c, messages: msgs };
           }
@@ -251,7 +244,7 @@ export const useHermesStream = (
     const actualModel = targetConv?.modelId || selectedModel;
 
     let promptToUse = (settings.systemPrompt || "").trim();
-    promptToUse += CRITICAL_INSTRUCTION;
+    promptToUse += i18n.t("systemPrompts.criticalInstruction");
     if (existingMessages.length === 0) {
       titleUpdatedRef.current.delete(convId);
       promptToUse +=
@@ -399,7 +392,10 @@ export const useHermesStream = (
                       isGenerating: false,
                       content:
                         m.content +
-                        `\n\n❌ **Erro de conexão**: ${err.message}. Certifique-se de que o container do Hermes está ativo e acessível na porta configurada.`,
+                        `\n\n` +
+                        i18n.t("errors.connectionError", {
+                          message: err.message,
+                        }),
                     };
                   }
                   return m;

@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  hermes:
+    image: ghcr.io/lukegskw/hermes-chat-ui:latest
+    container_name: hermes-agent
+    restart: unless-stopped
+    
+    # Required for interactive debugging/TTY (optional but recommended)
+    tty: true
+    stdin_open: true
+
+    ports:
+      # Native Hermes Agent API (internal logic)
+      - "${BACKEND_PORT:-8642}:8642"
+      # Web UI Proxy (serves the frontend and augments the API)
+      - "${PROXY_PORT:-8643}:8643"
+      
+    volumes:
+      # Use relative paths for local development or replace with absolute paths on a NAS
+      - ./hermes-data/config:/opt/data
+      - ./hermes-data/workspace:/opt/data/workspace
+      
+    environment:
+      # --- Base Environment (Modify if needed) ---
+      # Ensure UID/GID match the user running the container for correct permissions
+      - HERMES_UID=1000
+      - HERMES_GID=1000
+      - UV_CACHE_DIR=/opt/data/.cache
+      - HERMES_HOME=/opt/data
+      - HERMES_SAFETY_MODE=manual
+      - HERMES_PROXY_PORT=8643
+      
+      # --- API & Security (Driven by .env) ---
+      - HERMES_API_KEY=${API_SERVER_KEY}
+      - API_SERVER_ENABLED=${API_SERVER_ENABLED:-true}
+      - API_SERVER_KEY=${API_SERVER_KEY}
+      - API_SERVER_HOST=${API_SERVER_HOST:-0.0.0.0}
+      - API_SERVER_PORT=${API_SERVER_PORT:-8642}
+      - API_SERVER_CORS_ORIGINS=${API_SERVER_CORS_ORIGINS:-*}
+      - API_SERVER_MODEL_NAME=${API_SERVER_MODEL_NAME}
+      
+      # --- Integrations (Optional, uncomment below to use) ---
+      # - HA_URL=${HA_URL}
+      # - HA_TOKEN=${HA_TOKEN}      
+      # - GITHUB_TOKEN=${GITHUB_TOKEN}

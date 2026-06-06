@@ -17,6 +17,7 @@ import {
 } from "..";
 import { ToolCall } from "../../types";
 import { useClipboard } from "../../hooks";
+import { useTranslation } from "react-i18next";
 import styles from "./MessageBubble.module.scss";
 
 export type MessageBubbleProps = {
@@ -24,6 +25,7 @@ export type MessageBubbleProps = {
 };
 
 export const MessageBubble = ({ message }: MessageBubbleProps) => {
+  const { t } = useTranslation();
   const { role, content, timestamp } = message;
   const isUser = role === "user";
   const [showReasoning, setShowReasoning] = useState(true);
@@ -72,7 +74,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
         <div className={styles.header}>
           <span className={styles.role}>
             {!isUser && <Sparkles size={10} className={styles.sparklesIcon} />}
-            {isUser ? "Você" : "Hermes"}
+            {isUser ? t("messages.you") : t("messages.hermes")}
           </span>
 
           <div className={styles.actions}>
@@ -80,7 +82,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
 
             <button
               onClick={handleCopy}
-              title="Copiar mensagem"
+              title={t("messages.copyMessage")}
               className={styles.copyBtn}
             >
               {copied ? (
@@ -109,7 +111,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                     className={styles.reasoningToggle}
                   >
                     <BrainCircuit size={15} className={styles.reasoningIcon} />
-                    Processo de Raciocínio
+                    {t("messages.reasoningProcess")}
                     <div className={styles.reasoningChevron}>
                       {showReasoning ? (
                         <ChevronDown size={15} />
@@ -145,7 +147,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               <div className={`${styles.typingDot} ${styles.dot2}`} />
               <div className={`${styles.typingDot} ${styles.dot3}`} />
             </div>
-            <span className={styles.typingText}>Pensando...</span>
+            <span className={styles.typingText}>{t("messages.thinking")}</span>
           </div>
         )}
 
@@ -165,7 +167,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                         <div key={idx} className={styles.imageWrapper}>
                           <img
                             src={part.image_url.url}
-                            alt="anexo"
+                            alt={t("messages.attachment")}
                             className={styles.image}
                           />
                         </div>

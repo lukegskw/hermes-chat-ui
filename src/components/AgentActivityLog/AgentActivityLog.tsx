@@ -8,6 +8,7 @@ import {
   Activity,
 } from "../Icons";
 import { ToolCall } from "../../types";
+import { useTranslation } from "react-i18next";
 import styles from "./AgentActivityLog.module.scss";
 
 export type AgentActivityLogProps = {
@@ -21,6 +22,7 @@ export const AgentActivityLog = ({
   reasoningContent,
   isGenerating = false,
 }: AgentActivityLogProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasContent = toolCalls.length > 0 || !!reasoningContent;
@@ -36,11 +38,11 @@ export const AgentActivityLog = ({
   const standardToolsCount = toolCalls.length - delegationsCount;
 
   const summaryParts = [];
-  if (reasoningContent) summaryParts.push("Raciocínio");
+  if (reasoningContent) summaryParts.push(t("activity.reasoning"));
   if (standardToolsCount > 0)
-    summaryParts.push(`${standardToolsCount} ferramentas`);
+    summaryParts.push(`${standardToolsCount} ${t("activity.tools")}`);
   if (delegationsCount > 0)
-    summaryParts.push(`${delegationsCount} sub-agentes`);
+    summaryParts.push(`${delegationsCount} ${t("activity.subAgents")}`);
 
   const summaryText = summaryParts.join(" · ");
 
@@ -52,7 +54,9 @@ export const AgentActivityLog = ({
       >
         <div className={styles.summaryText}>
           <Activity size={14} />
-          <span>Atividade do Agente: {summaryText}</span>
+          <span>
+            {t("activity.agentActivity")} {summaryText}
+          </span>
         </div>
         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </div>
@@ -65,7 +69,9 @@ export const AgentActivityLog = ({
                 <Brain size={12} />
               </div>
               <div className={styles.content}>
-                <div className={styles.title}>Processo de Pensamento</div>
+                <div className={styles.title}>
+                  {t("activity.thoughtProcess")}
+                </div>
                 <div className={styles.description}>{reasoningContent}</div>
               </div>
             </div>
@@ -89,11 +95,11 @@ export const AgentActivityLog = ({
                   <div className={styles.description}>
                     {isGenerating
                       ? isDelegate
-                        ? "Delegando tarefa..."
-                        : "Executando ferramenta..."
+                        ? t("activity.delegatingTask")
+                        : t("activity.executingTool")
                       : isDelegate
-                        ? "Tarefa delegada."
-                        : "Ferramenta executada."}
+                        ? t("activity.taskDelegated")
+                        : t("activity.toolExecuted")}
                   </div>
                 </div>
               </div>

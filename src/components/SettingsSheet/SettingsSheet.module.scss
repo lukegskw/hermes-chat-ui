@@ -99,12 +99,21 @@
   color: s.$color-white;
 }
 
-.textareaLarge {
+.textareaLarge, .select {
   @include s.neo-input;
-  min-height: 150px;
   padding: 12px;
   font-size: 0.95rem;
+}
+
+.textareaLarge {
+  min-height: 150px;
   resize: vertical;
+}
+
+.description {
+  font-size: 0.75rem;
+  color: s.$color-secondary;
+  margin: 0 0 8px 0;
 }
 
 .saveBtn {

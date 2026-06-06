@@ -70,7 +70,7 @@ async def chat_completions(request: Request):
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT OR IGNORE INTO conversations (id, title) VALUES (?, ?)",
-                (conv_id, "Nova Conversa")
+                (conv_id, "New Chat")
             )
             cursor.execute(
                 "INSERT INTO messages (id, conversation_id, role, content_json) VALUES (?, ?, ?, ?)",

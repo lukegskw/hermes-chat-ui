@@ -21,6 +21,7 @@ import {
   ConversationAPI,
 } from "../../types";
 import { validateImageFile, fileToBase64 } from "../../utils";
+import { useTranslation } from "react-i18next";
 import styles from "./ChatWindow.module.scss";
 
 export type ChatWindowMessage = ChatMessage & {
@@ -63,6 +64,7 @@ export const ChatWindow = ({
   pendingApproval,
   onRespondApproval,
 }: ChatWindowProps) => {
+  const { t } = useTranslation();
   const [input, setInput] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -254,7 +256,7 @@ export const ChatWindow = ({
                   onChange={(e) => setEditTitleText(e.target.value)}
                   onBlur={handleSaveTitle}
                   className={styles.headerTitleInput}
-                  placeholder="Nome da conversa..."
+                  placeholder={t("chat.conversationName")}
                 />
               </form>
             ) : (
@@ -265,7 +267,7 @@ export const ChatWindow = ({
                   setIsEditingTitle(true);
                 }}
               >
-                {activeConversation.title || "Conversa sem título"}
+                {activeConversation.title || t("chat.untitledChat")}
               </span>
             )
           ) : (
@@ -279,7 +281,7 @@ export const ChatWindow = ({
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className={styles.headerMoreBtn}
-                title="Mais Opções"
+                title={t("chat.moreOptions")}
               >
                 <MoreHorizontal size={20} />
               </button>
@@ -298,7 +300,7 @@ export const ChatWindow = ({
                       }}
                       className={styles.actionMenuItem}
                     >
-                      <Edit2 size={16} /> Renomear
+                      <Edit2 size={16} /> {t("chat.rename")}
                     </button>
                     <button
                       onClick={() => {
@@ -307,7 +309,7 @@ export const ChatWindow = ({
                       }}
                       className={styles.actionMenuItem}
                     >
-                      <DatabaseZap size={16} /> Compactar
+                      <DatabaseZap size={16} /> {t("chat.compact")}
                     </button>
                     <div className={styles.actionMenuDivider} />
                     <button
@@ -319,7 +321,7 @@ export const ChatWindow = ({
                       }}
                       className={`${styles.actionMenuItem} ${styles.deleteItem}`}
                     >
-                      <Trash2 size={16} /> Apagar
+                      <Trash2 size={16} /> {t("chat.delete")}
                     </button>
                   </div>
 
@@ -341,7 +343,7 @@ export const ChatWindow = ({
                           }}
                           className={styles.actionMenuItem}
                         >
-                          <Edit2 size={16} /> Renomear
+                          <Edit2 size={16} /> {t("chat.rename")}
                         </button>
                         <button
                           onClick={() => {
@@ -350,7 +352,7 @@ export const ChatWindow = ({
                           }}
                           className={styles.actionMenuItem}
                         >
-                          <DatabaseZap size={16} /> Compactar
+                          <DatabaseZap size={16} /> {t("chat.compact")}
                         </button>
                         <div className={styles.actionMenuDivider} />
                         <button
@@ -362,7 +364,7 @@ export const ChatWindow = ({
                           }}
                           className={`${styles.actionMenuItem} ${styles.deleteItem}`}
                         >
-                          <Trash2 size={16} /> Apagar
+                          <Trash2 size={16} /> {t("chat.delete")}
                         </button>
                       </div>
                     </>,
@@ -424,11 +426,9 @@ export const ChatWindow = ({
               <Sparkles size={36} color="white" />
             </div>
 
-            <h2 className={styles.welcomeTitle}>Olá! Eu sou o Hermes Agent.</h2>
+            <h2 className={styles.welcomeTitle}>{t("chat.welcome.title")}</h2>
             <p className={styles.welcomeSubtitle}>
-              Como assistente autônomo local, posso rodar comandos, integrar-me
-              com sua casa inteligente e realizar buscas avançadas. O que
-              faremos hoje?
+              {t("chat.welcome.subtitle")}
             </p>
           </div>
         )}
@@ -449,7 +449,7 @@ export const ChatWindow = ({
           <div className={styles.attachmentPreviewStrip}>
             {previewUrls.map((url, i) => (
               <div key={i} className={styles.attachmentThumbnail}>
-                <img src={url} alt={`Anexo ${i}`} />
+                <img src={url} alt={`${t("messages.attachment")} ${i}`} />
                 <button
                   type="button"
                   onClick={() => removeAttachment(i)}
@@ -467,7 +467,7 @@ export const ChatWindow = ({
           <div className={styles.modelIndicatorBar}>
             <div className={styles.modelIndicatorContent}>
               <Terminal size={11} className={styles.terminalIcon} />
-              EXECUTANDO COM:
+              {t("chat.runningWith")}
               <div className={styles.modelSelectWrapper}>
                 <select
                   value={selectedModel}
@@ -477,7 +477,7 @@ export const ChatWindow = ({
                 >
                   {models.length === 0 && isFetchingModels ? (
                     <option value={selectedModel || ""}>
-                      {selectedModel || "Carregando..."}
+                      {selectedModel || t("chat.loading")}
                     </option>
                   ) : models.length === 0 && connectionError ? (
                     <option value="">
@@ -485,7 +485,7 @@ export const ChatWindow = ({
                     </option>
                   ) : models.length === 0 ? (
                     <option value={selectedModel || ""}>
-                      {selectedModel || "Sem modelos"}
+                      {selectedModel || t("chat.noModels")}
                     </option>
                   ) : (
                     models.map((m) => (
@@ -518,7 +518,9 @@ export const ChatWindow = ({
 
           <div className={styles.chatInputActions}>
             {isDragging && (
-              <div className={styles.dropZoneActive}>Solte as imagens aqui</div>
+              <div className={styles.dropZoneActive}>
+                {t("chat.dropImages")}
+              </div>
             )}
 
             <textarea
@@ -532,7 +534,7 @@ export const ChatWindow = ({
                   addAttachments(Array.from(e.clipboardData.files));
                 }
               }}
-              placeholder="Envie uma mensagem para o Hermes..."
+              placeholder={t("chat.placeholder")}
               className={styles.chatTextarea}
             />
 
@@ -549,7 +551,7 @@ export const ChatWindow = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className={styles.btnAttach}
-                title="Anexar imagem"
+                title={t("chat.attachImage")}
               >
                 <Paperclip size={18} />
               </button>
@@ -559,7 +561,7 @@ export const ChatWindow = ({
                   type="button"
                   onClick={onStopGeneration}
                   className={styles.btnStop}
-                  title="Interromper geração"
+                  title={t("chat.stopGeneration")}
                 >
                   <Square size={16} fill="currentColor" />
                 </button>
@@ -568,7 +570,7 @@ export const ChatWindow = ({
                   type="submit"
                   disabled={!input.trim()}
                   className={`${styles.btnSend} ${input.trim() || pendingAttachments.length > 0 ? styles.active : ""}`}
-                  title="Enviar mensagem"
+                  title={t("chat.sendMessage")}
                 >
                   <Send size={16} />
                 </button>

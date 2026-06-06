@@ -1,3 +1,4 @@
+import i18n from "../i18n";
 import { ImageValidationResult } from "../types";
 
 export const MAX_IMAGE_SIZE_MB = 4;
@@ -14,14 +15,14 @@ export const validateImageFile = (file: File): ImageValidationResult => {
   if (!VALID_IMAGE_TYPES.includes(file.type)) {
     return {
       valid: false,
-      error: `Formato não suportado (${file.type}). Apenas JPEG, PNG, GIF e WebP são permitidos.`,
+      error: i18n.t("errors.unsupportedFormat", { type: file.type }),
     };
   }
 
   if (file.size > MAX_IMAGE_SIZE_BYTES) {
     return {
       valid: false,
-      error: `Imagem muito grande. O limite é de ${MAX_IMAGE_SIZE_MB}MB.`,
+      error: i18n.t("errors.imageTooLarge", { size: MAX_IMAGE_SIZE_MB }),
     };
   }
 

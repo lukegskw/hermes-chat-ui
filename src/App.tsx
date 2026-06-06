@@ -11,6 +11,7 @@ import {
   useHermesStream,
   useSwipeDrawer,
 } from "./hooks";
+import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
 
 export const App = () => {
@@ -75,10 +76,12 @@ export const App = () => {
     activeMessages,
   );
 
+  const { t } = useTranslation();
+
   if (isInitializing || isFetchingModels) {
     return (
       <div className="loadingScreen">
-        <div className="text">Carregando seu estagiário inteligente...</div>
+        <div className="text">{t("loading.initializing")}</div>
       </div>
     );
   }
