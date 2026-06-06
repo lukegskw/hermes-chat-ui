@@ -4,24 +4,26 @@
   <p>A modern, feature-rich web interface for <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>.</p>
 
   <p>
-    <a href="https://github.com/lukegskw/hermes-chat-ui/actions"><img src="https://github.com/lukegskw/hermes-chat-ui/actions/workflows/docker-publish.yml/badge.svg" alt="Docker Build" /></a>
+    <a href="https://github.com/lukegskw/hermes-chat-ui/pkgs/container/hermes-chat-ui"><img src="https://img.shields.io/github/v/release/lukegskw/hermes-chat-ui?label=GHCR%20Image&color=blue" alt="Docker Package" /></a>
+    <a href="https://github.com/NousResearch/hermes-agent"><img src="https://img.shields.io/badge/Powered%20by-Hermes%20Agent-FF8702.svg" alt="Powered by Hermes Agent" /></a>
+    <a href="https://github.com/lukegskw/hermes-chat-ui/stargazers"><img src="https://img.shields.io/github/stars/lukegskw/hermes-chat-ui?style=social" alt="Stars" /></a>
     <a href="https://github.com/lukegskw/hermes-chat-ui/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
   </p>
 </div>
 
-## 📸 Overview
+## Overview
 
 <div align="center">
   <img src="docs/assets/screenshot-1.png" alt="Hermes Chat UI in action" width="800" />
 </div>
 
-## 🤔 What is this?
+## Oh no, another chat UI? Why did I build this?
 
 Hermes Chat UI is a standalone web application designed to provide a rich chat interface for the Hermes Agent.
 
-While there are existing community web UIs for Hermes Agent, many of them require a local installation on the host machine or don't support containerized deployments out of the box. **This project solves that by packaging the entire stack — agent, API proxy, and web UI — into a single Docker image.** This makes it trivial to deploy on a Synology NAS, Portainer, or any standard Docker host.
+While there are existing community web UIs for Hermes Agent, many of them require a local installation on the host machine or don't support containerized deployments out of the box. **This project solves that by packaging the entire stack — agent, API proxy, and web UI — into a single Docker image.** This makes it trivial to deploy on a Synology NAS, Ugreen NAS, Portainer, or any standard Docker host.
 
-## ✨ Features
+## Features
 
 - **Progressive Web App (PWA)**: Installable on desktop and mobile.
 - **Mobile First**: Fully responsive design that works beautifully on your phone.
@@ -35,7 +37,7 @@ While there are existing community web UIs for Hermes Agent, many of them requir
 
 ---
 
-## 🚀 Quick Start (Docker)
+## Quick Start (Docker)
 
 The easiest way to run Hermes Chat UI is using Docker Compose.
 
@@ -65,7 +67,7 @@ docker compose up -d
 
 ---
 
-## ⚙️ Configuration Reference
+## Configuration Reference
 
 The application can be configured via environment variables.
 
@@ -97,7 +99,7 @@ The application can be configured via environment variables.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```mermaid
 graph LR
@@ -112,7 +114,7 @@ The Docker image contains everything needed to run the app. It starts the Hermes
 
 ---
 
-## 💻 Local Development
+## Local Development
 
 Prerequisites:
 
@@ -156,7 +158,7 @@ uv run uvicorn main:app --host 0.0.0.0 --port 8643 --reload
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please ensure you:
 
@@ -164,6 +166,6 @@ Contributions are welcome! Please ensure you:
 - Maintain strict TypeScript type safety (no `any`, no implicit typing).
 - Test UI changes in both English and Portuguese.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
