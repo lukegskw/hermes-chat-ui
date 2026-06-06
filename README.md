@@ -16,7 +16,7 @@
   <img src="docs/assets/screenshot-1.png" alt="Hermes Chat UI in action" width="800" />
 </div>
 
-## Oh no, another chat UI? Why did I build this?
+## Oh no, another chat UI? Why did you build this?
 
 Hermes Chat UI is a standalone web application designed to provide a rich chat interface for the Hermes Agent.
 
