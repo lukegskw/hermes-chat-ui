@@ -4,9 +4,8 @@
   <p>A modern, feature-rich web interface for <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>.</p>
 
   <p>
-    <a href="https://github.com/lukegskw/hermes-chat-ui/pkgs/container/hermes-chat-ui"><img src="https://img.shields.io/github/v/release/lukegskw/hermes-chat-ui?label=GHCR%20Image&color=blue" alt="Docker Package" /></a>
+    <a href="https://github.com/lukegskw/hermes-chat-ui/pkgs/container/hermes-chat-ui"><img src="https://img.shields.io/badge/GHCR%20Image-Available-blue" alt="Docker Package" /></a>
     <a href="https://github.com/NousResearch/hermes-agent"><img src="https://img.shields.io/badge/Powered%20by-Hermes%20Agent-FF8702.svg" alt="Powered by Hermes Agent" /></a>
-    <a href="https://github.com/lukegskw/hermes-chat-ui/stargazers"><img src="https://img.shields.io/github/stars/lukegskw/hermes-chat-ui?style=social" alt="Stars" /></a>
     <a href="https://github.com/lukegskw/hermes-chat-ui/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
   </p>
 </div>
