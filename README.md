@@ -9,9 +9,15 @@
   </p>
 </div>
 
+## 📸 Overview
+
+<div align="center">
+  <img src="docs/assets/screenshot-1.png" alt="Hermes Chat UI in action" width="800" />
+</div>
+
 ## 🤔 What is this?
 
-Hermes Chat UI is a standalone web application designed to provide a rich chat interface for the Hermes Agent. 
+Hermes Chat UI is a standalone web application designed to provide a rich chat interface for the Hermes Agent.
 
 While there are existing community web UIs for Hermes Agent, many of them require a local installation on the host machine or don't support containerized deployments out of the box. **This project solves that by packaging the entire stack — agent, API proxy, and web UI — into a single Docker image.** This makes it trivial to deploy on a Synology NAS, Portainer, or any standard Docker host.
 
@@ -65,29 +71,29 @@ The application can be configured via environment variables.
 
 ### Core Settings
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `BACKEND_PORT` | Port for the native Hermes Agent API | `8642` |
-| `PROXY_PORT` | Port for the Web UI and augmented API | `8643` |
-| `HERMES_API_KEY` | **REQUIRED**. Secure key shared between UI and Agent | *None* |
+| Variable         | Description                                          | Default |
+| ---------------- | ---------------------------------------------------- | ------- |
+| `BACKEND_PORT`   | Port for the native Hermes Agent API                 | `8642`  |
+| `PROXY_PORT`     | Port for the Web UI and augmented API                | `8643`  |
+| `HERMES_API_KEY` | **REQUIRED**. Secure key shared between UI and Agent | _None_  |
 
 ### Built-in API Server
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `API_SERVER_ENABLED` | Enable the OpenAI-compatible API server | `true` |
-| `API_SERVER_KEY` | Secure key for the API (usually same as `HERMES_API_KEY`) | *None* |
-| `API_SERVER_HOST` | Host address to bind the API server | `0.0.0.0` |
-| `API_SERVER_PORT` | Port for the API server | `8642` |
-| `API_SERVER_MODEL_NAME`| Default model name to report via API | *None* |
+| Variable                | Description                                               | Default   |
+| ----------------------- | --------------------------------------------------------- | --------- |
+| `API_SERVER_ENABLED`    | Enable the OpenAI-compatible API server                   | `true`    |
+| `API_SERVER_KEY`        | Secure key for the API (usually same as `HERMES_API_KEY`) | _None_    |
+| `API_SERVER_HOST`       | Host address to bind the API server                       | `0.0.0.0` |
+| `API_SERVER_PORT`       | Port for the API server                                   | `8642`    |
+| `API_SERVER_MODEL_NAME` | Default model name to report via API                      | _None_    |
 
 ### Integrations (Optional)
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `HA_URL` | Home Assistant URL (e.g., `http://homeassistant.local:8123`) | *None* |
-| `HA_TOKEN` | Home Assistant Long-Lived Access Token | *None* |
-| `GITHUB_TOKEN` | GitHub Personal Access Token | *None* |
+| Variable       | Description                                                  | Default |
+| -------------- | ------------------------------------------------------------ | ------- |
+| `HA_URL`       | Home Assistant URL (e.g., `http://homeassistant.local:8123`) | _None_  |
+| `HA_TOKEN`     | Home Assistant Long-Lived Access Token                       | _None_  |
+| `GITHUB_TOKEN` | GitHub Personal Access Token                                 | _None_  |
 
 ---
 
@@ -109,33 +115,39 @@ The Docker image contains everything needed to run the app. It starts the Hermes
 ## 💻 Local Development
 
 Prerequisites:
+
 - Node.js 20+
 - Python 3.11+
 - [uv](https://github.com/astral-sh/uv) package manager
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/lukegskw/hermes-chat-ui.git
 cd hermes-chat-ui
 ```
 
 2. Set up your environment:
+
 ```bash
 cp .env.example .env
 # Edit .env and set your API keys
 ```
 
 3. Install frontend dependencies:
+
 ```bash
 npm install
 ```
 
 4. Start the frontend development server:
+
 ```bash
 npm run dev
 ```
 
 5. (In a separate terminal) Start the backend proxy:
+
 ```bash
 cd backend
 # Create a venv and install dependencies based on your agent setup
@@ -147,6 +159,7 @@ uv run uvicorn main:app --host 0.0.0.0 --port 8643 --reload
 ## 🤝 Contributing
 
 Contributions are welcome! Please ensure you:
+
 - Follow the existing Neo-brutalist design system.
 - Maintain strict TypeScript type safety (no `any`, no implicit typing).
 - Test UI changes in both English and Portuguese.
