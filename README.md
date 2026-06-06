@@ -23,6 +23,9 @@ Hermes Chat UI is a standalone web application designed to provide a rich chat i
 
 While there are existing community web UIs for Hermes Agent, many of them require a local installation on the host machine or don't support containerized deployments out of the box. **This project solves that by packaging the entire stack — agent, API proxy, and web UI — into a single Docker image.** This makes it trivial to deploy on a Synology NAS, Ugreen NAS, Portainer, or any standard Docker host.
 
+> [!IMPORTANT]  
+> **No Extra Installation of `hermes-agent` Needed!** The official `hermes-agent` is fully packaged inside this Docker image. You do not need to install or run the agent separately. However, because the agent runs internally, any specific agent configuration (like local LLMs, tools, or memory systems) must be configured by you via environment variables or volume mounts, as detailed in the [official Hermes Agent documentation](https://github.com/NousResearch/hermes-agent).
+
 ## Features
 
 - **Progressive Web App (PWA)**: Installable on desktop and mobile.
