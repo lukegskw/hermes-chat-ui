@@ -16,5 +16,6 @@ class Message(BaseModel):
 class Conversation(BaseModel):
     id: str
     title: str
+    model_id: Optional[str] = None
     messages: List[Message]
     updated_at: Optional[str] = None

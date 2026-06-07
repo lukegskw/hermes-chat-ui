@@ -108,7 +108,7 @@ export const App = () => {
             setIsSidebarOpen(false);
           }}
           onNewChat={() => {
-            handleNewChat();
+            handleNewChat(selectedModel);
             setIsSidebarOpen(false);
           }}
           onClearAll={() => {

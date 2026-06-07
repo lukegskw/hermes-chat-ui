@@ -384,3 +384,24 @@ export const updateConversationTitle = async (
     return false;
   }
 };
+
+export const updateConversationModel = async (
+  endpoint: string,
+  id: string,
+  modelId: string,
+): Promise<boolean> => {
+  try {
+    const res = await fetch(
+      `${endpoint.replace(/\/$/, "")}/api/conversations/${id}/model`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modelId }),
+      },
+    );
+    return res.ok;
+  } catch (e) {
+    logger.error({ error: e }, "Failed to update conversation model");
+    return false;
+  }
+};

@@ -10,6 +10,7 @@ from ..engine import async_chat_engine
 router = APIRouter()
 NATIVE_HERMES_URL = "http://localhost:8642"
 active_tasks = {}
+active_model_per_conv = {}
 
 @router.post("/api/chat/{conv_id}/cancel")
 async def cancel_chat(conv_id: str):
@@ -91,6 +92,33 @@ async def chat_completions(request: Request):
     if "conversation_id" in body:
         del body["conversation_id"]
         
+    # Handle model switch via /model if needed
+    requested_model = body.get("model")
+    if requested_model and active_model_per_conv.get(conv_id) != requested_model:
+        switch_body = {
+            "model": "hermes-agent",
+            "messages": [{"role": "user", "content": f"/model {requested_model}"}],
+            "stream": False
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f"{NATIVE_HERMES_URL}/v1/chat/completions", json=switch_body, headers=headers) as resp:
+                    if resp.status == 200:
+                        active_model_per_conv[conv_id] = requested_model
+                        print(f"Successfully switched model for {conv_id} to {requested_model}")
+                        
+                        # Also update the db
+                        from ..database import get_db_connection
+                        conn = get_db_connection()
+                        cursor = conn.cursor()
+                        cursor.execute("UPDATE conversations SET model_id = ? WHERE id = ?", (requested_model, conv_id))
+                        conn.commit()
+                        conn.close()
+                    else:
+                        print(f"Failed to switch model: {await resp.text()}")
+        except Exception as e:
+            print(f"Error switching model: {e}")
+
     response_queue = asyncio.Queue()
 
     # Launch background task
