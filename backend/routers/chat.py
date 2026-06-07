@@ -84,6 +84,9 @@ async def chat_completions(request: Request):
             print(f"Failed to save user message: {e}")
 
     headers = {"Content-Type": "application/json"}
+    if conv_id:
+        headers["X-Hermes-Session-Id"] = conv_id
+        
     auth_header = os.environ.get("API_SERVER_KEY")
     if auth_header:
         headers["Authorization"] = f"Bearer {auth_header}"
