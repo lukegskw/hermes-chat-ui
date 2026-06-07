@@ -10,7 +10,7 @@ router = APIRouter()
 async def list_conversations():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, title, updated_at FROM conversations ORDER BY updated_at DESC")
+    cursor.execute("SELECT id, title, model_id, updated_at FROM conversations ORDER BY updated_at DESC")
     rows = cursor.fetchall()
     
     conversations = []
@@ -18,6 +18,7 @@ async def list_conversations():
         conversations.append({
             "id": row["id"],
             "title": row["title"],
+            "modelId": row["model_id"],
             "updated_at": row["updated_at"],
             "messages": [] # We don't need to load all messages for the list view
         })
@@ -52,6 +53,7 @@ async def get_conversation(conv_id: str):
     return {
         "id": conv_row["id"],
         "title": conv_row["title"],
+        "modelId": conv_row["model_id"],
         "updated_at": conv_row["updated_at"],
         "messages": messages
     }
@@ -63,8 +65,8 @@ async def create_conversation(conv: Conversation):
     
     try:
         cursor.execute(
-            "INSERT INTO conversations (id, title) VALUES (?, ?)",
-            (conv.id, conv.title)
+            "INSERT INTO conversations (id, title, model_id) VALUES (?, ?, ?)",
+            (conv.id, conv.title, conv.model_id)
         )
         for msg in conv.messages:
             cursor.execute(
@@ -115,3 +117,17 @@ async def update_conversation_title(conv_id: str, payload: dict):
     conn.commit()
     conn.close()
     return {"status": "success"}
+
+@router.put("/api/conversations/{conv_id}/model")
+async def update_conversation_model(conv_id: str, payload: dict):
+    model_id = payload.get("modelId")
+    if not model_id:
+        raise HTTPException(status_code=400, detail="modelId is required")
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE conversations SET model_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (model_id, conv_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+

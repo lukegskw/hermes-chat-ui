@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchModels, logger } from "../utils";
+import { fetchModels, updateConversationModel, logger } from "../utils";
 import { Conversation, Model } from "../types";
 
 export const useModels = (
@@ -53,6 +53,9 @@ export const useModels = (
           c.id === activeConversationId ? { ...c, modelId } : c,
         ),
       );
+      updateConversationModel(endpoint, activeConversationId, modelId).catch(
+        console.error,
+      );
     }
   };
 
@@ -63,6 +66,9 @@ export const useModels = (
     }
     setConversations((prev) =>
       prev.map((c) => (c.id === activeConversationId ? { ...c, modelId } : c)),
+    );
+    updateConversationModel(endpoint, activeConversationId, modelId).catch(
+      console.error,
     );
   };
 

@@ -165,12 +165,13 @@ export const useChatState = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [activeConversationId, endpoint, loadConversationsList]);
 
-  const handleNewChat = async () => {
+  const handleNewChat = async (modelId?: string) => {
     const newId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newConv: Conversation = {
       id: newId,
       title: "Nova Conversa",
       messages: [],
+      modelId: modelId,
     };
 
     setConversations((prev) => [newConv, ...prev]);

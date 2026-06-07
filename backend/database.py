@@ -22,9 +22,16 @@ def init_db():
         CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
+            model_id TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Migration: add model_id to existing db if missing
+    try:
+        cursor.execute("ALTER TABLE conversations ADD COLUMN model_id TEXT")
+    except sqlite3.OperationalError:
+        pass # Column already exists
     
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS messages (
