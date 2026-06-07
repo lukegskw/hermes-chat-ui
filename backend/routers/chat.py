@@ -4,6 +4,7 @@ import asyncio
 import os
 import aiohttp
 import json
+import yaml
 
 from ..engine import async_chat_engine
 
@@ -11,6 +12,43 @@ router = APIRouter()
 NATIVE_HERMES_URL = "http://localhost:8642"
 active_tasks = {}
 active_model_per_conv = {}
+
+# Candidate paths for hermes config.yaml, ordered by priority
+_CONFIG_PATHS = [
+    os.path.join(os.environ.get("HERMES_HOME", "/opt/data"), "config.yaml"),
+    "/opt/data/config.yaml",
+    "/opt/data/.hermes/config.yaml",
+    os.path.expanduser("~/.hermes/config.yaml"),
+]
+
+
+def _update_hermes_config_model(model_name: str) -> None:
+    """
+    Write the desired model directly into hermes config.yaml.
+
+    The hermes-agent gateway reads config.yaml when spawning new
+    sessions, so updating `model.default` here ensures the next
+    API request uses the correct model.
+    """
+    for config_path in _CONFIG_PATHS:
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f) or {}
+
+            if "model" not in config:
+                config["model"] = {}
+
+            config["model"]["default"] = model_name
+
+            with open(config_path, "w") as f:
+                yaml.dump(config, f, default_flow_style=False)
+
+            print(f"Updated {config_path}: model.default = {model_name}")
+            return
+
+    raise FileNotFoundError(
+        f"No hermes config.yaml found in any of: {_CONFIG_PATHS}"
+    )
 
 @router.post("/api/chat/{conv_id}/cancel")
 async def cancel_chat(conv_id: str):
@@ -92,32 +130,33 @@ async def chat_completions(request: Request):
     if "conversation_id" in body:
         del body["conversation_id"]
         
-    # Handle model switch via /model if needed
+    # Handle model switch by updating config.yaml directly.
+    # 
+    # Why not use `/model X` as a chat message?
+    # The hermes-agent api_server adapter does NOT intercept slash commands.
+    # They fall through to the conversation_loop, which tries to call the
+    # current default model. If that model is broken (e.g. no credits),
+    # even the `/model` command itself fails — a chicken-and-egg problem.
+    # 
+    # Instead, we write the desired model directly into config.yaml.
+    # The gateway reads config.yaml when spawning new sessions, so the
+    # next request will use the updated model.
     requested_model = body.get("model")
     if requested_model and active_model_per_conv.get(conv_id) != requested_model:
-        switch_body = {
-            "model": "hermes-agent",
-            "messages": [{"role": "user", "content": f"/model {requested_model}"}],
-            "stream": False
-        }
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(f"{NATIVE_HERMES_URL}/v1/chat/completions", json=switch_body, headers=headers) as resp:
-                    if resp.status == 200:
-                        active_model_per_conv[conv_id] = requested_model
-                        print(f"Successfully switched model for {conv_id} to {requested_model}")
-                        
-                        # Also update the db
-                        from ..database import get_db_connection
-                        conn = get_db_connection()
-                        cursor = conn.cursor()
-                        cursor.execute("UPDATE conversations SET model_id = ? WHERE id = ?", (requested_model, conv_id))
-                        conn.commit()
-                        conn.close()
-                    else:
-                        print(f"Failed to switch model: {await resp.text()}")
+            _update_hermes_config_model(requested_model)
+            active_model_per_conv[conv_id] = requested_model
+            print(f"Successfully switched model to {requested_model} via config.yaml")
+
+            # Persist the model choice in our own DB too
+            from ..database import get_db_connection
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("UPDATE conversations SET model_id = ? WHERE id = ?", (requested_model, conv_id))
+            conn.commit()
+            conn.close()
         except Exception as e:
-            print(f"Error switching model: {e}")
+            print(f"Error switching model via config.yaml: {e}")
 
     response_queue = asyncio.Queue()
 
