@@ -12,10 +12,10 @@ import {
 
 export const ModelSchema = z.object({
   id: z.string(),
-  object: z.string().optional(),
-  created: z.number().optional(),
-  owned_by: z.string().optional(),
-  label: z.string().optional(),
+  object: z.string().nullish(),
+  created: z.number().nullish(),
+  owned_by: z.string().nullish(),
+  label: z.string().nullish(),
 });
 
 const ModelsResponseSchema = z.object({
@@ -26,9 +26,9 @@ const ModelsResponseSchema = z.object({
 export const ConversationSchema = z.object({
   id: z.string(),
   title: z.string(),
-  modelId: z.string().optional(),
+  modelId: z.string().nullish(),
   messages: z.array(z.custom<ChatMessage>()),
-  updated_at: z.string().optional(),
+  updated_at: z.string().nullish(),
 });
 
 /**

@@ -108,8 +108,8 @@ async def chat_completions(request: Request):
             conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT OR IGNORE INTO conversations (id, title) VALUES (?, ?)",
-                (conv_id, "New Chat")
+                "INSERT OR IGNORE INTO conversations (id, title, model_id) VALUES (?, ?, ?)",
+                (conv_id, "New Chat", body.get("model"))
             )
             cursor.execute(
                 "INSERT INTO messages (id, conversation_id, role, content_json) VALUES (?, ?, ?, ?)",
@@ -143,18 +143,22 @@ async def chat_completions(request: Request):
     # next request will use the updated model.
     requested_model = body.get("model")
     if requested_model and active_model_per_conv.get(conv_id) != requested_model:
+        # Persist the model choice in our own DB first
         try:
-            _update_hermes_config_model(requested_model)
-            active_model_per_conv[conv_id] = requested_model
-            print(f"Successfully switched model to {requested_model} via config.yaml")
-
-            # Persist the model choice in our own DB too
             from ..database import get_db_connection
             conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute("UPDATE conversations SET model_id = ? WHERE id = ?", (requested_model, conv_id))
             conn.commit()
             conn.close()
+        except Exception as e:
+            print(f"Error updating model_id in DB: {e}")
+
+        # Update hermes config.yaml
+        try:
+            _update_hermes_config_model(requested_model)
+            active_model_per_conv[conv_id] = requested_model
+            print(f"Successfully switched model to {requested_model} via config.yaml")
         except Exception as e:
             print(f"Error switching model via config.yaml: {e}")
 
