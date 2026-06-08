@@ -8,16 +8,9 @@ import {
   Sparkles,
   X,
 } from "../Icons";
-import { Model, ChatMessage } from "../../types";
+import { Model, Conversation } from "../../types";
 import { useTranslation } from "react-i18next";
 import styles from "./Sidebar.module.scss";
-
-export type Conversation = {
-  id: string;
-  title: string;
-  modelId?: string;
-  messages: ChatMessage[];
-};
 
 export type Settings = {
   systemPrompt?: string;

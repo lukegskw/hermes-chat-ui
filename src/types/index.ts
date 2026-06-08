@@ -1,9 +1,9 @@
 export type Model = {
   id: string;
-  object?: string;
-  created?: number;
-  owned_by?: string;
-  label?: string;
+  object?: string | null;
+  created?: number | null;
+  owned_by?: string | null;
+  label?: string | null;
 };
 
 export type ToolCall = {
@@ -33,9 +33,9 @@ export type ChatMessage = {
 export type ConversationAPI = {
   id: string;
   title: string;
-  modelId?: string;
+  modelId?: string | null;
   messages: ChatMessage[];
-  updated_at?: string;
+  updated_at?: string | null;
 };
 
 export type SendChatMessageStreamOptions = {
@@ -65,7 +65,7 @@ export type Conversation = {
   id: string;
   title: string;
   messages: ChatMessage[];
-  modelId?: string;
+  modelId?: string | null;
 };
 
 export type Settings = {
