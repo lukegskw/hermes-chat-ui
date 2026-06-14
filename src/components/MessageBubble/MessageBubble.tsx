@@ -31,13 +31,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const [showReasoning, setShowReasoning] = useState(true);
   const { copied, copyToClipboard } = useClipboard();
 
-  const hasNoContent = () => {
-    if (!content) return true;
-    if (Array.isArray(content)) return content.length === 0;
-    if (typeof content === "string") return !content.trim();
-    return false;
-  };
-
   const handleCopy = () => {
     const textContent =
       typeof content === "string"
@@ -147,7 +140,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
           )}
 
         {/* Inline thinking animation - shown while waiting for first content token */}
-        {!isUser && message.isGenerating && hasNoContent() && (
+        {!isUser && message.isGenerating && (
           <div className={styles.typingIndicatorContainer}>
             <div className={styles.typingDots}>
               <div className={`${styles.typingDot} ${styles.dot1}`} />
@@ -163,7 +156,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
           {isUser ? (
             <div className={styles.bodyUser}>
               {typeof content === "string" ? (
-                <p>{content}</p>
+                <span>{content}</span>
               ) : (
                 <div className={styles.contentParts}>
                   {content.map((part, idx) => {

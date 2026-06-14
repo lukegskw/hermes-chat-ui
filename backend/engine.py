@@ -63,21 +63,18 @@ async def async_chat_engine(
                     # Parse SSE to accumulate content and tool calls
                     _parse_and_accumulate(chunk, tool_calls)
                     full_content += _extract_content(chunk)
-                    
-                    # Periodically or lazily update DB? 
-                    # For simplicity, we can update DB on every chunk or just at the end.
-                    # Since SQLite is fast, we can update it frequently, but to be safe,
-                    # we will just update it at the end to avoid lock contention.
 
         except Exception as e:
             err_chunk = f"data: {json.dumps({'choices': [{'delta': {'content': f'Proxy Error: {str(e)}'}}]})}\n\n".encode()
             await response_queue.put(err_chunk)
-            
-    # Stream is complete (or errored out). Send DONE flag to queue
-    await response_queue.put(None) # None signifies end of stream
     
-    # Final DB Update
+    # Update DB BEFORE sending DONE to avoid race condition where the
+    # frontend reloads between [DONE] and the DB write, leaving an empty
+    # placeholder message in the database.
     _update_message_in_db(assistant_msg_id, full_content, tool_calls)
+    
+    # Stream is complete. Send DONE flag to queue.
+    await response_queue.put(None) # None signifies end of stream
 
 
 def _update_message_in_db(msg_id: str, content: str, tool_calls: list):
