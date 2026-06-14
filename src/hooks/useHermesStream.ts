@@ -267,7 +267,9 @@ export const useHermesStream = (
         assistantMessageContent += chunk;
 
         if (!titleUpdatedRef.current.has(convId)) {
-          const match = assistantMessageContent.match(/<TITLE>(.*?)<\/TITLE>/);
+          const match = assistantMessageContent.match(
+            /<TITLE>([\s\S]*?)<\/TITLE>/,
+          );
           if (match) {
             const extractedTitle = match[1].trim();
             titleUpdatedRef.current.add(convId);
@@ -371,7 +373,19 @@ export const useHermesStream = (
               return {
                 ...c,
                 messages: c.messages.map((m) =>
-                  m.id === assistantMsgId ? { ...m, isGenerating: false } : m,
+                  m.id === assistantMsgId
+                    ? {
+                        ...m,
+                        isGenerating: false,
+                        content:
+                          typeof m.content === "string"
+                            ? m.content
+                                .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
+                                .replace(/^[\s\S]*?<\/TITLE>\n*/i, "")
+                                .trim()
+                            : m.content,
+                      }
+                    : m,
                 ),
               };
             }
