@@ -31,13 +31,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const [showReasoning, setShowReasoning] = useState(true);
   const { copied, copyToClipboard } = useClipboard();
 
-  const hasNoContent = () => {
-    if (!content) return true;
-    if (Array.isArray(content)) return content.length === 0;
-    if (typeof content === "string") return !content.trim();
-    return false;
-  };
-
   const handleCopy = () => {
     const textContent =
       typeof content === "string"
@@ -146,18 +139,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
             </div>
           )}
 
-        {/* Inline thinking animation - shown while waiting for first content token */}
-        {!isUser && message.isGenerating && hasNoContent() && (
-          <div className={styles.typingIndicatorContainer}>
-            <div className={styles.typingDots}>
-              <div className={`${styles.typingDot} ${styles.dot1}`} />
-              <div className={`${styles.typingDot} ${styles.dot2}`} />
-              <div className={`${styles.typingDot} ${styles.dot3}`} />
-            </div>
-            <span className={styles.typingText}>{t("messages.thinking")}</span>
-          </div>
-        )}
-
         {/* Message body */}
         <div className={styles.body}>
           {isUser ? (
@@ -186,16 +167,28 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               )}
             </div>
           ) : (
-            <MarkdownRenderer
-              content={
-                typeof content === "string"
-                  ? content
-                  : content
-                      .filter((p) => p.type === "text")
-                      .map((p) => p.text)
-                      .join("\n")
-              }
-            />
+            <>
+              <MarkdownRenderer
+                content={
+                  typeof content === "string"
+                    ? content
+                    : content
+                        .filter((p) => p.type === "text")
+                        .map((p) => p.text)
+                        .join("\n")
+                }
+              />
+              {/* Streaming indicator — always visible while generating */}
+              {message.isGenerating && (
+                <div className={styles.streamingIndicator}>
+                  <div className={styles.streamingDots}>
+                    <div className={`${styles.streamingDot} ${styles.sDot1}`} />
+                    <div className={`${styles.streamingDot} ${styles.sDot2}`} />
+                    <div className={`${styles.streamingDot} ${styles.sDot3}`} />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
