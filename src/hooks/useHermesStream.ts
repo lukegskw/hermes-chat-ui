@@ -127,8 +127,6 @@ export const useHermesStream = (
       setConversations(currentConversations);
       setActiveConversationId(convId);
 
-      // Save the conversation to the backend immediately so it persists
-      // even if the app is closed before the stream completes.
       createConversation(endpoint, newConv).catch(console.error);
     }
 
