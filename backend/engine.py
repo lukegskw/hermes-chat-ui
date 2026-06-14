@@ -63,11 +63,6 @@ async def async_chat_engine(
                     # Parse SSE to accumulate content and tool calls
                     _parse_and_accumulate(chunk, tool_calls)
                     full_content += _extract_content(chunk)
-                    
-                    # Periodically or lazily update DB? 
-                    # For simplicity, we can update DB on every chunk or just at the end.
-                    # Since SQLite is fast, we can update it frequently, but to be safe,
-                    # we will just update it at the end to avoid lock contention.
 
         except Exception as e:
             err_chunk = f"data: {json.dumps({'choices': [{'delta': {'content': f'Proxy Error: {str(e)}'}}]})}\n\n".encode()
