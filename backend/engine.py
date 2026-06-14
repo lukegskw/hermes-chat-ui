@@ -72,12 +72,14 @@ async def async_chat_engine(
         except Exception as e:
             err_chunk = f"data: {json.dumps({'choices': [{'delta': {'content': f'Proxy Error: {str(e)}'}}]})}\n\n".encode()
             await response_queue.put(err_chunk)
-            
-    # Stream is complete (or errored out). Send DONE flag to queue
-    await response_queue.put(None) # None signifies end of stream
     
-    # Final DB Update
+    # Update DB BEFORE sending DONE to avoid race condition where the
+    # frontend reloads between [DONE] and the DB write, leaving an empty
+    # placeholder message in the database.
     _update_message_in_db(assistant_msg_id, full_content, tool_calls)
+    
+    # Stream is complete. Send DONE flag to queue.
+    await response_queue.put(None) # None signifies end of stream
 
 
 def _update_message_in_db(msg_id: str, content: str, tool_calls: list):

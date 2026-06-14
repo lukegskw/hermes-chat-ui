@@ -215,6 +215,7 @@
 .bodyUser {
   @include s.body-text;
   font-size: 0.95rem;
+  white-space: pre-wrap;
 
   p {
     margin-bottom: 0.5rem;

@@ -3,6 +3,7 @@ import {
   sendChatMessageStream,
   compressSession,
   updateConversationTitle,
+  createConversation,
   fileToBase64,
   logger,
 } from "../utils";
@@ -125,6 +126,10 @@ export const useHermesStream = (
       currentConversations = [newConv, ...currentConversations];
       setConversations(currentConversations);
       setActiveConversationId(convId);
+
+      // Save the conversation to the backend immediately so it persists
+      // even if the app is closed before the stream completes.
+      createConversation(endpoint, newConv).catch(console.error);
     }
 
     const targetConv = currentConversations.find((c) => c.id === convId);
