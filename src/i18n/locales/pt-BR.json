@@ -89,12 +89,13 @@
     "approvalDenied": "[APPROVAL_DENIED] Comando rejeitado pelo usuário. Não execute o comando.",
     "approvalGranted": "[APPROVAL_GRANTED] Permissão concedida pelo usuário. Pode prosseguir com a execução do comando.",
     "unsupportedFormat": "Formato não suportado ({{type}}). Apenas JPEG, PNG, GIF e WebP são permitidos.",
-    "imageTooLarge": "Imagem muito grande. O limite é {{size}}MB."
+    "imageTooLarge": "Imagem muito grande. O limite é {{size}}MB.",
+    "reconnecting": "🔄 Reconectando..."
   },
   "loading": {
     "initializing": "Carregando o seu assistente inteligente..."
   },
   "systemPrompts": {
-    "criticalInstruction": "\\n\\nINSTRUÇÃO CRÍTICA: Se uma ferramenta retornar um erro com o status \"approval_required\", você DEVE pedir a permissão do usuário imprimindo EXATAMENTE a seguinte string no final da sua resposta: [APPROVAL_REQUIRED: <comando_para_executar>]\\nApós imprimir essa string, pare a geração e aguarde a resposta do usuário."
+    "criticalInstruction": "\n\nINSTRUÇÃO CRÍTICA: Se uma ferramenta retornar um erro com o status \"approval_required\", você DEVE pedir a permissão do usuário imprimindo EXATAMENTE a seguinte string no final da sua resposta: [APPROVAL_REQUIRED: <comando_para_executar>]\nApós imprimir essa string, pare a geração e aguarde a resposta do usuário."
   }
 }

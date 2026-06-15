@@ -89,12 +89,13 @@
     "approvalDenied": "[APPROVAL_DENIED] Command rejected by user. Do not execute the command.",
     "approvalGranted": "[APPROVAL_GRANTED] Permission granted by user. You may proceed with command execution.",
     "unsupportedFormat": "Unsupported format ({{type}}). Only JPEG, PNG, GIF, and WebP are allowed.",
-    "imageTooLarge": "Image too large. The limit is {{size}}MB."
+    "imageTooLarge": "Image too large. The limit is {{size}}MB.",
+    "reconnecting": "🔄 Reconnecting..."
   },
   "loading": {
     "initializing": "Loading your smart assistant..."
   },
   "systemPrompts": {
-    "criticalInstruction": "\\n\\nCRITICAL INSTRUCTION: If a tool returns an error with the status \"approval_required\", you MUST ask for the user's permission by printing EXACTLY the following string at the end of your response: [APPROVAL_REQUIRED: <command_to_execute>]\\nAfter printing this string, stop generation and wait for the user's response."
+    "criticalInstruction": "\n\nCRITICAL INSTRUCTION: If a tool returns an error with the status \"approval_required\", you MUST ask for the user's permission by printing EXACTLY the following string at the end of your response: [APPROVAL_REQUIRED: <command_to_execute>]\nAfter printing this string, stop generation and wait for the user's response."
   }
 }
