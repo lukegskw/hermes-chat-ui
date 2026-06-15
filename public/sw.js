@@ -1,10 +1,11 @@
-const CACHE_NAME = 'hermes-chat-cache-v1';
+const CACHE_NAME = 'hermes-chat-cache-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon.svg',
+  '/icon.png',
 ];
+const OFFLINE_PAGE = '/index.html';
 
 // Install Event - Pre-cache essential static shell assets
 self.addEventListener('install', (event) => {
@@ -16,7 +17,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate Event - Clean up old caches
+// Activate Event - Clean up old caches and take control of uncontrolled clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -32,15 +33,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event - Stale-While-Revalidate caching strategy
+// Fetch Event - Stale-While-Revalidate with offline fallback
 self.addEventListener('fetch', (event) => {
   // Only handle standard HTTP/HTTPS GET requests
   if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
     return;
   }
 
-  // Do not intercept or cache Hermes API endpoints or hot module reloading dev routes
-  if (event.request.url.includes('/v1/') || event.request.url.includes('/@vite/') || event.request.url.includes('node_modules')) {
+  // Do not intercept Hermes API endpoints or dev server routes
+  if (
+    event.request.url.includes('/v1/') ||
+    event.request.url.includes('/api/') ||
+    event.request.url.includes('/@vite/') ||
+    event.request.url.includes('node_modules')
+  ) {
     return;
   }
 
@@ -55,10 +61,10 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         }).catch((err) => {
           console.warn('[Service Worker] Fetch failed, serving cached fallback:', err);
-          return cachedResponse;
+          // If we have a cached response, serve it; otherwise show offline page
+          return cachedResponse || cache.match(OFFLINE_PAGE);
         });
 
-        // Return cached shell resource immediately, revalidating in the background
         return cachedResponse || fetchPromise;
       });
     })

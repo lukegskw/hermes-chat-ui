@@ -35,6 +35,63 @@ export const useHermesStream = (
   >({});
   const titleUpdatedRef = useRef<Set<string>>(new Set());
 
+  // --- PWA / Background resilience ---
+  // Tracks which conversation was streaming when the page went hidden
+  const streamingOnHiddenRef = useRef<string | null>(null);
+  // Stores the last text sent per conversation for potential retry
+  const lastSentTextRef = useRef<Record<string, string>>({});
+  // Stores the last attachments sent per conversation for potential retry
+  const lastSentAttachmentsRef = useRef<Record<string, File[]>>({});
+  // Flag to prevent duplicate retry
+  const retryInProgressRef = useRef(false);
+
+  // Listen for visibility changes to detect PWA backgrounding
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        // Page going to background — record which conversation was streaming
+        for (const [convId, isGen] of Object.entries(generatingStates)) {
+          if (isGen) {
+            streamingOnHiddenRef.current = convId;
+            break;
+          }
+        }
+      } else if (document.visibilityState === "visible") {
+        // Page returning to foreground — check if we need to retry
+        const interruptedConvId = streamingOnHiddenRef.current;
+        streamingOnHiddenRef.current = null;
+
+        if (
+          interruptedConvId &&
+          interruptedConvId === activeConversationId &&
+          generatingStates[interruptedConvId] &&
+          !retryInProgressRef.current
+        ) {
+          const lastText = lastSentTextRef.current[interruptedConvId];
+          const lastFiles = lastSentAttachmentsRef.current[interruptedConvId];
+          if (lastText || (lastFiles && lastFiles.length > 0)) {
+            logger.info(
+              { convId: interruptedConvId },
+              "[PWA] Page returned to foreground, retrying interrupted stream",
+            );
+            retryInProgressRef.current = true;
+            // Small delay to allow the network to stabilize after wake
+            setTimeout(() => {
+              handleSendMessage(lastText || "", lastFiles).finally(() => {
+                retryInProgressRef.current = false;
+              });
+            }, 500);
+          }
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConversationId, generatingStates]);
+
   const isGenerating = generatingStates[activeConversationId] || false;
 
   // --- Text-Based Approval Interception ---
@@ -83,6 +140,8 @@ export const useHermesStream = (
     });
     abortControllersRef.current[id]?.abort();
     delete abortControllersRef.current[id];
+    delete lastSentTextRef.current[id];
+    delete lastSentAttachmentsRef.current[id];
   };
 
   const handleCleanupAllConversations = () => {
@@ -91,6 +150,8 @@ export const useHermesStream = (
       abortControllersRef.current[id]?.abort();
     }
     abortControllersRef.current = {};
+    lastSentTextRef.current = {};
+    lastSentAttachmentsRef.current = {};
   };
 
   const handleRespondApproval = async (
@@ -114,6 +175,12 @@ export const useHermesStream = (
     let convId = activeConversationId;
     let currentConversations = [...conversations];
 
+    // Store last sent message for PWA retry
+    lastSentTextRef.current[convId] = text;
+    if (attachments) {
+      lastSentAttachmentsRef.current[convId] = attachments;
+    }
+
     // 1. Create a conversation if none exists
     if (!convId || !currentConversations.find((c) => c.id === convId)) {
       convId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -128,6 +195,12 @@ export const useHermesStream = (
       setActiveConversationId(convId);
 
       createConversation(endpoint, newConv).catch(console.error);
+    }
+
+    // Re-bind refs after potential convId change
+    lastSentTextRef.current[convId] = text;
+    if (attachments) {
+      lastSentAttachmentsRef.current[convId] = attachments;
     }
 
     const targetConv = currentConversations.find((c) => c.id === convId);
@@ -394,36 +467,46 @@ export const useHermesStream = (
         );
         setGeneratingStates((prev) => ({ ...prev, [convId]: false }));
         delete abortControllersRef.current[convId];
+        delete lastSentTextRef.current[convId];
+        delete lastSentAttachmentsRef.current[convId];
       },
       onError: (err) => {
         logger.error({ error: err }, "Streaming connection error");
-        setConversations((prev) =>
-          prev.map((c) => {
-            if (c.id === convId) {
-              return {
-                ...c,
-                messages: c.messages.map((m) => {
-                  if (m.id === assistantMsgId) {
-                    return {
-                      ...m,
-                      isGenerating: false,
-                      content:
-                        m.content +
-                        `\n\n` +
-                        i18n.t("errors.connectionError", {
-                          message: err.message,
-                        }),
-                    };
-                  }
-                  return m;
-                }),
-              };
-            }
-            return c;
-          }),
-        );
+        // Check if the error happened while the page was hidden (PWA backgrounded)
+        // If so, the message will be retried on visibilitychange — skip appending error
+        const wasBackgrounded = streamingOnHiddenRef.current === convId;
+
+        if (!wasBackgrounded) {
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id === convId) {
+                return {
+                  ...c,
+                  messages: c.messages.map((m) => {
+                    if (m.id === assistantMsgId) {
+                      return {
+                        ...m,
+                        isGenerating: false,
+                        content:
+                          m.content +
+                          `\n\n` +
+                          i18n.t("errors.connectionError", {
+                            message: err.message,
+                          }),
+                      };
+                    }
+                    return m;
+                  }),
+                };
+              }
+              return c;
+            }),
+          );
+        }
+
         setGeneratingStates((prev) => ({ ...prev, [convId]: false }));
         delete abortControllersRef.current[convId];
+        // Keep lastSentTextRef so retry can pick it up
       },
     });
   };
@@ -458,6 +541,8 @@ export const useHermesStream = (
         ...prev,
         [activeConversationId]: false,
       }));
+      delete lastSentTextRef.current[activeConversationId];
+      delete lastSentAttachmentsRef.current[activeConversationId];
     }
   };
 
