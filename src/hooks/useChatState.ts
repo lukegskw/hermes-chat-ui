@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchConversations,
   fetchConversation,
@@ -6,6 +6,7 @@ import {
   deleteConversation,
   deleteAllConversations,
   updateConversationTitle,
+  logger,
 } from "../utils";
 import { Conversation, Settings, ChatMessage } from "../types";
 import { getApiUrl } from "../config/env";
@@ -39,6 +40,7 @@ export const useChatState = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string>("");
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const recoveredConversationIdsRef = useRef<Set<string>>(new Set());
 
   const endpoint = getApiUrl();
 
@@ -100,7 +102,8 @@ export const useChatState = () => {
             setConversations((prev) => {
               const prevConv = prev.find((c) => c.id === data.id);
               if (!prevConv) {
-                return [...prev, data as Conversation];
+                const newConversations: Conversation[] = [...prev, data];
+                return newConversations;
               }
 
               // SMART MERGE: Preserve frontend generating states and local-only messages
@@ -111,10 +114,44 @@ export const useChatState = () => {
                 );
                 // If the frontend is actively generating this message, it is the source of truth.
                 if (localEquivalent && localEquivalent.isGenerating) {
+                  const localLen =
+                    typeof localEquivalent.content === "string"
+                      ? localEquivalent.content.length
+                      : 0;
+                  const dbLen =
+                    typeof dbMsg.content === "string"
+                      ? dbMsg.content.length
+                      : 0;
+
+                  // Backend has more content → stream completed server-side, recover it
+                  if (dbLen > localLen) {
+                    const cleanContent =
+                      typeof dbMsg.content === "string"
+                        ? dbMsg.content
+                            .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
+                            .replace(/^[\s\S]*?<\/TITLE>\n*/i, "")
+                            .trim()
+                        : dbMsg.content;
+                    return {
+                      ...dbMsg,
+                      content: cleanContent,
+                      isGenerating: false,
+                    };
+                  }
+                  // Otherwise, local is actively streaming — keep it
                   return localEquivalent;
                 }
                 return dbMsg;
               });
+
+              const isRecovered = mergedMessages.some((msg) => {
+                const localMsg = prevConv.messages.find((m) => m.id === msg.id);
+                return localMsg && localMsg.isGenerating && !msg.isGenerating;
+              });
+
+              if (isRecovered) {
+                recoveredConversationIdsRef.current.add(data.id);
+              }
 
               // Append purely local messages that aren't in the DB yet
               const dbMessageIds = new Set(
@@ -138,11 +175,48 @@ export const useChatState = () => {
               });
               mergedMessages.push(...localOnlyMessages);
 
-              const uiData = {
+              // Title recovery logic on foreground return
+              let updatedTitle = data.title;
+              const needsTitleRecovery =
+                data.title === "Nova Conversa" || data.title.length <= 33; // Truncated user message fallback
+
+              if (needsTitleRecovery) {
+                const firstAssistant = mergedMessages.find(
+                  (m: ChatMessage) =>
+                    m.role === "assistant" && typeof m.content === "string",
+                );
+                if (
+                  firstAssistant &&
+                  typeof firstAssistant.content === "string"
+                ) {
+                  const titleMatch = firstAssistant.content.match(
+                    /<TITLE>([\s\S]*?)<\/TITLE>/,
+                  );
+                  if (titleMatch) {
+                    const recoveredTitle = titleMatch[1].trim();
+                    updatedTitle = recoveredTitle;
+                    setTimeout(() => {
+                      updateConversationTitle(
+                        endpoint,
+                        data.id,
+                        recoveredTitle,
+                      ).catch((err: unknown) => {
+                        logger.error(
+                          { error: err },
+                          "Failed to update recovered title",
+                        );
+                      });
+                    }, 0);
+                  }
+                }
+              }
+
+              const uiData: Conversation = {
                 ...data,
+                title: updatedTitle,
                 modelId: data.modelId || prevConv.modelId,
                 messages: mergedMessages,
-              } as Conversation;
+              };
               return prev.map((c) => (c.id === data.id ? uiData : c));
             });
           }
@@ -242,5 +316,6 @@ export const useChatState = () => {
     handleRenameConversation,
     handleClearAll,
     reloadConversations: loadConversationsList,
+    recoveredConversationIdsRef,
   };
 };

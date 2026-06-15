@@ -24,6 +24,7 @@ export const useHermesStream = (
   setActiveConversationId: React.Dispatch<React.SetStateAction<string>>,
   selectedModel: string,
   activeMessages: ChatMessage[],
+  recoveredConversationIdsRef?: React.MutableRefObject<Set<string>>,
 ) => {
   const [generatingStates, setGeneratingStates] = useState<
     Record<string, boolean>
@@ -74,6 +75,20 @@ export const useHermesStream = (
       }
     }
   }, [activeMessages, isGenerating, activeConversationId, setConversations]);
+
+  // Clear generating states for recovered conversations
+  useEffect(() => {
+    if (
+      recoveredConversationIdsRef &&
+      recoveredConversationIdsRef.current.has(activeConversationId)
+    ) {
+      setGeneratingStates((prev) => ({
+        ...prev,
+        [activeConversationId]: false,
+      }));
+      recoveredConversationIdsRef.current.delete(activeConversationId);
+    }
+  }, [activeConversationId, conversations, recoveredConversationIdsRef]);
 
   const handleCleanupConversation = (id: string) => {
     setGeneratingStates((prev) => {
@@ -396,6 +411,22 @@ export const useHermesStream = (
         delete abortControllersRef.current[convId];
       },
       onError: (err) => {
+        const isBackgroundSuspension =
+          document.visibilityState === "hidden" ||
+          err.message.includes("Load failed") ||
+          err.message.includes("network") ||
+          err.message.includes("Failed to fetch");
+
+        if (isBackgroundSuspension) {
+          // Don't show error — let visibilitychange recovery handle it
+          // Keep isGenerating: true so recovery can detect pending state
+          logger.debug(
+            { error: err },
+            "Stream interrupted by background suspension",
+          );
+          return;
+        }
+
         logger.error({ error: err }, "Streaming connection error");
         setConversations((prev) =>
           prev.map((c) => {
