@@ -32,6 +32,34 @@ export const ConversationSchema = z.object({
 });
 
 /**
+ * Acquire a Screen Wake Lock to prevent the device from suspending
+ * during an active SSE stream. Returns null if the API is unavailable.
+ */
+async function acquireWakeLock(): Promise<WakeLockSentinel | null> {
+  try {
+    if ("wakeLock" in navigator) {
+      const lock = await navigator.wakeLock.request("screen");
+      logger.debug("[WakeLock] Acquired");
+      return lock;
+    }
+  } catch (err: unknown) {
+    // Wake Lock can be denied by power-saving policies; non-fatal
+    logger.debug({ error: err }, "[WakeLock] Failed to acquire");
+  }
+  return null;
+}
+
+/**
+ * Release a previously acquired Wake Lock.
+ */
+function releaseWakeLock(lock: WakeLockSentinel | null): void {
+  if (lock && !lock.released) {
+    lock.release().catch(() => {});
+    logger.debug("[WakeLock] Released");
+  }
+}
+
+/**
  * Fetch models from hermes-agent's proxy endpoint (if available).
  * Falls back to /v1/models if the proxy is unreachable.
  */
@@ -71,6 +99,8 @@ export const sendChatMessageStream = async ({
   onError,
   signal,
 }: SendChatMessageStreamOptions): Promise<void> => {
+  const wakeLock = await acquireWakeLock();
+
   try {
     // Prepare conversation messages payload
     const payloadMessages: Omit<ChatMessage, "id">[] = [];
@@ -240,6 +270,8 @@ export const sendChatMessageStream = async ({
     } else {
       onError(error instanceof Error ? error : new Error(String(error)));
     }
+  } finally {
+    releaseWakeLock(wakeLock);
   }
 };
 
