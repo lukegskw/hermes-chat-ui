@@ -15,7 +15,7 @@ const generateId = () =>
 const buildNewChat = (id?: string, modelId?: string): Conversation => {
   return {
     id: id || generateId(),
-    title: "Nova Conversa",
+    title: "New Chat",
     messages: [],
     modelId: modelId,
   };

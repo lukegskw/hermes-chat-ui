@@ -254,15 +254,14 @@ export const useHermesStream = (
 
       const systemPrompt = (settings.systemPrompt || "").trim();
       if (systemPrompt) {
-        instructions += `\n\n[System context: ${systemPrompt}]`;
+        instructions += `\n\n${systemPrompt}`;
       }
 
       instructions += i18n.t("systemPrompts.criticalInstruction");
 
       if (existingMessages.length === 0) {
         titleUpdatedRef.current.delete(activeConversationId);
-        instructions +=
-          "\n\n[IMPORTANT: Begin your response exactly with <TITLE> followed by a concise 3-5 word title for this chat, followed by </TITLE> and a line break, then provide your normal response.]";
+        instructions += i18n.t("systemPrompts.titleInstruction");
       }
 
       lastApiMsg.content = lastApiMsg.content + instructions;
