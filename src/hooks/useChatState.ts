@@ -188,7 +188,7 @@ export const useChatState = () => {
   }, [activeConversationId, endpoint, loadConversationsList]);
 
   const handleNewChat = async (modelId?: string) => {
-    const newConv = buildNewChat(modelId);
+    const newConv = buildNewChat(undefined, modelId);
 
     setConversations((prev) => [newConv, ...prev]);
     setActiveConversationId(newConv.id);
