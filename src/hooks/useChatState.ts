@@ -9,6 +9,18 @@ import {
   updateConversationTitle,
 } from "../utils";
 
+const generateId = () =>
+  `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+const buildNewChat = (id?: string, modelId?: string): Conversation => {
+  return {
+    id: id || generateId(),
+    title: "Nova Conversa",
+    messages: [],
+    modelId: modelId,
+  };
+};
+
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt: "",
 };
@@ -48,6 +60,10 @@ export const useChatState = () => {
   // Expose reload method for external components and focus sync
   const loadConversationsList = useCallback(async () => {
     const list = await fetchConversations(endpoint);
+
+    // Pre-generate a fallback ID in case no conversations exist at all
+    const fallbackId = generateId();
+
     setConversations((prev) => {
       const dbIds = new Set(list.map((c) => c.id));
       const mergedList = list.map((apiConv) => {
@@ -66,11 +82,18 @@ export const useChatState = () => {
       });
       // Keep local conversations that aren't in the DB yet
       const localOnly = prev.filter((c) => !dbIds.has(c.id));
-      return [...localOnly, ...mergedList];
+      const localAndMergedLists = [...localOnly, ...mergedList];
+      if (localAndMergedLists.length === 0) {
+        const newConv = buildNewChat(fallbackId);
+        localAndMergedLists.push(newConv);
+      }
+      return localAndMergedLists;
     });
+
     setActiveConversationId((prev) => {
-      if (!prev && list.length > 0) return list[0].id;
-      return prev;
+      if (prev) return prev;
+      if (list.length > 0) return list[0].id;
+      return fallbackId;
     });
   }, [endpoint]);
 
@@ -165,16 +188,10 @@ export const useChatState = () => {
   }, [activeConversationId, endpoint, loadConversationsList]);
 
   const handleNewChat = async (modelId?: string) => {
-    const newId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const newConv: Conversation = {
-      id: newId,
-      title: "Nova Conversa",
-      messages: [],
-      modelId: modelId,
-    };
+    const newConv = buildNewChat(modelId);
 
     setConversations((prev) => [newConv, ...prev]);
-    setActiveConversationId(newId);
+    setActiveConversationId(newConv.id);
   };
 
   const handleSelectConversation = (id: string) => {
@@ -210,6 +227,7 @@ export const useChatState = () => {
       setConversations([]);
       setActiveConversationId("");
       await deleteAllConversations(endpoint);
+      handleNewChat();
     }
   };
 
