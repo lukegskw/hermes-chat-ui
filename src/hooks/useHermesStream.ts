@@ -245,8 +245,11 @@ export const useHermesStream = (
 
     const actualModel = targetConv?.modelId || selectedModel;
 
-    const lastMsg = updatedMessages[updatedMessages.length - 1];
-    if (lastMsg.role === "user" && typeof lastMsg.content === "string") {
+    // Build a separate messages array for the API with injected instructions.
+    // This must NOT mutate updatedMessages since those are displayed in the UI.
+    const apiMessages = updatedMessages.map((m) => ({ ...m }));
+    const lastApiMsg = apiMessages[apiMessages.length - 1];
+    if (lastApiMsg.role === "user" && typeof lastApiMsg.content === "string") {
       let instructions = "";
 
       const systemPrompt = (settings.systemPrompt || "").trim();
@@ -262,7 +265,7 @@ export const useHermesStream = (
           "\n\n[IMPORTANT: Begin your response exactly with <TITLE> followed by a concise 3-5 word title for this chat, followed by </TITLE> and a line break, then provide your normal response.]";
       }
 
-      lastMsg.content = lastMsg.content + instructions;
+      lastApiMsg.content = lastApiMsg.content + instructions;
     } else if (existingMessages.length === 0) {
       titleUpdatedRef.current.delete(activeConversationId);
     }
@@ -272,7 +275,7 @@ export const useHermesStream = (
     await sendChatMessageStream({
       endpoint,
       model: actualModel,
-      messages: updatedMessages,
+      messages: apiMessages,
       systemPrompt: undefined,
       conversationId: activeConversationId,
       signal: controller.signal,
