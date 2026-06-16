@@ -1,14 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { getApiUrl } from "../config/env";
+import { ChatMessage, Conversation, Settings } from "../types";
 import {
-  fetchConversations,
-  fetchConversation,
-  createConversation,
-  deleteConversation,
   deleteAllConversations,
+  deleteConversation,
+  fetchConversation,
+  fetchConversations,
   updateConversationTitle,
 } from "../utils";
-import { Conversation, Settings, ChatMessage } from "../types";
-import { getApiUrl } from "../config/env";
 
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt: "",
@@ -176,9 +175,6 @@ export const useChatState = () => {
 
     setConversations((prev) => [newConv, ...prev]);
     setActiveConversationId(newId);
-
-    // Save to backend
-    await createConversation(endpoint, newConv);
   };
 
   const handleSelectConversation = (id: string) => {
