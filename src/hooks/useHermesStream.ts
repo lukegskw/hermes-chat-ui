@@ -127,7 +127,7 @@ export const useHermesStream = (
       setConversations(currentConversations);
       setActiveConversationId(convId);
 
-      createConversation(endpoint, newConv).catch(console.error);
+      await createConversation(endpoint, newConv);
     }
 
     const targetConv = currentConversations.find((c) => c.id === convId);
