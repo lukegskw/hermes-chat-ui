@@ -177,7 +177,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               }
             />
           )}
-          // Thinking indicator
           {!isUser && message.isGenerating && (
             <div className={styles.typingIndicatorContainer}>
               <div className={styles.typingDots}>
