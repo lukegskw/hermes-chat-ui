@@ -181,7 +181,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
                     />
 
                     <span className={styles.conversationTitle}>
-                      {t("sidebar.untitledChat")}
+                      {conv.title || t("sidebar.untitledChat")}
                     </span>
                   </div>
                 </div>

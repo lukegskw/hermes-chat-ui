@@ -99,9 +99,9 @@ async def chat_completions(request: Request):
     messages = body.get("messages", [])
     user_msg_id = ""
     if messages and messages[-1]["role"] == "user":
-        # frontend must inject the ID or we assume it's already saved by frontend?
-        # Actually, the proxy saves it. But the proxy needs to save the user message to the DB here!
         user_msg = messages[-1]
+        # Use clean user_content if provided (without injected instructions)
+        clean_content = body.get("user_content", user_msg.get("content", ""))
         user_msg_id = f"msg_{os.urandom(4).hex()}"
         from ..database import get_db_connection
         try:
@@ -113,7 +113,7 @@ async def chat_completions(request: Request):
             )
             cursor.execute(
                 "INSERT INTO messages (id, conversation_id, role, content_json) VALUES (?, ?, ?, ?)",
-                (user_msg_id, conv_id, "user", json.dumps(user_msg.get("content", "")))
+                (user_msg_id, conv_id, "user", json.dumps(clean_content))
             )
             cursor.execute("UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (conv_id,))
             conn.commit()

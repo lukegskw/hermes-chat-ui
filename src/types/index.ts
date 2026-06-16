@@ -44,6 +44,7 @@ export type SendChatMessageStreamOptions = {
   messages: ChatMessage[];
   systemPrompt: string | undefined;
   conversationId?: string;
+  userContent?: string;
   onChunk: (chunk: string) => void;
   onReasoningChunk?: (chunk: string) => void;
   onToolCallChunk?: (toolCallDelta: unknown) => void;

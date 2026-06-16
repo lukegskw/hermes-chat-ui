@@ -277,6 +277,8 @@ export const useHermesStream = (
       messages: apiMessages,
       systemPrompt: undefined,
       conversationId: activeConversationId,
+      userContent:
+        typeof messageContent === "string" ? messageContent : undefined,
       signal: controller.signal,
       onChunk: (chunk) => {
         assistantMessageContent += chunk;
