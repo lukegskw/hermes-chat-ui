@@ -44,7 +44,6 @@ export const App = () => {
     handleDeleteConversation,
     handleRenameConversation,
     handleClearAll,
-    recoveredConversationIdsRef,
   } = useChatState();
 
   const {
@@ -75,7 +74,6 @@ export const App = () => {
     setActiveConversationId,
     pendingModelId || selectedModel,
     activeMessages,
-    recoveredConversationIdsRef,
   );
 
   const { t } = useTranslation();
