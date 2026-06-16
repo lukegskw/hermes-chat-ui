@@ -139,6 +139,18 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
             </div>
           )}
 
+        {/* Inline thinking animation - shown while waiting for first content token */}
+        {!isUser && message.isGenerating && (
+          <div className={styles.typingIndicatorContainer}>
+            <div className={styles.typingDots}>
+              <div className={`${styles.typingDot} ${styles.dot1}`} />
+              <div className={`${styles.typingDot} ${styles.dot2}`} />
+              <div className={`${styles.typingDot} ${styles.dot3}`} />
+            </div>
+            <span className={styles.typingText}>{t("messages.thinking")}</span>
+          </div>
+        )}
+
         {/* Message body */}
         <div className={styles.body}>
           {isUser ? (

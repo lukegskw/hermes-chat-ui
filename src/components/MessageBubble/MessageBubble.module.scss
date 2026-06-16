@@ -176,6 +176,36 @@
   animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.typingIndicatorContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.typingDots {
+  display: flex;
+  gap: 4px;
+}
+
+.typingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: s.$color-white;
+  animation: typingDot 1.4s infinite ease-in-out both;
+
+  &.dot1 { animation-delay: -0.32s; }
+  &.dot2 { animation-delay: -0.16s; }
+}
+
+.typingText {
+  @include s.label-style;
+  font-size: 0.75rem;
+  color: s.$color-white;
+  opacity: 0.8;
+}
+
 .body {
   width: 100%;
   min-width: 0;
