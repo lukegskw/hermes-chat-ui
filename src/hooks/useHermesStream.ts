@@ -1,19 +1,19 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import i18n from "../i18n";
 import {
-  sendChatMessageStream,
+  ChatMessage,
+  ContentPart,
+  Conversation,
+  PendingApproval,
+} from "../types";
+import {
   compressSession,
-  updateConversationTitle,
   createConversation,
   fileToBase64,
   logger,
+  sendChatMessageStream,
+  updateConversationTitle,
 } from "../utils";
-import {
-  Conversation,
-  ChatMessage,
-  PendingApproval,
-  ContentPart,
-} from "../types";
-import i18n from "../i18n";
 
 export const useHermesStream = (
   endpoint: string,
@@ -111,27 +111,21 @@ export const useHermesStream = (
     )
       return;
 
-    let convId = activeConversationId;
-    let currentConversations = [...conversations];
-
-    // 1. Create a conversation if none exists
-    if (!convId || !currentConversations.find((c) => c.id === convId)) {
-      convId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const newConv: Conversation = {
-        id: convId,
-        title: text.substring(0, 30) + (text.length > 30 ? "..." : ""),
-        messages: [],
-        modelId: selectedModel,
-      };
-      currentConversations = [newConv, ...currentConversations];
-      setConversations(currentConversations);
-      setActiveConversationId(convId);
-
-      await createConversation(endpoint, newConv);
-    }
-
-    const targetConv = currentConversations.find((c) => c.id === convId);
+    const targetConv = conversations.find((c) => c.id === activeConversationId);
     const existingMessages = targetConv ? targetConv.messages : [];
+
+    // If this is the first message, the conversation doesn't exist in the backend yet.
+    // Create it now with the proper title so the chat_completions INSERT OR IGNORE is a no-op.
+    if (existingMessages.length === 0) {
+      const initialTitle =
+        text.substring(0, 30) + (text.length > 30 ? "..." : "");
+      await createConversation(endpoint, {
+        id: activeConversationId,
+        title: initialTitle,
+        messages: [],
+        modelId: targetConv?.modelId || selectedModel,
+      });
+    }
 
     // Intercept /compact and /compress commands
     const command = text.trim();
@@ -149,19 +143,25 @@ export const useHermesStream = (
 
       setConversations((prev) =>
         prev.map((c) =>
-          c.id === convId
+          c.id === activeConversationId
             ? { ...c, messages: [...existingMessages, userMsg, systemMsg] }
             : c,
         ),
       );
 
-      setGeneratingStates((prev) => ({ ...prev, [convId]: true }));
+      setGeneratingStates((prev) => ({
+        ...prev,
+        [activeConversationId]: true,
+      }));
       const success = await compressSession(endpoint);
-      setGeneratingStates((prev) => ({ ...prev, [convId]: false }));
+      setGeneratingStates((prev) => ({
+        ...prev,
+        [activeConversationId]: false,
+      }));
 
       setConversations((prev) =>
         prev.map((c) => {
-          if (c.id === convId) {
+          if (c.id === activeConversationId) {
             const msgs = [...c.messages];
             msgs[msgs.length - 1] = {
               ...msgs[msgs.length - 1],
@@ -214,7 +214,7 @@ export const useHermesStream = (
 
     setConversations((prev) =>
       prev.map((c) => {
-        if (c.id === convId) {
+        if (c.id === activeConversationId) {
           return { ...c, title, messages: updatedMessages };
         }
         return c;
@@ -232,7 +232,7 @@ export const useHermesStream = (
 
     setConversations((prev) =>
       prev.map((c) => {
-        if (c.id === convId) {
+        if (c.id === activeConversationId) {
           return { ...c, messages: [...updatedMessages, assistantMsg] };
         }
         return c;
@@ -240,16 +240,16 @@ export const useHermesStream = (
     );
 
     // 4. Fire API call with abort controller
-    setGeneratingStates((prev) => ({ ...prev, [convId]: true }));
+    setGeneratingStates((prev) => ({ ...prev, [activeConversationId]: true }));
     const controller = new AbortController();
-    abortControllersRef.current[convId] = controller;
+    abortControllersRef.current[activeConversationId] = controller;
 
     const actualModel = targetConv?.modelId || selectedModel;
 
     let promptToUse = (settings.systemPrompt || "").trim();
     promptToUse += i18n.t("systemPrompts.criticalInstruction");
     if (existingMessages.length === 0) {
-      titleUpdatedRef.current.delete(convId);
+      titleUpdatedRef.current.delete(activeConversationId);
       promptToUse +=
         "\n[CRITICAL INSTRUCTION: This is the first message. You MUST begin your response exactly with the tag <TITLE> followed by a concise 3-5 word title for this chat, followed by </TITLE> and a line break, and then provide your normal response.]";
     }
@@ -261,32 +261,36 @@ export const useHermesStream = (
       model: actualModel,
       messages: updatedMessages,
       systemPrompt: promptToUse,
-      conversationId: convId,
+      conversationId: activeConversationId,
       signal: controller.signal,
       onChunk: (chunk) => {
         assistantMessageContent += chunk;
 
-        if (!titleUpdatedRef.current.has(convId)) {
+        if (!titleUpdatedRef.current.has(activeConversationId)) {
           const match = assistantMessageContent.match(
             /<TITLE>([\s\S]*?)<\/TITLE>/,
           );
           if (match) {
             const extractedTitle = match[1].trim();
-            titleUpdatedRef.current.add(convId);
+            titleUpdatedRef.current.add(activeConversationId);
             setConversations((prev) =>
               prev.map((c) =>
-                c.id === convId ? { ...c, title: extractedTitle } : c,
+                c.id === activeConversationId
+                  ? { ...c, title: extractedTitle }
+                  : c,
               ),
             );
-            updateConversationTitle(endpoint, convId, extractedTitle).catch(
-              console.error,
-            );
+            updateConversationTitle(
+              endpoint,
+              activeConversationId,
+              extractedTitle,
+            ).catch(console.error);
           }
         }
 
         setConversations((prev) =>
           prev.map((c) => {
-            if (c.id === convId) {
+            if (c.id === activeConversationId) {
               const newMessages = c.messages.map((m) => {
                 if (m.id === assistantMsgId) {
                   return { ...m, content: m.content + chunk };
@@ -302,7 +306,7 @@ export const useHermesStream = (
       onReasoningChunk: (chunk) => {
         setConversations((prev) =>
           prev.map((c) => {
-            if (c.id === convId) {
+            if (c.id === activeConversationId) {
               return {
                 ...c,
                 messages: c.messages.map((m) => {
@@ -323,7 +327,7 @@ export const useHermesStream = (
       onToolCallChunk: (tcDelta: unknown) => {
         setConversations((prev) =>
           prev.map((c) => {
-            if (c.id === convId) {
+            if (c.id === activeConversationId) {
               return {
                 ...c,
                 messages: c.messages.map((m) => {
@@ -369,7 +373,7 @@ export const useHermesStream = (
       onDone: () => {
         setConversations((prev) =>
           prev.map((c) => {
-            if (c.id === convId) {
+            if (c.id === activeConversationId) {
               return {
                 ...c,
                 messages: c.messages.map((m) =>
@@ -392,14 +396,17 @@ export const useHermesStream = (
             return c;
           }),
         );
-        setGeneratingStates((prev) => ({ ...prev, [convId]: false }));
-        delete abortControllersRef.current[convId];
+        setGeneratingStates((prev) => ({
+          ...prev,
+          [activeConversationId]: false,
+        }));
+        delete abortControllersRef.current[activeConversationId];
       },
       onError: (err) => {
         logger.error({ error: err }, "Streaming connection error");
         setConversations((prev) =>
           prev.map((c) => {
-            if (c.id === convId) {
+            if (c.id === activeConversationId) {
               return {
                 ...c,
                 messages: c.messages.map((m) => {
@@ -422,8 +429,11 @@ export const useHermesStream = (
             return c;
           }),
         );
-        setGeneratingStates((prev) => ({ ...prev, [convId]: false }));
-        delete abortControllersRef.current[convId];
+        setGeneratingStates((prev) => ({
+          ...prev,
+          [activeConversationId]: false,
+        }));
+        delete abortControllersRef.current[activeConversationId];
       },
     });
   };
