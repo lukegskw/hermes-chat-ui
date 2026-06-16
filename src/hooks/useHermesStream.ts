@@ -21,7 +21,6 @@ export const useHermesStream = (
   conversations: Conversation[],
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
   activeConversationId: string,
-  setActiveConversationId: React.Dispatch<React.SetStateAction<string>>,
   selectedModel: string,
   activeMessages: ChatMessage[],
 ) => {
@@ -246,12 +245,26 @@ export const useHermesStream = (
 
     const actualModel = targetConv?.modelId || selectedModel;
 
-    let promptToUse = (settings.systemPrompt || "").trim();
-    promptToUse += i18n.t("systemPrompts.criticalInstruction");
-    if (existingMessages.length === 0) {
+    const lastMsg = updatedMessages[updatedMessages.length - 1];
+    if (lastMsg.role === "user" && typeof lastMsg.content === "string") {
+      let instructions = "";
+
+      const systemPrompt = (settings.systemPrompt || "").trim();
+      if (systemPrompt) {
+        instructions += `\n\n[System context: ${systemPrompt}]`;
+      }
+
+      instructions += i18n.t("systemPrompts.criticalInstruction");
+
+      if (existingMessages.length === 0) {
+        titleUpdatedRef.current.delete(activeConversationId);
+        instructions +=
+          "\n\n[IMPORTANT: Begin your response exactly with <TITLE> followed by a concise 3-5 word title for this chat, followed by </TITLE> and a line break, then provide your normal response.]";
+      }
+
+      lastMsg.content = lastMsg.content + instructions;
+    } else if (existingMessages.length === 0) {
       titleUpdatedRef.current.delete(activeConversationId);
-      promptToUse +=
-        "\n[CRITICAL INSTRUCTION: This is the first message. You MUST begin your response exactly with the tag <TITLE> followed by a concise 3-5 word title for this chat, followed by </TITLE> and a line break, and then provide your normal response.]";
     }
 
     let assistantMessageContent = "";
@@ -260,7 +273,7 @@ export const useHermesStream = (
       endpoint,
       model: actualModel,
       messages: updatedMessages,
-      systemPrompt: promptToUse,
+      systemPrompt: undefined,
       conversationId: activeConversationId,
       signal: controller.signal,
       onChunk: (chunk) => {

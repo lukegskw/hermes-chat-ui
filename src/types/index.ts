@@ -42,7 +42,7 @@ export type SendChatMessageStreamOptions = {
   endpoint: string;
   model: string;
   messages: ChatMessage[];
-  systemPrompt: string;
+  systemPrompt: string | undefined;
   conversationId?: string;
   onChunk: (chunk: string) => void;
   onReasoningChunk?: (chunk: string) => void;
