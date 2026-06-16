@@ -9,6 +9,7 @@ import {
 import {
   compressSession,
   createConversation,
+  fetchConversation,
   fileToBase64,
   logger,
   sendChatMessageStream,
@@ -34,7 +35,57 @@ export const useHermesStream = (
   >({});
   const titleUpdatedRef = useRef<Set<string>>(new Set());
 
+  // Track whether the app was backgrounded during an active stream.
+  // iOS Safari/PWA kills fetch connections when the app is minimized —
+  // these flags let us suppress false error messages and recover the
+  // real response from the backend on return to foreground.
+  const backgroundedRef = useRef(false);
+  const streamInterruptedRef = useRef(false);
+
   const isGenerating = generatingStates[activeConversationId] || false;
+
+  // --- Track when the app enters background ---
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === "hidden") {
+        backgroundedRef.current = true;
+      }
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, []);
+
+  // --- Recover interrupted streams on return to foreground ---
+  useEffect(() => {
+    const handler = async () => {
+      if (document.visibilityState !== "visible") return;
+      if (!streamInterruptedRef.current) return;
+
+      streamInterruptedRef.current = false;
+
+      const data = await fetchConversation(endpoint, activeConversationId);
+      if (data && data.messages.length > 0) {
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== activeConversationId) return c;
+            // Use DB messages as the authoritative source.
+            // Keep only local messages that are not yet persisted
+            // (e.g. system status messages) and are not orphaned
+            // assistant drafts.
+            const dbIds = new Set(data.messages.map((m) => m.id));
+            const localOnly = c.messages.filter(
+              (m) => !dbIds.has(m.id) && m.role !== "assistant",
+            );
+            return { ...c, messages: [...data.messages, ...localOnly] };
+          }),
+        );
+      }
+    };
+
+    document.addEventListener("visibilitychange", handler);
+    return () =>
+      document.removeEventListener("visibilitychange", handler);
+  }, [endpoint, activeConversationId, setConversations]);
 
   // --- Text-Based Approval Interception ---
   useEffect(() => {
@@ -109,6 +160,10 @@ export const useHermesStream = (
       isGenerating
     )
       return;
+
+    // Reset background-tracking flags at the start of a new stream
+    backgroundedRef.current = false;
+    streamInterruptedRef.current = false;
 
     const targetConv = conversations.find((c) => c.id === activeConversationId);
     const existingMessages = targetConv ? targetConv.messages : [];
@@ -421,31 +476,64 @@ export const useHermesStream = (
       },
       onError: (err) => {
         logger.error({ error: err }, "Streaming connection error");
-        setConversations((prev) =>
-          prev.map((c) => {
-            if (c.id === activeConversationId) {
-              return {
-                ...c,
-                messages: c.messages.map((m) => {
-                  if (m.id === assistantMsgId) {
-                    return {
-                      ...m,
-                      isGenerating: false,
-                      content:
-                        m.content +
-                        `\n\n` +
-                        i18n.t("errors.connectionError", {
-                          message: err.message,
-                        }),
-                    };
-                  }
-                  return m;
-                }),
-              };
-            }
-            return c;
-          }),
-        );
+
+        // Detect whether the connection was killed because the app was
+        // backgrounded (iOS Safari/PWA suspends fetch + ReadableStream).
+        const wasBackgrounded =
+          document.visibilityState === "hidden" || backgroundedRef.current;
+        backgroundedRef.current = false;
+
+        if (wasBackgrounded) {
+          // Stream killed by OS — suppress the error message.
+          // The visibilitychange recovery effect will fetch the real
+          // response from the backend when the user returns.
+          streamInterruptedRef.current = true;
+
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id === activeConversationId) {
+                return {
+                  ...c,
+                  messages: c.messages.map((m) => {
+                    if (m.id === assistantMsgId) {
+                      return { ...m, isGenerating: false };
+                    }
+                    return m;
+                  }),
+                };
+              }
+              return c;
+            }),
+          );
+        } else {
+          // Genuine connection error — show the error message
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id === activeConversationId) {
+                return {
+                  ...c,
+                  messages: c.messages.map((m) => {
+                    if (m.id === assistantMsgId) {
+                      return {
+                        ...m,
+                        isGenerating: false,
+                        content:
+                          m.content +
+                          `\n\n` +
+                          i18n.t("errors.connectionError", {
+                            message: err.message,
+                          }),
+                      };
+                    }
+                    return m;
+                  }),
+                };
+              }
+              return c;
+            }),
+          );
+        }
+
         setGeneratingStates((prev) => ({
           ...prev,
           [activeConversationId]: false,
