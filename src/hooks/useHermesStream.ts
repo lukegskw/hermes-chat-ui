@@ -53,24 +53,6 @@ export const useHermesStream = (
             command: command,
             label: command,
           });
-
-          // Strip the ugly tag from the user's view
-          setConversations((prev) =>
-            prev.map((c) => {
-              if (c.id === activeConversationId) {
-                const msgs = [...c.messages];
-                msgs[msgs.length - 1] = {
-                  ...lastMsg,
-                  content:
-                    (lastMsg.content as string)
-                      .replace(/\[APPROVAL_REQUIRED:\s*(.*?)\]/g, "")
-                      .trim() || i18n.t("errors.approvalRequired"),
-                };
-                return { ...c, messages: msgs };
-              }
-              return c;
-            }),
-          );
         }
       }
     }

@@ -106,8 +106,22 @@ export const useChatState = () => {
                 return newConversations;
               }
 
-              // SMART MERGE: Preserve frontend generating states and local-only messages
-              const dbMessages = data.messages;
+              // Clean TITLE from db messages so they match frontend messages
+              const dbMessages = data.messages.map((dbMsg: ChatMessage) => {
+                if (
+                  dbMsg.role === "assistant" &&
+                  typeof dbMsg.content === "string"
+                ) {
+                  return {
+                    ...dbMsg,
+                    content: dbMsg.content
+                      .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
+                      .replace(/^[\s\S]*?<\/TITLE>\n*/i, "")
+                      .trim(),
+                  };
+                }
+                return dbMsg;
+              });
               const mergedMessages = dbMessages.map((dbMsg: ChatMessage) => {
                 const localEquivalent = prevConv.messages.find(
                   (m) => m.id === dbMsg.id,
