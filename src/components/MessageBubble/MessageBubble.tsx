@@ -1,23 +1,23 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  Copy,
-  Check,
-  Bot,
-  User,
-  Sparkles,
-  ChevronDown,
-  ChevronRight,
-  BrainCircuit,
-} from "../Icons";
-import {
-  MarkdownRenderer,
-  ChatWindowMessage,
   AgentActivityLog,
+  ChatWindowMessage,
+  MarkdownRenderer,
   ToolCallBox,
 } from "..";
-import { ToolCall } from "../../types";
 import { useClipboard } from "../../hooks";
-import { useTranslation } from "react-i18next";
+import { ToolCall } from "../../types";
+import {
+  Bot,
+  BrainCircuit,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Sparkles,
+  User,
+} from "../Icons";
 import styles from "./MessageBubble.module.scss";
 
 export type MessageBubbleProps = {
@@ -166,7 +166,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                         </div>
                       );
                     }
-                    return null;
                   })}
                 </div>
               )}
@@ -185,6 +184,18 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                   .trim() || t("errors.approvalRequired")
               }
             />
+          )}
+          {!isUser && message.isGenerating && (
+            <div className={styles.typingIndicatorContainer}>
+              <div className={styles.typingDots}>
+                <div className={`${styles.typingDot} ${styles.dot1}`} />
+                <div className={`${styles.typingDot} ${styles.dot2}`} />
+                <div className={`${styles.typingDot} ${styles.dot3}`} />
+              </div>
+              <span className={styles.typingText}>
+                {t("messages.thinking")}
+              </span>
+            </div>
           )}
         </div>
       </div>

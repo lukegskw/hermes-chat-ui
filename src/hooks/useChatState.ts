@@ -1,15 +1,25 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  fetchConversations,
-  fetchConversation,
-  createConversation,
-  deleteConversation,
-  deleteAllConversations,
-  updateConversationTitle,
-  logger,
-} from "../utils";
-import { Conversation, Settings, ChatMessage } from "../types";
+import { useCallback, useEffect, useState } from "react";
 import { getApiUrl } from "../config/env";
+import { ChatMessage, Conversation, Settings } from "../types";
+import {
+  deleteAllConversations,
+  deleteConversation,
+  fetchConversation,
+  fetchConversations,
+  updateConversationTitle,
+} from "../utils";
+
+const generateId = () =>
+  `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+const buildNewChat = (id?: string, modelId?: string): Conversation => {
+  return {
+    id: id || generateId(),
+    title: "New Chat",
+    messages: [],
+    modelId: modelId,
+  };
+};
 
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt: "",
@@ -40,7 +50,6 @@ export const useChatState = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string>("");
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
-  const recoveredConversationIdsRef = useRef<Set<string>>(new Set());
 
   const endpoint = getApiUrl();
 
@@ -51,6 +60,10 @@ export const useChatState = () => {
   // Expose reload method for external components and focus sync
   const loadConversationsList = useCallback(async () => {
     const list = await fetchConversations(endpoint);
+
+    // Pre-generate a fallback ID in case no conversations exist at all
+    const fallbackId = generateId();
+
     setConversations((prev) => {
       const dbIds = new Set(list.map((c) => c.id));
       const mergedList = list.map((apiConv) => {
@@ -69,11 +82,18 @@ export const useChatState = () => {
       });
       // Keep local conversations that aren't in the DB yet
       const localOnly = prev.filter((c) => !dbIds.has(c.id));
-      return [...localOnly, ...mergedList];
+      const localAndMergedLists = [...localOnly, ...mergedList];
+      if (localAndMergedLists.length === 0) {
+        const newConv = buildNewChat(fallbackId);
+        localAndMergedLists.push(newConv);
+      }
+      return localAndMergedLists;
     });
+
     setActiveConversationId((prev) => {
-      if (!prev && list.length > 0) return list[0].id;
-      return prev;
+      if (prev) return prev;
+      if (list.length > 0) return list[0].id;
+      return fallbackId;
     });
   }, [endpoint]);
 
@@ -102,8 +122,7 @@ export const useChatState = () => {
             setConversations((prev) => {
               const prevConv = prev.find((c) => c.id === data.id);
               if (!prevConv) {
-                const newConversations: Conversation[] = [...prev, data];
-                return newConversations;
+                return [...prev, data as Conversation];
               }
 
               // Clean TITLE from db messages so they match frontend messages
@@ -128,44 +147,10 @@ export const useChatState = () => {
                 );
                 // If the frontend is actively generating this message, it is the source of truth.
                 if (localEquivalent && localEquivalent.isGenerating) {
-                  const localLen =
-                    typeof localEquivalent.content === "string"
-                      ? localEquivalent.content.length
-                      : 0;
-                  const dbLen =
-                    typeof dbMsg.content === "string"
-                      ? dbMsg.content.length
-                      : 0;
-
-                  // Backend has more content → stream completed server-side, recover it
-                  if (dbLen > localLen) {
-                    const cleanContent =
-                      typeof dbMsg.content === "string"
-                        ? dbMsg.content
-                            .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
-                            .replace(/^[\s\S]*?<\/TITLE>\n*/i, "")
-                            .trim()
-                        : dbMsg.content;
-                    return {
-                      ...dbMsg,
-                      content: cleanContent,
-                      isGenerating: false,
-                    };
-                  }
-                  // Otherwise, local is actively streaming — keep it
                   return localEquivalent;
                 }
                 return dbMsg;
               });
-
-              const isRecovered = mergedMessages.some((msg) => {
-                const localMsg = prevConv.messages.find((m) => m.id === msg.id);
-                return localMsg && localMsg.isGenerating && !msg.isGenerating;
-              });
-
-              if (isRecovered) {
-                recoveredConversationIdsRef.current.add(data.id);
-              }
 
               // Append purely local messages that aren't in the DB yet
               const dbMessageIds = new Set(
@@ -189,48 +174,11 @@ export const useChatState = () => {
               });
               mergedMessages.push(...localOnlyMessages);
 
-              // Title recovery logic on foreground return
-              let updatedTitle = data.title;
-              const needsTitleRecovery =
-                data.title === "Nova Conversa" || data.title.length <= 33; // Truncated user message fallback
-
-              if (needsTitleRecovery) {
-                const firstAssistant = mergedMessages.find(
-                  (m: ChatMessage) =>
-                    m.role === "assistant" && typeof m.content === "string",
-                );
-                if (
-                  firstAssistant &&
-                  typeof firstAssistant.content === "string"
-                ) {
-                  const titleMatch = firstAssistant.content.match(
-                    /<TITLE>([\s\S]*?)<\/TITLE>/,
-                  );
-                  if (titleMatch) {
-                    const recoveredTitle = titleMatch[1].trim();
-                    updatedTitle = recoveredTitle;
-                    setTimeout(() => {
-                      updateConversationTitle(
-                        endpoint,
-                        data.id,
-                        recoveredTitle,
-                      ).catch((err: unknown) => {
-                        logger.error(
-                          { error: err },
-                          "Failed to update recovered title",
-                        );
-                      });
-                    }, 0);
-                  }
-                }
-              }
-
-              const uiData: Conversation = {
+              const uiData = {
                 ...data,
-                title: updatedTitle,
                 modelId: data.modelId || prevConv.modelId,
                 messages: mergedMessages,
-              };
+              } as Conversation;
               return prev.map((c) => (c.id === data.id ? uiData : c));
             });
           }
@@ -254,19 +202,10 @@ export const useChatState = () => {
   }, [activeConversationId, endpoint, loadConversationsList]);
 
   const handleNewChat = async (modelId?: string) => {
-    const newId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const newConv: Conversation = {
-      id: newId,
-      title: "Nova Conversa",
-      messages: [],
-      modelId: modelId,
-    };
+    const newConv = buildNewChat(undefined, modelId);
 
     setConversations((prev) => [newConv, ...prev]);
-    setActiveConversationId(newId);
-
-    // Save to backend
-    await createConversation(endpoint, newConv);
+    setActiveConversationId(newConv.id);
   };
 
   const handleSelectConversation = (id: string) => {
@@ -302,6 +241,7 @@ export const useChatState = () => {
       setConversations([]);
       setActiveConversationId("");
       await deleteAllConversations(endpoint);
+      handleNewChat();
     }
   };
 
@@ -330,6 +270,5 @@ export const useChatState = () => {
     handleRenameConversation,
     handleClearAll,
     reloadConversations: loadConversationsList,
-    recoveredConversationIdsRef,
   };
 };

@@ -1,15 +1,15 @@
 import { forwardRef } from "react";
+import { useTranslation } from "react-i18next";
+import { Conversation, Model } from "../../types";
 import {
   Bot,
-  Plus,
-  Trash2,
-  Settings as SettingsIcon,
   MessageSquare,
+  Plus,
+  Settings as SettingsIcon,
   Sparkles,
+  Trash2,
   X,
 } from "../Icons";
-import { Model, Conversation } from "../../types";
-import { useTranslation } from "react-i18next";
 import styles from "./Sidebar.module.scss";
 
 export type Settings = {

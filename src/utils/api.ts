@@ -64,6 +64,7 @@ export const sendChatMessageStream = async ({
   messages,
   systemPrompt,
   conversationId,
+  userContent,
   onChunk,
   onReasoningChunk,
   onToolCallChunk,
@@ -87,11 +88,14 @@ export const sendChatMessageStream = async ({
     });
 
     const apiBase = endpoint.replace(/\/$/, "");
-    const body = {
+    const body: Record<string, unknown> = {
       model: model,
       messages: payloadMessages,
       stream: true,
     };
+    if (userContent !== undefined) {
+      body.user_content = userContent;
+    }
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",

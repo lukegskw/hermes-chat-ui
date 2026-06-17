@@ -416,19 +416,6 @@ export const ChatWindow = ({
                 return <MessageBubble key={msg.id} message={filteredMsg} />;
               })}
 
-            {isGenerating && (
-              <div className={styles.thinkingIndicatorContainer}>
-                <div className={styles.thinkingDots}>
-                  <div className={`${styles.thinkingDot} ${styles.dot1}`} />
-                  <div className={`${styles.thinkingDot} ${styles.dot2}`} />
-                  <div className={`${styles.thinkingDot} ${styles.dot3}`} />
-                </div>
-                <span className={styles.thinkingText}>
-                  {t("messages.thinking")}
-                </span>
-              </div>
-            )}
-
             <div ref={messagesEndRef} />
           </div>
         ) : (

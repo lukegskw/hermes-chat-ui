@@ -1,18 +1,18 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Toaster } from "sonner";
 import {
-  Sidebar,
-  SettingsSheet,
   ChatWindow,
   ErrorBoundary,
+  SettingsSheet,
+  Sidebar,
 } from "./components";
 import {
   useChatState,
-  useModels,
   useHermesStream,
+  useModels,
   useSwipeDrawer,
 } from "./hooks";
-import { useTranslation } from "react-i18next";
-import { Toaster } from "sonner";
 
 export const App = () => {
   const HERMES_ENDPOINT = "";
@@ -35,7 +35,6 @@ export const App = () => {
     conversations,
     setConversations,
     activeConversationId,
-    setActiveConversationId,
     activeConversation,
     activeMessages,
     isInitializing,
@@ -44,7 +43,6 @@ export const App = () => {
     handleDeleteConversation,
     handleRenameConversation,
     handleClearAll,
-    recoveredConversationIdsRef,
   } = useChatState();
 
   const {
@@ -72,10 +70,8 @@ export const App = () => {
     conversations,
     setConversations,
     activeConversationId,
-    setActiveConversationId,
     pendingModelId || selectedModel,
     activeMessages,
-    recoveredConversationIdsRef,
   );
 
   const { t } = useTranslation();

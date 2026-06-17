@@ -95,6 +95,7 @@
     "initializing": "Carregando o seu assistente inteligente..."
   },
   "systemPrompts": {
-    "criticalInstruction": "\\n\\nINSTRUÇÃO CRÍTICA: Se uma ferramenta retornar um erro com o status \"approval_required\", você DEVE pedir a permissão do usuário imprimindo EXATAMENTE a seguinte string no final da sua resposta: [APPROVAL_REQUIRED: <comando_para_executar>]\\nApós imprimir essa string, pare a geração e aguarde a resposta do usuário."
+    "criticalInstruction": "\\n\\nQuando uma ferramenta retornar um erro com status \"approval_required\", por favor peça minha permissão. Termine sua mensagem com exatamente este texto: [APPROVAL_REQUIRED: <o comando>] e pare e espere minha resposta.",
+    "titleInstruction": "\\n\\nAntes de responder, por favor comece sua resposta com um título curto para esta conversa (3-5 palavras) dentro de tags <TITLE></TITLE> na primeira linha, depois uma linha em branco, e então sua resposta real."
   }
 }
