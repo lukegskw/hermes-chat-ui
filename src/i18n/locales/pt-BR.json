@@ -45,20 +45,7 @@
     "copyMessage": "Copiar mensagem",
     "attachment": "anexo"
   },
-  "approval": {
-    "title": "Ação Requer Aprovação",
-    "description": "O agente solicitou permissão para executar uma ferramenta.",
-    "tool": "Ferramenta:",
-    "command": "Comando:",
-    "allowOnce": "Permitir 1x",
-    "allowOnceTitle": "Permitir execução apenas desta vez",
-    "thisSession": "Esta Sessão",
-    "thisSessionTitle": "Permitir automaticamente durante esta sessão",
-    "always": "Sempre",
-    "alwaysTitle": "Lembrar permissão e não perguntar novamente para este comando",
-    "deny": "Negar",
-    "denyTitle": "Negar e cancelar execução"
-  },
+
   "settings": {
     "title": "Configurações",
     "systemPrompt": "System Prompt (Opcional)",
@@ -85,9 +72,7 @@
     "compressingContext": "⏳ Compactando contexto da sessão...",
     "compressSuccess": "✅ Contexto compactado com sucesso pelo agente.",
     "compressFailed": "❌ Falha ao compactar o contexto da sessão.",
-    "approvalRequired": "⚠️ O comando acima requer aprovação manual para prosseguir.",
-    "approvalDenied": "[APPROVAL_DENIED] Comando rejeitado pelo usuário. Não execute o comando.",
-    "approvalGranted": "[APPROVAL_GRANTED] Permissão concedida pelo usuário. Pode prosseguir com a execução do comando.",
+
     "unsupportedFormat": "Formato não suportado ({{type}}). Apenas JPEG, PNG, GIF e WebP são permitidos.",
     "imageTooLarge": "Imagem muito grande. O limite é {{size}}MB."
   },
@@ -95,7 +80,6 @@
     "initializing": "Carregando o seu assistente inteligente..."
   },
   "systemPrompts": {
-    "criticalInstruction": "\\n\\nQuando uma ferramenta retornar um erro com status \"approval_required\", por favor peça minha permissão. Termine sua mensagem com exatamente este texto: [APPROVAL_REQUIRED: <o comando>] e pare e espere minha resposta.",
     "titleInstruction": "\\n\\nAntes de responder, por favor comece sua resposta com um título curto para esta conversa (3-5 palavras) dentro de tags <TITLE></TITLE> na primeira linha, depois uma linha em branco, e então sua resposta real."
   }
 }

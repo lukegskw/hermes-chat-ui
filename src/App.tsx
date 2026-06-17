@@ -58,10 +58,8 @@ export const App = () => {
 
   const {
     isGenerating,
-    pendingApproval,
     handleSendMessage,
     handleStopGeneration,
-    handleRespondApproval,
     handleCleanupConversation,
     handleCleanupAllConversations,
   } = useHermesStream(
@@ -71,7 +69,6 @@ export const App = () => {
     setConversations,
     activeConversationId,
     pendingModelId || selectedModel,
-    activeMessages,
   );
 
   const { t } = useTranslation();
@@ -143,8 +140,6 @@ export const App = () => {
           onSelectModel={handleConversationModelChange}
           isFetchingModels={isFetchingModels}
           connectionError={connectionError}
-          pendingApproval={pendingApproval}
-          onRespondApproval={handleRespondApproval}
         />
         <SettingsSheet
           isOpen={isSettingsSheetOpen}

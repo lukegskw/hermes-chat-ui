@@ -45,20 +45,7 @@
     "copyMessage": "Copy message",
     "attachment": "attachment"
   },
-  "approval": {
-    "title": "Action Requires Approval",
-    "description": "The agent requested permission to execute a tool.",
-    "tool": "Tool:",
-    "command": "Command:",
-    "allowOnce": "Allow 1x",
-    "allowOnceTitle": "Allow execution only this time",
-    "thisSession": "This Session",
-    "thisSessionTitle": "Allow automatically during this session",
-    "always": "Always",
-    "alwaysTitle": "Remember permission and never ask again for this command",
-    "deny": "Deny",
-    "denyTitle": "Deny and cancel execution"
-  },
+
   "settings": {
     "title": "Settings",
     "systemPrompt": "System Prompt (Optional)",
@@ -85,9 +72,7 @@
     "compressingContext": "⏳ Compressing session context...",
     "compressSuccess": "✅ Context compressed successfully by the agent.",
     "compressFailed": "❌ Failed to compress session context.",
-    "approvalRequired": "⚠️ The command above requires manual approval to proceed.",
-    "approvalDenied": "[APPROVAL_DENIED] Command rejected by user. Do not execute the command.",
-    "approvalGranted": "[APPROVAL_GRANTED] Permission granted by user. You may proceed with command execution.",
+
     "unsupportedFormat": "Unsupported format ({{type}}). Only JPEG, PNG, GIF, and WebP are allowed.",
     "imageTooLarge": "Image too large. The limit is {{size}}MB."
   },
@@ -95,7 +80,6 @@
     "initializing": "Loading your smart assistant..."
   },
   "systemPrompts": {
-    "criticalInstruction": "\\n\\nWhen a tool returns an error with status \"approval_required\", please ask me for permission. End your message with exactly this text: [APPROVAL_REQUIRED: <the command>] and then stop and wait for my reply.",
     "titleInstruction": "\\n\\nBefore answering, please start your reply with a short title for this conversation (3-5 words) wrapped in <TITLE></TITLE> tags on the first line, then a blank line, then your actual response."
   }
 }

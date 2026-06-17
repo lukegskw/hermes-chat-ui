@@ -13,13 +13,8 @@ import {
   Edit2,
   Trash2,
 } from "../Icons";
-import { MessageBubble, ApprovalCard } from "..";
-import {
-  ChatMessage,
-  PendingApproval,
-  Model,
-  ConversationAPI,
-} from "../../types";
+import { MessageBubble } from "..";
+import { ChatMessage, Model, ConversationAPI } from "../../types";
 import { validateImageFile, fileToBase64 } from "../../utils";
 import { useTranslation } from "react-i18next";
 import styles from "./ChatWindow.module.scss";
@@ -43,8 +38,6 @@ export type ChatWindowProps = {
   onSelectModel: (modelId: string) => void;
   isFetchingModels?: boolean;
   connectionError?: string;
-  pendingApproval?: PendingApproval | null;
-  onRespondApproval?: (choice: "once" | "session" | "always" | "deny") => void;
 };
 
 export const ChatWindow = ({
@@ -61,8 +54,6 @@ export const ChatWindow = ({
   onSelectModel,
   isFetchingModels,
   connectionError,
-  pendingApproval,
-  onRespondApproval,
 }: ChatWindowProps) => {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
@@ -436,15 +427,6 @@ export const ChatWindow = ({
 
       {/* Input controls Container */}
       <div className={styles.inputControlsContainer}>
-        {pendingApproval && onRespondApproval && (
-          <div className={styles.approvalCardWrapper}>
-            <ApprovalCard
-              approval={pendingApproval}
-              onRespond={onRespondApproval}
-            />
-          </div>
-        )}
-
         {previewUrls.length > 0 && (
           <div className={styles.attachmentPreviewStrip}>
             {previewUrls.map((url, i) => (

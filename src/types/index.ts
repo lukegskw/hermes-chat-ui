@@ -53,15 +53,6 @@ export type SendChatMessageStreamOptions = {
   signal?: AbortSignal;
 };
 
-export type PendingApproval = {
-  id: string;
-  tool: string;
-  command: string;
-  label?: string;
-  risk_level?: string;
-  session_id?: string;
-};
-
 export type Conversation = {
   id: string;
   title: string;

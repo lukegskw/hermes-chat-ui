@@ -30,16 +30,7 @@ export const useChatState = () => {
     const saved = localStorage.getItem("hermes_settings");
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        if (
-          parsed.systemPrompt &&
-          parsed.systemPrompt.includes(
-            'CRITICAL INSTRUCTION: Se uma ferramenta retornar um erro com o status "approval_required"',
-          )
-        ) {
-          parsed.systemPrompt = "";
-        }
-        return parsed;
+        return JSON.parse(saved);
       } catch {
         return DEFAULT_SETTINGS;
       }

@@ -32,18 +32,13 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const { copied, copyToClipboard } = useClipboard();
 
   const handleCopy = () => {
-    let textContent =
+    const textContent =
       typeof content === "string"
         ? content
         : content
             .filter((c) => c.type === "text")
             .map((c) => c.text)
             .join("\n");
-    if (!isUser) {
-      textContent = textContent
-        .replace(/\[APPROVAL_REQUIRED:\s*(.*?)\]/g, "")
-        .trim();
-    }
     void copyToClipboard(textContent);
   };
 
@@ -173,15 +168,12 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
           ) : (
             <MarkdownRenderer
               content={
-                (typeof content === "string"
+                typeof content === "string"
                   ? content
                   : content
                       .filter((p) => p.type === "text")
                       .map((p) => p.text)
                       .join("\n")
-                )
-                  .replace(/\[APPROVAL_REQUIRED:\s*(.*?)\]/g, "")
-                  .trim() || t("errors.approvalRequired")
               }
             />
           )}
