@@ -24,6 +24,28 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
+# Rewrite config.js with ALL environment variables so the frontend can access them
+echo "Injecting environment variables into config.js..."
+{
+  printf "// Auto-generated at container startup. Do not edit.\n"
+  printf "window.APP_CONFIG = {\n"
+  first=true
+  env | while IFS='=' read -r name value; do
+    # Skip empty names and internal shell vars
+    [ -z "$name" ] && continue
+    # Escape backslashes, double quotes, and control chars for JS
+    escaped=$(printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    if $first; then
+      printf '  "%s": "%s"' "$name" "$escaped"
+      first=false
+    else
+      printf ',\n  "%s": "%s"' "$name" "$escaped"
+    fi
+  done
+  printf "\n};\n"
+} > /app/static/config.js
+echo "config.js written with $(wc -l < /app/static/config.js) lines"
+
 # Start the FastAPI proxy (serves UI + API)
 echo "Starting Hermes Proxy and UI..."
 cd /app
