@@ -14,7 +14,8 @@ fi
 echo "Waiting for Hermes Agent gateway to become ready..."
 BACKEND_PORT=${API_SERVER_PORT:-8642}
 export HERMES_API_URL="${HERMES_API_URL:-http://localhost:8642}"
-export HERMES_API_KEY="${HE...port HERMES_PROXY_PORT="${HERMES_PROXY_PORT:-8643}"
+export HERMES_API_KEY="${HERMES_API_KEY}"
+export HERMES_PROXY_PORT="${HERMES_PROXY_PORT:-8643}"
 for i in $(seq 1 30); do
   if curl -s http://localhost:${BACKEND_PORT}/v1/models > /dev/null 2>&1; then
     echo "Hermes Agent gateway is ready."
