@@ -73,6 +73,7 @@ export type AppConfig = {
   HERMES_API_URL?: string;
   HERMES_API_KEY?: string;
   HERMES_PROXY_PORT?: string;
+  [key: string]: string | undefined;
 };
 
 export type SwipeDrawerOptions = {
