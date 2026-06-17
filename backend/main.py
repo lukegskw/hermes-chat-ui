@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
 import os
 
 from .routers import config, conversations, chat
@@ -18,12 +19,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/config.js")
+async def serve_config_js():
+    """Dynamically generate config.js with ALL environment variables.
+    
+    The entrypoint runs as non-root (hermes user) and cannot overwrite
+    /app/static/config.js which is root-owned. Serving dynamically via
+    this route avoids filesystem permission issues entirely.
+    """
+    lines = [
+        "// Auto-generated at runtime. Do not edit.\n",
+        "window.APP_CONFIG = {\n",
+    ]
+    first = True
+    for name, value in sorted(os.environ.items()):
+        safe_value = value.replace("\\", "\\\\").replace('"', '\\"')
+        if first:
+            lines.append(f'  "{name}": "{safe_value}"')
+            first = False
+        else:
+            lines.append(f',\n  "{name}": "{safe_value}"')
+    lines.append("\n};\n")
+    return Response(content="".join(lines), media_type="application/javascript")
+
+
 # Include routers
 app.include_router(config.router)
 app.include_router(conversations.router)
 app.include_router(chat.router)
 
-# Mount SPA
+# Mount SPA — must be after explicit routes so /config.js is intercepted
 static_dir = os.environ.get("HERMES_STATIC_DIR", "/app/static")
 if os.path.exists(static_dir):
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
