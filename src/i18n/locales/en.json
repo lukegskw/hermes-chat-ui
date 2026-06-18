@@ -61,6 +61,17 @@
   },
   "settings": {
     "title": "Settings",
+    "notifications": "Notifications",
+    "push": {
+      "label": "Push Notifications",
+      "status": {
+        "subscribed": "Notifications enabled",
+        "unsubscribed": "Notifications disabled",
+        "blocked": "Notifications blocked by browser",
+        "notSupported": "Push notifications not supported",
+        "error": "Failed to enable notifications"
+      }
+    },
     "systemPrompt": "System Prompt (Optional)",
     "systemPromptPlaceholder": "Type your custom prompt here...",
     "save": "Save Settings",

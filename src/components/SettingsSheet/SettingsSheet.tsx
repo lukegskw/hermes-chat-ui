@@ -1,7 +1,14 @@
 import React, { useState } from "react";
-import { Settings as SettingsIcon, X, Save } from "../Icons";
+import {
+  Settings as SettingsIcon,
+  X,
+  Save,
+  BellIcon,
+  BellOffIcon,
+} from "../Icons";
 import { Settings } from "../../types";
 import { useTranslation } from "react-i18next";
+import { usePushNotifications } from "../../hooks";
 import styles from "./SettingsSheet.module.scss";
 
 export type SettingsSheetProps = {
@@ -23,6 +30,9 @@ export const SettingsSheet = ({
   );
   const [tempLanguage, setTempLanguage] = useState(i18n.language || "en");
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  const { isEnabled, isLoading, isSupported, status, togglePush } =
+    usePushNotifications(isOpen);
 
   if (isOpen !== prevIsOpen) {
     setPrevIsOpen(isOpen);
@@ -74,6 +84,27 @@ export const SettingsSheet = ({
               <option value="en">English</option>
               <option value="pt-BR">Português (Brasil)</option>
             </select>
+          </div>
+
+          <div className={styles.field}>
+            <div className={styles.notificationField}>
+              <div className={styles.notificationLabel}>
+                {isEnabled ? <BellIcon size={18} /> : <BellOffIcon size={18} />}
+                <label className={styles.label}>
+                  {t("settings.push.label")}
+                </label>
+              </div>
+              <button
+                type="button"
+                className={`${styles.toggle} ${isEnabled ? styles.toggleActive : ""}`}
+                onClick={() => void togglePush()}
+                disabled={!isSupported || isLoading}
+                aria-pressed={isEnabled}
+              >
+                <span className={styles.toggleKnob} />
+              </button>
+            </div>
+            {status && <span className={styles.pushStatus}>{status}</span>}
           </div>
 
           <div className={styles.field}>

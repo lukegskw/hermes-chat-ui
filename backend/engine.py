@@ -73,6 +73,19 @@ async def async_chat_engine(
     # placeholder message in the database.
     _update_message_in_db(assistant_msg_id, full_content, tool_calls)
     
+    # Trigger push notification if configured
+    try:
+        from .routers.notifications import _load_subscriptions
+        from .push import send_push_notification
+        subs = _load_subscriptions()
+        if subs:
+            preview = full_content[:100] + "..." if len(full_content) > 100 else full_content
+            data = {"title": "Hermes", "body": preview, "url": "/"}
+            for sub in subs:
+                send_push_notification(sub, data)
+    except Exception as e:
+        print(f"[push] Failed to trigger notification after generation: {e}")
+    
     # Stream is complete. Send DONE flag to queue.
     await response_queue.put(None) # None signifies end of stream
 

@@ -122,3 +122,67 @@
   font-size: 1rem;
   margin-top: 8px;
 }
+
+.notificationField {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: s.$border-width solid s.$color-black;
+  background-color: s.$color-white;
+  @include s.neo-shadow(s.$color-black, 4px, 4px);
+  margin-bottom: 4px;
+}
+
+.notificationLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: s.$color-black;
+  
+  .label {
+    color: s.$color-black;
+    margin: 0;
+  }
+}
+
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: s.$color-bg;
+  border: 2px solid s.$color-black;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  &.toggleActive {
+    background-color: s.$color-secondary;
+    
+    .toggleKnob {
+      transform: translateX(20px);
+    }
+  }
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background-color: s.$color-white;
+  border: 2px solid s.$color-black;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pushStatus {
+  font-size: 0.75rem;
+  color: s.$color-secondary;
+  margin-left: 4px;
+}
