@@ -40,9 +40,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
             .map((c) => c.text)
             .join("\n");
     if (!isUser) {
-      textContent = textContent
-        .replace(/\[APPROVAL_REQUIRED:\s*(.*?)\]/g, "")
-        .trim();
+      textContent = textContent.trim();
     }
     void copyToClipboard(textContent);
   };
@@ -172,17 +170,13 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
             </div>
           ) : (
             <MarkdownRenderer
-              content={
-                (typeof content === "string"
-                  ? content
-                  : content
-                      .filter((p) => p.type === "text")
-                      .map((p) => p.text)
-                      .join("\n")
-                )
-                  .replace(/\[APPROVAL_REQUIRED:\s*(.*?)\]/g, "")
-                  .trim() || t("errors.approvalRequired")
-              }
+              content={(typeof content === "string"
+                ? content
+                : content
+                    .filter((p) => p.type === "text")
+                    .map((p) => p.text)
+                    .join("\n")
+              ).trim()}
             />
           )}
           {!isUser && message.isGenerating && (

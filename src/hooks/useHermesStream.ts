@@ -1,11 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import i18n from "../i18n";
-import {
-  ChatMessage,
-  ContentPart,
-  Conversation,
-  PendingApproval,
-} from "../types";
+import { ChatMessage, ContentPart, Conversation } from "../types";
 import {
   compressSession,
   createConversation,
@@ -22,39 +17,17 @@ export const useHermesStream = (
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
   activeConversationId: string,
   selectedModel: string,
-  activeMessages: ChatMessage[],
 ) => {
   const [generatingStates, setGeneratingStates] = useState<
     Record<string, boolean>
   >({});
-  const [pendingApproval, setPendingApproval] =
-    useState<PendingApproval | null>(null);
+
   const abortControllersRef = useRef<
     Record<string, AbortController | undefined>
   >({});
   const titleUpdatedRef = useRef<Set<string>>(new Set());
 
   const isGenerating = generatingStates[activeConversationId] || false;
-
-  // --- Text-Based Approval Interception ---
-  useEffect(() => {
-    if (!isGenerating && activeMessages.length > 0) {
-      const lastMsg = activeMessages[activeMessages.length - 1];
-      if (lastMsg.role === "assistant" && typeof lastMsg.content === "string") {
-        const match = lastMsg.content.match(/\[APPROVAL_REQUIRED:\s*(.*?)\]/);
-        if (match) {
-          const command = match[1].trim();
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setPendingApproval({
-            id: `pending_${Date.now()}`,
-            tool: "terminal",
-            command: command,
-            label: command,
-          });
-        }
-      }
-    }
-  }, [activeMessages, isGenerating, activeConversationId, setConversations]);
 
   const handleCleanupConversation = (id: string) => {
     setGeneratingStates((prev) => {
@@ -72,17 +45,6 @@ export const useHermesStream = (
       abortControllersRef.current[id]?.abort();
     }
     abortControllersRef.current = {};
-  };
-
-  const handleRespondApproval = async (
-    choice: "once" | "session" | "always" | "deny",
-  ) => {
-    setPendingApproval(null);
-    if (choice === "deny") {
-      await handleSendMessage(i18n.t("errors.approvalDenied"));
-    } else {
-      await handleSendMessage(i18n.t("errors.approvalGranted"));
-    }
   };
 
   const handleSendMessage = async (text: string, attachments?: File[]) => {
@@ -472,10 +434,8 @@ export const useHermesStream = (
 
   return {
     isGenerating,
-    pendingApproval,
     handleSendMessage,
     handleStopGeneration,
-    handleRespondApproval,
     handleCleanupConversation,
     handleCleanupAllConversations,
   };
