@@ -7,19 +7,27 @@ import os
 from pathlib import Path
 
 
-VAPID_KEYS_FILE = os.environ.get("VAPID_KEYS_FILE", "~/.hermes/vapid_keys.json")
+VAPID_KEYS_FILE = os.environ.get("VAPID_KEYS_FILE", "/opt/data/vapid_keys.json")
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:push@example.com")
 
 
 def get_vapid_keys() -> dict:
     """Get or generate VAPID keys."""
     keys_path = Path(VAPID_KEYS_FILE).expanduser()
+    
+    # Verifica fallback
+    fallback_path = Path("~/.hermes/vapid_keys.json").expanduser()
+    if not keys_path.exists() and fallback_path.exists():
+        keys_path = fallback_path
 
     if keys_path.exists():
-        with open(keys_path, "r") as f:
-            keys = json.load(f)
-        if "private_key" in keys and "public_key" in keys:
-            return keys
+        try:
+            with open(keys_path, "r") as f:
+                keys = json.load(f)
+            if "private_key" in keys and "public_key" in keys:
+                return keys
+        except Exception:
+            pass
 
     # Generate new keys
     try:
@@ -49,7 +57,6 @@ def get_vapid_keys() -> dict:
         "public_key": public_key_b64,
     }
 
-    # Save to file
     try:
         keys_path.parent.mkdir(parents=True, exist_ok=True)
         with open(keys_path, "w") as f:
@@ -57,6 +64,14 @@ def get_vapid_keys() -> dict:
         print(f"[push] Generated new VAPID keys, saved to {keys_path}")
     except Exception as e:
         print(f"[push] Failed to save VAPID keys to {keys_path}: {e}")
+        try:
+            keys_path = Path("~/.hermes/vapid_keys.json").expanduser()
+            keys_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(keys_path, "w") as f:
+                json.dump(keys, f)
+            print(f"[push] Saved VAPID keys to fallback {keys_path}")
+        except Exception as e2:
+            print(f"[push] Failed to save VAPID keys to fallback: {e2}")
 
     return keys
 

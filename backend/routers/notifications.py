@@ -13,11 +13,20 @@ from ..push import get_vapid_public_key, send_push_notification
 
 router = APIRouter(tags=["notifications"])
 
-SUBSCRIPTIONS_FILE = os.environ.get(
-    "PUSH_SUBSCRIPTIONS_FILE", "~/.hermes/push_subscriptions.json"
-)
+SUBSCRIPTIONS_FILE = os.environ.get("SUBSCRIPTIONS_FILE", "/opt/data/push_subscriptions.json")
 
+def _get_subscriptions_path() -> Path:
+    main_path = Path(SUBSCRIPTIONS_FILE).expanduser()
+    fallback_path = Path("~/.hermes/push_subscriptions.json").expanduser()
+    if not main_path.exists() and fallback_path.exists():
+        return fallback_path
+    return main_path
 
+def _load_subscriptions() -> list[dict]:
+    """Load push subscriptions from file."""
+    path = _get_subscriptions_path()
+    if not path.exists():
+        return []
 class PushSubscriptionKeys(BaseModel):
     p256dh: str
     auth: str
@@ -38,7 +47,7 @@ class NotificationPayload(BaseModel):
 
 def _load_subscriptions() -> list[dict]:
     """Load push subscriptions from file."""
-    path = Path(SUBSCRIPTIONS_FILE).expanduser()
+    path = _get_subscriptions_path()
     if not path.exists():
         return []
     try:
@@ -50,13 +59,20 @@ def _load_subscriptions() -> list[dict]:
 
 def _save_subscriptions(subscriptions: list[dict]) -> None:
     """Save push subscriptions to file."""
-    path = Path(SUBSCRIPTIONS_FILE).expanduser()
+    path = _get_subscriptions_path()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
             json.dump(subscriptions, f, indent=2)
     except Exception as e:
         print(f"[notifications] Failed to save subscriptions: {e}")
+        try:
+            path = Path("~/.hermes/push_subscriptions.json").expanduser()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "w") as f:
+                json.dump(subscriptions, f, indent=2)
+        except Exception as e2:
+            print(f"[notifications] Failed to save subscriptions fallback: {e2}")
 
 
 @router.get("/vapid-public-key")

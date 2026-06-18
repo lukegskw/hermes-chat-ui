@@ -26,7 +26,14 @@ export const getApiUrl = () => {
   if (envConfig.HERMES_API_URL) {
     return envConfig.HERMES_API_URL.replace(/\/$/, "");
   }
-  const urlObj = new URL(window.location.origin);
-  urlObj.port = envConfig.HERMES_PROXY_PORT || "8643";
-  return urlObj.toString().replace(/\/$/, "");
+
+  // Em desenvolvimento, o frontend roda no Vite e o backend em outra porta
+  if (import.meta.env.DEV) {
+    const urlObj = new URL(window.location.origin);
+    urlObj.port = envConfig.HERMES_PROXY_PORT || "8643";
+    return urlObj.toString().replace(/\/$/, "");
+  }
+
+  // Em produção, o frontend e backend rodam juntos, então é a mesma URL (sem forçar porta HTTPS quebrada)
+  return window.location.origin;
 };

@@ -2,13 +2,19 @@ import sqlite3
 import os
 import json
 
-DB_PATH = os.environ.get("HERMES_DB_PATH", "~/.hermes/hermes_chats.db")
+DB_PATH = os.environ.get("HERMES_DB_PATH", "/opt/data/hermes_chats.db")
 
 def get_db_connection():
     db_file = os.path.expanduser(DB_PATH)
-    os.makedirs(os.path.dirname(db_file), exist_ok=True)
-    
-    conn = sqlite3.connect(db_file)
+    try:
+        os.makedirs(os.path.dirname(db_file), exist_ok=True)
+        conn = sqlite3.connect(db_file)
+    except (OSError, IOError):
+        # Fallback to local user directory se /opt/data for read-only
+        db_file = os.path.expanduser("~/.hermes/hermes_chats.db")
+        os.makedirs(os.path.dirname(db_file), exist_ok=True)
+        conn = sqlite3.connect(db_file)
+        
     conn.row_factory = sqlite3.Row
     return conn
 
