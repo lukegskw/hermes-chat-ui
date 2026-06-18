@@ -14,7 +14,7 @@ from ..push import get_vapid_public_key, send_push_notification
 router = APIRouter(tags=["notifications"])
 
 SUBSCRIPTIONS_FILE = os.environ.get(
-    "PUSH_SUBSCRIPTIONS_FILE", "/app/push_subscriptions.json"
+    "PUSH_SUBSCRIPTIONS_FILE", "~/.hermes/push_subscriptions.json"
 )
 
 
@@ -38,7 +38,7 @@ class NotificationPayload(BaseModel):
 
 def _load_subscriptions() -> list[dict]:
     """Load push subscriptions from file."""
-    path = Path(SUBSCRIPTIONS_FILE)
+    path = Path(SUBSCRIPTIONS_FILE).expanduser()
     if not path.exists():
         return []
     try:
@@ -50,7 +50,7 @@ def _load_subscriptions() -> list[dict]:
 
 def _save_subscriptions(subscriptions: list[dict]) -> None:
     """Save push subscriptions to file."""
-    path = Path(SUBSCRIPTIONS_FILE)
+    path = Path(SUBSCRIPTIONS_FILE).expanduser()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:

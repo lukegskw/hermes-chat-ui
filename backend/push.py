@@ -7,13 +7,13 @@ import os
 from pathlib import Path
 
 
-VAPID_KEYS_FILE = os.environ.get("VAPID_KEYS_FILE", "/app/vapid_keys.json")
+VAPID_KEYS_FILE = os.environ.get("VAPID_KEYS_FILE", "~/.hermes/vapid_keys.json")
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:admin@hermes.local")
 
 
 def get_vapid_keys() -> dict:
     """Get or generate VAPID keys."""
-    keys_path = Path(VAPID_KEYS_FILE)
+    keys_path = Path(VAPID_KEYS_FILE).expanduser()
 
     if keys_path.exists():
         with open(keys_path, "r") as f:
