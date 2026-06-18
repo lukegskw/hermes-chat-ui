@@ -3,7 +3,7 @@ const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon.svg',
+  '/icon.png',
 ];
 
 // Install Event - Pre-cache essential static shell assets
@@ -70,7 +70,7 @@ self.addEventListener('push', (event) => {
   let data = {
     title: 'Hermes',
     body: 'You have a new message',
-    icon: '/icon.svg',
+    icon: '/icon.png',
     url: '/',
     tag: 'hermes-message',
   };
@@ -86,8 +86,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: data.icon || '/icon.svg',
-    badge: '/icon.svg',
+    icon: data.icon || '/icon.png',
+    badge: '/icon.png',
     tag: data.tag || 'hermes-message',
     data: { url: data.url || '/' },
     vibrate: [100, 50, 100],
