@@ -96,10 +96,10 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      // Check if any window is currently focused
+      // Check if any window is currently visible
       for (const client of clients) {
-        if (client.focused) {
-          // App is open and focused, no need to show a push notification
+        if (client.visibilityState === 'visible') {
+          // App is open and visible, no need to show a push notification
           return;
         }
       }

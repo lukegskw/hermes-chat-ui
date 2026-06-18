@@ -2,13 +2,11 @@ import sqlite3
 import os
 import json
 
-DB_PATH = os.environ.get("HERMES_DB_PATH", "/opt/data/hermes_chats.db")
+DB_PATH = os.environ.get("HERMES_DB_PATH", "~/.hermes/hermes_chats.db")
 
 def get_db_connection():
-    # If /opt/data doesn't exist, fallback to local directory
-    db_file = DB_PATH
-    if not os.path.exists(os.path.dirname(db_file)):
-        db_file = "hermes_chats.db"
+    db_file = os.path.expanduser(DB_PATH)
+    os.makedirs(os.path.dirname(db_file), exist_ok=True)
     
     conn = sqlite3.connect(db_file)
     conn.row_factory = sqlite3.Row

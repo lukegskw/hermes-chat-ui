@@ -79,8 +79,10 @@ async def async_chat_engine(
         from .push import send_push_notification
         subs = _load_subscriptions()
         if subs:
-            preview = full_content[:100] + "..." if len(full_content) > 100 else full_content
-            data = {"title": "Hermes", "body": preview, "url": "/"}
+            import re
+            clean_content = re.sub(r'<TITLE>.*?</TITLE>', '', full_content, flags=re.DOTALL).strip()
+            preview = clean_content[:100] + "..." if len(clean_content) > 100 else clean_content
+            data = {"title": "New message", "body": preview, "url": "/"}
             for sub in subs:
                 send_push_notification(sub, data)
     except Exception as e:
