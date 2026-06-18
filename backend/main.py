@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-from .routers import config, conversations, chat
+from .routers import config, conversations, chat, push
 
 # Initialize database
 from . import database
@@ -22,6 +22,7 @@ app.add_middleware(
 app.include_router(config.router)
 app.include_router(conversations.router)
 app.include_router(chat.router)
+app.include_router(push.router)
 
 # Mount SPA
 static_dir = os.environ.get("HERMES_STATIC_DIR", "/app/static")
@@ -32,6 +33,6 @@ else:
 
 if __name__ == "__main__":
     import uvicorn
-    print("Starting Hermes Proxy (Async Chat Engine)...")
+    print("Starting Hermes Proxy (Async Chat Engine)")
     port = int(os.environ.get("HERMES_PROXY_PORT", os.environ.get("PORT", 8643)))
     uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=False)
