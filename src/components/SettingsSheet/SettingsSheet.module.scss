@@ -130,7 +130,7 @@
   padding: 12px;
   border: s.$border-width solid s.$color-black;
   background-color: s.$color-white;
-  @include s.neo-shadow(s.$color-black, 4px, 4px);
+  @include s.neo-card(4px);
   margin-bottom: 4px;
 }
 
