@@ -83,11 +83,18 @@ def send_push_notification(subscription_info: dict, data: dict) -> bool:
         print("[push] Warning: pywebpush package not installed. Skipping push.")
         return False
 
+    import tempfile
+    import os
+    tmp_path = None
     try:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".pem") as tmp:
+            tmp.write(keys["private_key"])
+            tmp_path = tmp.name
+
         webpush(
             subscription_info=subscription_info,
             data=json.dumps(data),
-            vapid_private_key=keys["private_key"],
+            vapid_private_key=tmp_path,
             vapid_claims={"sub": VAPID_SUBJECT},
         )
         return True
@@ -97,3 +104,6 @@ def send_push_notification(subscription_info: dict, data: dict) -> bool:
     except Exception as e:
         print(f"[push] Unexpected error: {e}")
         return False
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
