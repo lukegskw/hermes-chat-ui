@@ -18,6 +18,11 @@ ENV PATH="/opt/hermes/.venv/bin:$PATH"
 # Copy built SPA
 COPY --from=build /app/dist /app/static/
 
+# Install python backend dependencies
+COPY backend/requirements.txt ./backend/
+RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir pywebpush cryptography
+
 COPY backend /app/backend
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

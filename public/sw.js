@@ -40,7 +40,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Do not intercept or cache Hermes API endpoints or hot module reloading dev routes
-  if (event.request.url.includes('/v1/') || event.request.url.includes('/@vite/') || event.request.url.includes('node_modules')) {
+  if (event.request.url.includes('/api/') || event.request.url.includes('/v1/') || event.request.url.includes('/@vite/') || event.request.url.includes('node_modules')) {
     return;
   }
 
@@ -61,6 +61,70 @@ self.addEventListener('fetch', (event) => {
         // Return cached shell resource immediately, revalidating in the background
         return cachedResponse || fetchPromise;
       });
+    })
+  );
+});
+
+// Push Notification Event
+self.addEventListener('push', (event) => {
+  let data = {
+    title: 'Hermes',
+    body: 'You have a new message',
+    icon: '/icon.svg',
+    url: '/',
+    tag: 'hermes-message',
+  };
+
+  if (event.data) {
+    try {
+      data = { ...data, ...event.data.json() };
+    } catch (e) {
+      console.error('[Service Worker] Push event error:', e);
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/icon.svg',
+    badge: '/icon.svg',
+    tag: data.tag || 'hermes-message',
+    data: { url: data.url || '/' },
+    vibrate: [100, 50, 100],
+    requireInteraction: false,
+  };
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Check if any window is currently focused
+      for (const client of clients) {
+        if (client.focused) {
+          // App is open and focused, no need to show a push notification
+          return;
+        }
+      }
+      return self.registration.showNotification(data.title, options);
+    })
+  );
+});
+
+// Notification Click Event
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Focus existing window if available
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Open new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(url);
+      }
     })
   );
 });

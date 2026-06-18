@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-from .routers import config, conversations, chat
+from .routers import config, conversations, chat, health, notifications
 
 # Initialize database
 from . import database
@@ -22,6 +22,8 @@ app.add_middleware(
 app.include_router(config.router)
 app.include_router(conversations.router)
 app.include_router(chat.router)
+app.include_router(health.router)
+app.include_router(notifications.router, prefix="/api/push")
 
 # Mount SPA
 static_dir = os.environ.get("HERMES_STATIC_DIR", "/app/static")

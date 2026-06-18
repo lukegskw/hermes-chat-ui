@@ -61,6 +61,17 @@
   },
   "settings": {
     "title": "Configurações",
+    "notifications": "Notificações",
+    "push": {
+      "label": "Notificações Push",
+      "status": {
+        "subscribed": "Notificações ativadas",
+        "unsubscribed": "Notificações desativadas",
+        "blocked": "Notificações bloqueadas pelo navegador",
+        "notSupported": "Notificações push não suportadas",
+        "error": "Falha ao ativar notificações"
+      }
+    },
     "systemPrompt": "System Prompt (Opcional)",
     "systemPromptPlaceholder": "Digite seu prompt customizado aqui...",
     "save": "Salvar Configurações",

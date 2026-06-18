@@ -3,3 +3,4 @@ export * from "./useModels";
 export * from "./useHermesStream";
 export * from "./useSwipeDrawer";
 export * from "./useClipboard";
+export * from "./usePushNotifications";
