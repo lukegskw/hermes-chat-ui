@@ -1,66 +1,109 @@
-const CACHE_NAME = 'hermes-chat-cache-v1';
-const ASSETS_TO_CACHE = [
+/// <reference lib="webworker" />
+
+const CACHE_NAME = 'hermes-chat-v1';
+const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/icon.svg',
 ];
 
-// Install Event - Pre-cache essential static shell assets
+// Install event - cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Pre-caching offline shell assets');
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+      return cache.addAll(STATIC_ASSETS);
+    })
   );
+  self.skipWaiting();
 });
 
-// Activate Event - Clean up old caches
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('[Service Worker] Removing old cache:', key);
-            return caches.delete(key);
-          }
-        })
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
       );
-    }).then(() => self.clients.claim())
+    })
+  );
+  self.clients.claim();
+});
+
+// Fetch event - network first, cache fallback
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        // Clone the response and cache it
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseClone);
+        });
+        return response;
+      })
+      .catch(() => {
+        // Network failed, try cache
+        return caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || new Response('Offline', { status: 503 });
+        });
+      })
   );
 });
 
-// Fetch Event - Stale-While-Revalidate caching strategy
-self.addEventListener('fetch', (event) => {
-  // Only handle standard HTTP/HTTPS GET requests
-  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
-    return;
+// Push notification event handler
+self.addEventListener('push', (event) => {
+  let data = {
+    title: 'Hermes',
+    body: 'You have a new message',
+    icon: '/favicon.ico',
+    url: '/',
+    tag: 'hermes-message',
+  };
+
+  if (event.data) {
+    try {
+      data = { ...data, ...event.data.json() };
+    } catch (e) {
+      data.body = event.data.text();
+    }
   }
 
-  // Do not intercept or cache Hermes API endpoints or hot module reloading dev routes
-  if (event.request.url.includes('/v1/') || event.request.url.includes('/@vite/') || event.request.url.includes('node_modules')) {
-    return;
-  }
+  const options = {
+    body: data.body,
+    icon: data.icon || '/favicon.ico',
+    badge: '/favicon.ico',
+    tag: data.tag || 'hermes-message',
+    data: {
+      url: data.url || '/',
+    },
+    vibrate: [100, 50, 100],
+    requireInteraction: false,
+  };
 
-  event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.match(event.request).then((cachedResponse) => {
-        const fetchPromise = fetch(event.request).then((networkResponse) => {
-          // Cache successful responses for future offline requests
-          if (networkResponse.status === 200) {
-            cache.put(event.request, networkResponse.clone());
-          }
-          return networkResponse;
-        }).catch((err) => {
-          console.warn('[Service Worker] Fetch failed, serving cached fallback:', err);
-          return cachedResponse;
-        });
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
 
-        // Return cached shell resource immediately, revalidating in the background
-        return cachedResponse || fetchPromise;
-      });
+// Notification click event handler
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Focus existing window if available
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Open new window
+      return self.clients.openWindow(url);
     })
   );
 });

@@ -1,14 +1,14 @@
+import os
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
+from fastapi.responses import FileResponse
 
-from .routers import config, conversations, chat, push
+from backend.routers import chat, config, health, notifications
 
-# Initialize database
-from . import database
-
-app = FastAPI(title="Hermes Chat UI Proxy")
+app = FastAPI(title="Hermes Chat UI")
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,21 +18,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(config.router)
-app.include_router(conversations.router)
-app.include_router(chat.router)
-app.include_router(push.router)
+app.include_router(chat.router, prefix="/api")
+app.include_router(config.router, prefix="/api")
+app.include_router(health.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api/push")
 
-# Mount SPA
-static_dir = os.environ.get("HERMES_STATIC_DIR", "/app/static")
-if os.path.exists(static_dir):
-    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
-else:
-    print(f"WARNING: Static directory '{static_dir}' not found. UI will not be served.")
 
-if __name__ == "__main__":
-    import uvicorn
-    print("Starting Hermes Proxy (Async Chat Engine)")
-    port = int(os.environ.get("HERMES_PROXY_PORT", os.environ.get("PORT", 8643)))
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=False)
+# Serve static frontend files
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "dist")
+if os.path.isdir(frontend_path):
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+    
+# Fallback for SPA routing - serve index.html for any unmatched route
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    frontend_path = os.path.join(os.path.dirname(__file__), "..", "dist")
+    index_path = os.path.join(frontend_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"error": "Frontend not built. Run 'npm run build' first."}

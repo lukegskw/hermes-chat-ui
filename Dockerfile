@@ -1,27 +1,26 @@
-# Define arguments before any FROM statement so they can be used in FROM directives
-ARG HERMES_AGENT_VERSION=latest
-
-# Stage 1: Build the SPA
-FROM node:20-alpine AS build
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Unified image based on hermes-agent
-FROM nousresearch/hermes-agent:${HERMES_AGENT_VERSION}
+FROM python:3.11-slim AS production
+WORKDIR /app
 
-# Set PATH to use the agent's virtual environment
-ENV PATH="/opt/hermes/.venv/bin:$PATH"
+# Install Python dependencies (including pywebpush for push notifications)
+RUN pip install --no-cache-dir fastapi uvicorn pywebpush httpx
 
-# Copy built SPA
-COPY --from=build /app/dist /app/static/
+# Copy built frontend from builder
+COPY --from=builder /app/dist ./dist
 
-COPY backend /app/backend
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Copy backend code
+COPY backend ./backend
+
+# Copy entrypoint
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
 EXPOSE 8643
 
-CMD ["/app/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
