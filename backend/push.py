@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 VAPID_KEYS_FILE = os.environ.get("VAPID_KEYS_FILE", "~/.hermes/vapid_keys.json")
-VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:admin@hermes.local")
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:push@example.com")
 
 
 def get_vapid_keys() -> dict:
