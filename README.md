@@ -169,6 +169,8 @@ Contributions are welcome! Please ensure you:
 - Maintain strict TypeScript type safety (no `any`, no implicit typing).
 - Test UI changes in both English and Portuguese.
 
+<!-- test PR -->
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
