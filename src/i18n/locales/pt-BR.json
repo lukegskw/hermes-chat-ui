@@ -1,100 +1,35 @@
 {
-  "common": {
-    "online": "Online",
-    "offline": "Offline",
-    "connecting": "Conectando..."
-  },
-  "sidebar": {
-    "newChat": "Novo Chat",
-    "activeModel": "Modelo Ativo",
-    "fetchingModels": "Buscando Modelos...",
-    "noModels": "Sem Modelos",
-    "disconnected": "Hermes desconectado",
-    "recentChats": "Chats Recentes",
-    "untitledChat": "Chat sem título",
-    "noChats": "Nenhuma conversa iniciada",
-    "settings": "Configurações",
-    "deleteChats": "Apagar Chats",
-    "closePanel": "Fechar painel"
-  },
-  "chat": {
-    "welcome": {
-      "title": "Olá! Eu sou o Hermes Agent.",
-      "subtitle": "Como um assistente autônomo local, eu posso rodar comandos, integrar com sua casa inteligente e fazer pesquisas avançadas. O que vamos fazer hoje?"
-    },
-    "placeholder": "Envie uma mensagem para Hermes...",
-    "conversationName": "Nome da conversa...",
-    "untitledChat": "Chat sem título",
-    "moreOptions": "Mais opções",
-    "rename": "Renomear",
-    "compact": "Compactar",
-    "delete": "Apagar",
-    "dropImages": "Solte imagens aqui",
-    "attachImage": "Anexar imagem",
-    "stopGeneration": "Parar geração",
-    "sendMessage": "Enviar mensagem",
-    "runningWith": "RODANDO COM:",
-    "loading": "Carregando...",
-    "noModels": "Sem modelos"
-  },
-  "messages": {
-    "you": "Você",
-    "hermes": "Hermes",
-    "thinking": "Pensando...",
-    "reasoningProcess": "Processo de Raciocínio",
-    "copyMessage": "Copiar mensagem",
-    "attachment": "anexo"
-  },
-  "approval": {
-    "title": "Ação Requer Aprovação",
-    "description": "O agente solicitou permissão para executar uma ferramenta.",
-    "tool": "Ferramenta:",
-    "command": "Comando:",
-    "allowOnce": "Permitir 1x",
-    "allowOnceTitle": "Permitir execução apenas desta vez",
-    "thisSession": "Esta Sessão",
-    "thisSessionTitle": "Permitir automaticamente durante esta sessão",
-    "always": "Sempre",
-    "alwaysTitle": "Lembrar permissão e não perguntar novamente para este comando",
-    "deny": "Negar",
-    "denyTitle": "Negar e cancelar execução"
-  },
   "settings": {
     "title": "Configurações",
-    "systemPrompt": "System Prompt (Opcional)",
-    "systemPromptPlaceholder": "Digite seu prompt customizado aqui...",
-    "save": "Salvar Configurações",
-    "language": "Idioma",
-    "languageDescription": "Selecione o idioma de exibição da interface"
+    "appearance": "Aparência",
+    "darkMode": "Modo Escuro",
+    "notifications": "Notificações",
+    "environment": "Ambiente",
+    "push": {
+      "label": "Notificações Push",
+      "description": "Receba notificações quando chegar uma nova mensagem",
+      "status": {
+        "subscribed": "Notificações ativadas",
+        "unsubscribed": "Notificações desativadas",
+        "blocked": "Notificações bloqueadas pelo navegador. Ative nas configurações do navegador.",
+        "error": "Falha ao configurar notificações. Tente novamente.",
+        "notSupported": "Notificações push não suportadas neste navegador. HTTPS é necessário."
+      }
+    }
   },
-  "activity": {
-    "agentActivity": "Atividade do Agente:",
-    "reasoning": "Raciocínio",
-    "tools": "ferramentas",
-    "subAgents": "sub-agentes",
-    "thoughtProcess": "Processo de Pensamento",
-    "delegatingTask": "Delegando tarefa...",
-    "executingTool": "Executando ferramenta...",
-    "taskDelegated": "Tarefa delegada.",
-    "toolExecuted": "Ferramenta executada."
+  "chat": {
+    "title": "Hermes Chat",
+    "inputPlaceholder": "Digite uma mensagem...",
+    "sendButton": "Enviar",
+    "systemMessage": "Sistema",
+    "welcomeMessage": "Bem-vindo! Como posso ajudar?",
+    "copyMessage": "Copiar",
+    "deleteMessage": "Excluir",
+    "copySuccess": "Copiado!"
   },
-  "errors": {
-    "interfaceError": "Algo deu errado na interface.",
-    "reloadPage": "Recarregar Página",
-    "connectionError": "**Erro de conexão**: {{message}}. Certifique-se de que o container do Hermes está ativo e acessível na porta configurada.",
-    "compressingContext": "⏳ Compactando contexto da sessão...",
-    "compressSuccess": "✅ Contexto compactado com sucesso pelo agente.",
-    "compressFailed": "❌ Falha ao compactar o contexto da sessão.",
-    "approvalRequired": "⚠️ O comando acima requer aprovação manual para prosseguir.",
-    "approvalDenied": "[APPROVAL_DENIED] Comando rejeitado pelo usuário. Não execute o comando.",
-    "approvalGranted": "[APPROVAL_GRANTED] Permissão concedida pelo usuário. Pode prosseguir com a execução do comando.",
-    "unsupportedFormat": "Formato não suportado ({{type}}). Apenas JPEG, PNG, GIF e WebP são permitidos.",
-    "imageTooLarge": "Imagem muito grande. O limite é {{size}}MB."
-  },
-  "loading": {
-    "initializing": "Carregando o seu assistente inteligente..."
-  },
-  "systemPrompts": {
-    "titleInstruction": "\\n\\nAntes de responder, por favor comece sua resposta com um título curto para esta conversa (3-5 palavras) dentro de tags <TITLE></TITLE> na primeira linha, depois uma linha em branco, e então sua resposta real."
+  "connection": {
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "reconnecting": "Reconectando..."
   }
 }

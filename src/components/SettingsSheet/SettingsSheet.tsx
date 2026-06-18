@@ -1,97 +1,153 @@
-import React, { useState } from "react";
-import { Settings as SettingsIcon, X, Save } from "../Icons";
-import { Settings } from "../../types";
+import { FC, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "../../hooks/useTheme";
+import { useEnvPassthrough } from "../../hooks/useEnvPassthrough";
+import { isPushSupported, getNotificationPermission, requestNotificationPermission, subscribeToPush, unsubscribeFromPush, isSubscribedToPush } from "../../utils/pushNotifications";
+import { SettingsIcon, MoonIcon, SunIcon, BellIcon, BellOffIcon } from "../Icons";
 import styles from "./SettingsSheet.module.scss";
 
-export type SettingsSheetProps = {
+interface SettingsSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  settings: Settings;
-  onSaveSettings: (settings: Settings) => void;
-};
+}
 
-export const SettingsSheet = ({
-  isOpen,
-  onClose,
-  settings,
-  onSaveSettings,
-}: SettingsSheetProps) => {
-  const { t, i18n } = useTranslation();
-  const [tempSystemPrompt, setTempSystemPrompt] = useState(
-    settings.systemPrompt || "",
-  );
-  const [tempLanguage, setTempLanguage] = useState(i18n.language || "en");
-  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+export const SettingsSheet: FC<SettingsSheetProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
+  const { envVars, updateEnvVar } = useEnvPassthrough();
 
-  if (isOpen !== prevIsOpen) {
-    setPrevIsOpen(isOpen);
-    if (isOpen) {
-      setTempSystemPrompt(settings.systemPrompt || "");
-      setTempLanguage(i18n.language || "en");
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushStatus, setPushStatus] = useState<string | null>(null);
+
+  // Check push subscription state on mount
+  useEffect(() => {
+    if (isOpen && isPushSupported()) {
+      isSubscribedToPush().then((subscribed) => {
+        setPushEnabled(subscribed);
+        if (subscribed) {
+          setPushStatus(t("settings.push.status.subscribed"));
+        }
+      });
+      const perm = getNotificationPermission();
+      if (perm === 'denied') {
+        setPushStatus(t("settings.push.status.blocked"));
+      }
     }
-  }
+  }, [isOpen, t]);
 
-  const handleSaveSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (tempLanguage !== i18n.language) {
-      i18n.changeLanguage(tempLanguage);
+  const handlePushToggle = useCallback(async () => {
+    if (pushLoading) return;
+    setPushLoading(true);
+
+    try {
+      if (pushEnabled) {
+        // Unsubscribe
+        const success = await unsubscribeFromPush();
+        if (success) {
+          setPushEnabled(false);
+          setPushStatus(t("settings.push.status.unsubscribed"));
+        }
+      } else {
+        // Request permission and subscribe
+        const permission = await requestNotificationPermission();
+        if (permission === 'granted') {
+          const subscription = await subscribeToPush();
+          if (subscription) {
+            setPushEnabled(true);
+            setPushStatus(t("settings.push.status.subscribed"));
+          } else {
+            setPushStatus(t("settings.push.status.error"));
+          }
+        } else if (permission === 'denied') {
+          setPushStatus(t("settings.push.status.blocked"));
+        }
+      }
+    } catch {
+      setPushStatus(t("settings.push.status.error"));
+    } finally {
+      setPushLoading(false);
     }
-    onSaveSettings({
-      systemPrompt: tempSystemPrompt,
-    });
-    onClose();
-  };
+  }, [pushEnabled, pushLoading, t]);
+
+  if (!isOpen) return null;
+
+  const pushSupported = isPushSupported();
 
   return (
-    <>
-      <div
-        className={`${styles.backdrop} ${isOpen ? styles.open : ""}`}
-        onClick={onClose}
-      />
-      <div className={`${styles.sheet} ${isOpen ? styles.open : ""}`}>
-        <div className={styles.header}>
-          <h3 className={styles.title}>
-            <SettingsIcon size={20} className={styles.textSecondary} />
-            {t("settings.title")}
-          </h3>
-          <button type="button" onClick={onClose} className={styles.close}>
-            <X size={24} />
-          </button>
-        </div>
+    <div className={styles.settingsSheet}>
+      <h2 className={styles.title}>{t("settings.title")}</h2>
 
-        <form onSubmit={handleSaveSettings} className={styles.content}>
-          <div className={styles.field}>
-            <label className={styles.label}>{t("settings.language")}</label>
-            <p className={styles.description}>
-              {t("settings.languageDescription")}
-            </p>
-            <select
-              className={styles.select}
-              value={tempLanguage}
-              onChange={(e) => setTempLanguage(e.target.value)}
-            >
-              <option value="en">English</option>
-              <option value="pt-BR">Português (Brasil)</option>
-            </select>
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label}>{t("settings.systemPrompt")}</label>
-            <textarea
-              className={styles.textareaLarge}
-              value={tempSystemPrompt}
-              onChange={(e) => setTempSystemPrompt(e.target.value)}
-              placeholder={t("settings.systemPromptPlaceholder")}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>{t("settings.appearance")}</div>
+        <div className={styles.settingItem}>
+          <span className={styles.settingLabel}>
+            {theme === "dark" ? <MoonIcon size={20} /> : <SunIcon size={20} />}
+            {t("settings.darkMode")}
+          </span>
+          <label className={styles.toggle}>
+            <input
+              type="checkbox"
+              checked={theme === "dark"}
+              onChange={toggleTheme}
             />
-          </div>
-
-          <button type="submit" className={styles.saveBtn}>
-            <Save size={18} />
-            {t("settings.save")}
-          </button>
-        </form>
+            <span className={styles.slider} />
+          </label>
+        </div>
       </div>
-    </>
+
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>{t("settings.notifications")}</div>
+        <div className={styles.settingItem}>
+          <span className={styles.settingLabel}>
+            {pushEnabled ? <BellIcon size={20} /> : <BellOffIcon size={20} />}
+            {t("settings.push.label")}
+          </span>
+          <div className={styles.pushToggleContainer}>
+            <label className={styles.toggle}>
+              <input
+                type="checkbox"
+                checked={pushEnabled}
+                onChange={handlePushToggle}
+                disabled={!pushSupported || pushLoading}
+              />
+              <span className={styles.slider} />
+            </label>
+          </div>
+        </div>
+        {pushStatus && (
+          <div className={`${styles.pushStatus} ${!pushSupported ? styles.pushError : ''}`}>
+            {pushStatus}
+          </div>
+        )}
+        {!pushSupported && (
+          <div className={`${styles.pushStatus} ${styles.pushWarning}`}>
+            {t("settings.push.status.notSupported")}
+          </div>
+        )}
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>{t("settings.environment")}</div>
+        <div className={styles.envGroup}>
+          {Object.entries(envVars).map(([key, value]) => (
+            <div key={key} className={styles.envInput}>
+              <input
+                type="text"
+                value={key}
+                disabled
+                title={key}
+              />
+              <input
+                type="text"
+                value={value}
+                onChange={(e) => updateEnvVar(key, e.target.value)}
+                placeholder={key}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 };
