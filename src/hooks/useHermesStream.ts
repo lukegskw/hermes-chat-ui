@@ -201,8 +201,6 @@ export const useHermesStream = (
         instructions += `\n\n${systemPrompt}`;
       }
 
-      instructions += i18n.t("systemPrompts.criticalInstruction");
-
       if (existingMessages.length === 0) {
         titleUpdatedRef.current.delete(activeConversationId);
         instructions += i18n.t("systemPrompts.titleInstruction");
