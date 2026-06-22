@@ -12,6 +12,7 @@ import {
   useHermesStream,
   useModels,
   useSwipeDrawer,
+  usePresenceHeartbeat,
 } from "./hooks";
 
 export const App = () => {
@@ -22,6 +23,8 @@ export const App = () => {
     useState<boolean>(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
+
+  usePresenceHeartbeat();
 
   useSwipeDrawer(sidebarRef, backdropRef, {
     isOpen: isSidebarOpen,

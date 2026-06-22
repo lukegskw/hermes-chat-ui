@@ -6,12 +6,19 @@ import json
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
+import time
 
 from ..push import get_vapid_public_key, send_push_notification
 
 router = APIRouter(tags=["notifications"])
+
+_last_heartbeat_at: float = 0.0
+
+def is_any_client_active(threshold_seconds: int = 60) -> bool:
+    """Return True if a heartbeat was received within the threshold."""
+    return (time.time() - _last_heartbeat_at) <= threshold_seconds
 
 SUBSCRIPTIONS_FILE = os.environ.get("SUBSCRIPTIONS_FILE", "/opt/data/push_subscriptions.json")
 
@@ -22,11 +29,6 @@ def _get_subscriptions_path() -> Path:
         return fallback_path
     return main_path
 
-def _load_subscriptions() -> list[dict]:
-    """Load push subscriptions from file."""
-    path = _get_subscriptions_path()
-    if not path.exists():
-        return []
 class PushSubscriptionKeys(BaseModel):
     p256dh: str
     auth: str
@@ -82,6 +84,14 @@ async def vapid_public_key():
     if not key:
         raise HTTPException(status_code=503, detail="VAPID public key not configured or cryptography package missing")
     return {"publicKey": key}
+
+
+@router.post("/heartbeat")
+async def heartbeat():
+    """Receive presence heartbeat from active clients."""
+    global _last_heartbeat_at
+    _last_heartbeat_at = time.time()
+    return Response(status_code=204)
 
 
 @router.post("/subscribe")

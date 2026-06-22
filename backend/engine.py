@@ -75,16 +75,20 @@ async def async_chat_engine(
     
     # Trigger push notification if configured
     try:
-        from .routers.notifications import _load_subscriptions
+        from .routers.notifications import _load_subscriptions, is_any_client_active
         from .push import send_push_notification
-        subs = _load_subscriptions()
-        if subs:
-            import re
-            clean_content = re.sub(r'<TITLE>.*?</TITLE>', '', full_content, flags=re.DOTALL).strip()
-            preview = clean_content[:100] + "..." if len(clean_content) > 100 else clean_content
-            data = {"title": "New message", "body": preview, "url": "/"}
-            for sub in subs:
-                send_push_notification(sub, data)
+        
+        if is_any_client_active():
+            print("[push] Client active, skipping push notification")
+        else:
+            subs = _load_subscriptions()
+            if subs:
+                import re
+                clean_content = re.sub(r'<TITLE>.*?</TITLE>', '', full_content, flags=re.DOTALL).strip()
+                preview = clean_content[:100] + "..." if len(clean_content) > 100 else clean_content
+                data = {"title": "New message", "body": preview, "url": "/"}
+                for sub in subs:
+                    send_push_notification(sub, data)
     except Exception as e:
         print(f"[push] Failed to trigger notification after generation: {e}")
     
