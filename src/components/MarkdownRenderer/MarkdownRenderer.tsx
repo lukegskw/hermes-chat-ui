@@ -1,6 +1,7 @@
 import React from "react";
 import { Check, Copy } from "../Icons";
 import { useClipboard } from "../../hooks";
+import { linkifyParts } from "../../utils";
 import styles from "./MarkdownRenderer.module.scss";
 
 type CodeBlockProps = {
@@ -212,7 +213,7 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
         }
         i++;
       }
-      return parts;
+      return linkifyParts(parts);
     };
 
     lines.forEach((line, idx) => {

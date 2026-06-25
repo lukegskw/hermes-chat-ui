@@ -64,6 +64,24 @@
   }
 }
 
+.toolItem {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 4px;
+  margin-left: -4px;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.toolHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .icon {
   width: 16px;
   height: 16px;
@@ -104,4 +122,27 @@
   font-weight: 600;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.toolStatus {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.toolArgs {
+  margin-top: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 2px solid s.$color-black;
+  background-color: s.$color-bg;
 }

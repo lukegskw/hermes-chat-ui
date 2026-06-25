@@ -166,5 +166,29 @@ def _parse_and_accumulate(chunk: bytes, tool_calls: list):
                                     
                             if "status" in tc and tc["status"]:
                                 tool_calls[idx]["status"] = tc["status"]
+                
+                # Handle Hermes custom tool events
+                if "toolCallId" in data and "tool" in data:
+                    tool_id = data["toolCallId"]
+                    # Find existing entry by id
+                    existing_idx = next(
+                        (i for i, tc in enumerate(tool_calls) if tc["id"] == tool_id),
+                        None
+                    )
+                    if existing_idx is None:
+                        tool_calls.append({
+                            "id": tool_id,
+                            "type": "function",
+                            "function": {
+                                "name": data.get("tool", ""),
+                                "arguments": data.get("label", ""),
+                            },
+                            "status": data.get("status", "running"),
+                        })
+                    else:
+                        if data.get("status"):
+                            tool_calls[existing_idx]["status"] = data["status"]
+                        if data.get("label"):
+                            tool_calls[existing_idx]["function"]["arguments"] = data["label"]
             except json.JSONDecodeError:
                 pass

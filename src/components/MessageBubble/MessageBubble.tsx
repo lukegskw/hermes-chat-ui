@@ -1,13 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  AgentActivityLog,
-  ChatWindowMessage,
-  MarkdownRenderer,
-  ToolCallBox,
-} from "..";
+import { AgentActivityLog, ChatWindowMessage, MarkdownRenderer } from "..";
+import { linkifyParts } from "../../utils";
 import { useClipboard } from "../../hooks";
-import { ToolCall } from "../../types";
 import {
   Bot,
   BrainCircuit,
@@ -105,6 +100,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               <AgentActivityLog
                 toolCalls={message.tool_calls}
                 reasoningContent={message.reasoning_content}
+                isGenerating={message.isGenerating}
               />
 
               {message.reasoning_content && (
@@ -130,15 +126,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                   )}
                 </div>
               )}
-
-              {message.tool_calls &&
-                message.tool_calls.map((tc: ToolCall, i: number) => (
-                  <ToolCallBox
-                    key={i}
-                    toolCall={tc}
-                    isGenerating={message.isGenerating}
-                  />
-                ))}
             </div>
           )}
 
@@ -147,12 +134,12 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
           {isUser ? (
             <div className={styles.bodyUser}>
               {typeof content === "string" ? (
-                <span>{content}</span>
+                <span>{linkifyParts([content])}</span>
               ) : (
                 <div className={styles.contentParts}>
                   {content.map((part, idx) => {
                     if (part.type === "text") {
-                      return <p key={idx}>{part.text}</p>;
+                      return <p key={idx}>{linkifyParts([part.text])}</p>;
                     } else {
                       return (
                         <div key={idx} className={styles.imageWrapper}>

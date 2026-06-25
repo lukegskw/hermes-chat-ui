@@ -6,15 +6,102 @@ import {
   Wrench,
   GitMerge,
   Activity,
+  Check,
 } from "../Icons";
 import { ToolCall } from "../../types";
 import { useTranslation } from "react-i18next";
+import { MarkdownRenderer } from "../MarkdownRenderer";
 import styles from "./AgentActivityLog.module.scss";
 
 export type AgentActivityLogProps = {
   toolCalls?: ToolCall[];
   reasoningContent?: string;
   isGenerating?: boolean;
+};
+
+const ToolItem = ({
+  tc,
+  isGenerating,
+  isDelegate,
+}: {
+  tc: ToolCall;
+  isGenerating: boolean;
+  isDelegate: boolean;
+}) => {
+  const { t } = useTranslation();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const Icon = isDelegate ? GitMerge : Wrench;
+
+  let formattedArgs = "";
+  const args = tc.function.arguments || "";
+  if (args) {
+    if (
+      tc.function.name === "execute_code" ||
+      tc.function.name === "run_python"
+    ) {
+      try {
+        const parsed = JSON.parse(args);
+        const code = parsed.code || parsed.content || args;
+        const lang = tc.function.name === "run_python" ? "python" : "code";
+        formattedArgs = `\`\`\`${lang}\n${code}\n\`\`\``;
+      } catch {
+        formattedArgs = `\`\`\`code\n${args}\n\`\`\``;
+      }
+    } else {
+      try {
+        const parsed = JSON.parse(args);
+        formattedArgs = `\`\`\`json\n${JSON.stringify(parsed, null, 2)}\n\`\`\``;
+      } catch {
+        formattedArgs = `\`\`\`json\n${args}\n\`\`\``;
+      }
+    }
+  }
+
+  const isRunning = tc.status === "running" || (isGenerating && !tc.status);
+  const isError = tc.status === "error";
+
+  return (
+    <div className={styles.node}>
+      <div
+        className={`${styles.icon} ${isDelegate ? styles.delegate : styles.default}`}
+      >
+        <Icon size={12} />
+      </div>
+      <div className={styles.content}>
+        <div
+          className={styles.toolItem}
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className={styles.toolHeader}>
+            <div className={styles.title}>{tc.function.name}</div>
+            <div className={styles.toolStatus}>
+              {isRunning ? (
+                <div className={styles.spinner} />
+              ) : isError ? (
+                <span style={{ color: "red", fontWeight: "bold" }}>!</span>
+              ) : (
+                <Check size={14} />
+              )}
+            </div>
+          </div>
+          <div className={styles.description}>
+            {isRunning
+              ? isDelegate
+                ? t("activity.delegatingTask")
+                : t("activity.executingTool")
+              : isDelegate
+                ? t("activity.taskDelegated")
+                : t("activity.toolExecuted")}
+          </div>
+        </div>
+        {isExpanded && formattedArgs && (
+          <div className={styles.toolArgs}>
+            <MarkdownRenderer content={formattedArgs} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export const AgentActivityLog = ({
@@ -81,28 +168,14 @@ export const AgentActivityLog = ({
             const isDelegate =
               tc.function.name === "delegate_task" ||
               tc.function.name === "delegate";
-            const Icon = isDelegate ? GitMerge : Wrench;
 
             return (
-              <div className={styles.node} key={index}>
-                <div
-                  className={`${styles.icon} ${isDelegate ? styles.delegate : styles.default}`}
-                >
-                  <Icon size={12} />
-                </div>
-                <div className={styles.content}>
-                  <div className={styles.title}>{tc.function.name}</div>
-                  <div className={styles.description}>
-                    {isGenerating
-                      ? isDelegate
-                        ? t("activity.delegatingTask")
-                        : t("activity.executingTool")
-                      : isDelegate
-                        ? t("activity.taskDelegated")
-                        : t("activity.toolExecuted")}
-                  </div>
-                </div>
-              </div>
+              <ToolItem
+                key={index}
+                tc={tc}
+                isGenerating={isGenerating}
+                isDelegate={isDelegate}
+              />
             );
           })}
         </div>
