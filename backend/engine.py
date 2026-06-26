@@ -22,6 +22,7 @@ async def async_chat_engine(
     
     assistant_msg_id = f"msg_{os.urandom(4).hex()}"
     full_content = ""
+    full_reasoning_content = ""
     tool_calls = []
     
     # Insert a placeholder assistant message into the DB
@@ -29,8 +30,8 @@ async def async_chat_engine(
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO messages (id, conversation_id, role, content_json, tool_calls_json) VALUES (?, ?, ?, ?, ?)",
-            (assistant_msg_id, conv_id, "assistant", json.dumps(full_content), json.dumps(tool_calls))
+            "INSERT INTO messages (id, conversation_id, role, content_json, tool_calls_json, reasoning_content_json) VALUES (?, ?, ?, ?, ?, ?)",
+            (assistant_msg_id, conv_id, "assistant", json.dumps(full_content), json.dumps(tool_calls), json.dumps(full_reasoning_content))
         )
         # Also update the conversation timestamp
         cursor.execute("UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (conv_id,))
@@ -52,7 +53,7 @@ async def async_chat_engine(
                     await response_queue.put(b"data: [DONE]\n\n")
                     
                     # Update DB with error
-                    _update_message_in_db(assistant_msg_id, error_str, tool_calls)
+                    _update_message_in_db(assistant_msg_id, error_str, "", tool_calls)
                     return
                 
                 # Consume stream
@@ -60,9 +61,10 @@ async def async_chat_engine(
                     # Put chunk to the queue for the frontend
                     await response_queue.put(chunk)
                     
-                    # Parse SSE to accumulate content and tool calls
+                    # Parse SSE to accumulate content, reasoning_content and tool calls
                     _parse_and_accumulate(chunk, tool_calls)
                     full_content += _extract_content(chunk)
+                    full_reasoning_content += _extract_reasoning_content(chunk)
 
         except Exception as e:
             err_chunk = f"data: {json.dumps({'choices': [{'delta': {'content': f'Proxy Error: {str(e)}'}}]})}\n\n".encode()
@@ -71,7 +73,7 @@ async def async_chat_engine(
     # Update DB BEFORE sending DONE to avoid race condition where the
     # frontend reloads between [DONE] and the DB write, leaving an empty
     # placeholder message in the database.
-    _update_message_in_db(assistant_msg_id, full_content, tool_calls)
+    _update_message_in_db(assistant_msg_id, full_content, full_reasoning_content, tool_calls)
     
     # Trigger push notification if configured
     try:
@@ -96,13 +98,13 @@ async def async_chat_engine(
     await response_queue.put(None) # None signifies end of stream
 
 
-def _update_message_in_db(msg_id: str, content: str, tool_calls: list):
+def _update_message_in_db(msg_id: str, content: str, reasoning_content: str, tool_calls: list):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE messages SET content_json = ?, tool_calls_json = ? WHERE id = ?",
-            (json.dumps(content), json.dumps(tool_calls) if tool_calls else None, msg_id)
+            "UPDATE messages SET content_json = ?, reasoning_content_json = ?, tool_calls_json = ? WHERE id = ?",
+            (json.dumps(content), json.dumps(reasoning_content), json.dumps(tool_calls) if tool_calls else None, msg_id)
         )
         conn.commit()
     except Exception as e:
@@ -127,6 +129,23 @@ def _extract_content(chunk: bytes) -> str:
             except json.JSONDecodeError:
                 pass
     return content
+
+
+def _extract_reasoning_content(chunk: bytes) -> str:
+    text = chunk.decode(errors="ignore")
+    lines = text.split('\n')
+    for line in lines:
+        if line.startswith("data: ") and line != "data: [DONE]":
+            try:
+                data = json.loads(line[6:])
+                choices = data.get("choices", [])
+                if choices:
+                    delta = choices[0].get("delta", {})
+                    if "reasoning_content" in delta and delta["reasoning_content"]:
+                        return delta["reasoning_content"]
+            except json.JSONDecodeError:
+                pass
+    return ""
 
 
 def _parse_and_accumulate(chunk: bytes, tool_calls: list):

@@ -45,6 +45,7 @@ async def get_conversation(conv_id: str):
             "id": m["id"],
             "role": m["role"],
             "content": json.loads(m["content_json"]),
+            "reasoning_content": json.loads(m["reasoning_content_json"]) if m["reasoning_content_json"] else None,
             "tool_calls": json.loads(m["tool_calls_json"]) if m["tool_calls_json"] else None,
             "timestamp": m["timestamp"]
         })
@@ -69,14 +70,16 @@ async def create_conversation(conv: Conversation):
             (conv.id, conv.title, conv.model_id)
         )
         for msg in conv.messages:
+            reasoning = json.dumps(msg.reasoning_content) if msg.reasoning_content else None
             cursor.execute(
-                "INSERT INTO messages (id, conversation_id, role, content_json, tool_calls_json) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO messages (id, conversation_id, role, content_json, tool_calls_json, reasoning_content_json) VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     msg.id,
                     conv.id,
                     msg.role,
                     json.dumps(msg.content),
-                    json.dumps(msg.tool_calls) if msg.tool_calls else None
+                    json.dumps(msg.tool_calls) if msg.tool_calls else None,
+                    reasoning,
                 )
             )
         conn.commit()
@@ -130,4 +133,3 @@ async def update_conversation_model(conv_id: str, payload: dict):
     conn.commit()
     conn.close()
     return {"status": "success"}
-

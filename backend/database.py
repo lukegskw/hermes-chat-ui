@@ -44,10 +44,17 @@ def init_db():
             role TEXT NOT NULL,
             content_json TEXT NOT NULL,
             tool_calls_json TEXT,
+            reasoning_content_json TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
         )
     """)
+    
+    # Migration: add reasoning_content_json to existing db if missing
+    try:
+        cursor.execute("ALTER TABLE messages ADD COLUMN reasoning_content_json TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     
     conn.commit()
     conn.close()

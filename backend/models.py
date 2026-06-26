@@ -10,6 +10,7 @@ class Message(BaseModel):
     id: str
     role: str
     content: Union[str, List[dict]]
+    reasoning_content: Optional[str] = None
     tool_calls: Optional[List[dict]] = None
     timestamp: Optional[str] = None
 
