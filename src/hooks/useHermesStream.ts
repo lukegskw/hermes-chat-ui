@@ -298,6 +298,7 @@ export const useHermesStream = (
                       type: string;
                       function?: { name?: string; arguments?: string };
                       status?: "running" | "completed" | "error";
+                      label?: string;
                     };
                     const index = delta.index || 0;
                     if (!currentTools[index]) {
@@ -309,6 +310,7 @@ export const useHermesStream = (
                           arguments: delta.function?.arguments || "",
                         },
                         status: delta.status || "running",
+                        label: delta.label || "",
                       };
                     } else {
                       if (delta.function?.arguments) {
@@ -317,6 +319,9 @@ export const useHermesStream = (
                       }
                       if (delta.status) {
                         currentTools[index].status = delta.status;
+                      }
+                      if (delta.label) {
+                        currentTools[index].label = delta.label;
                       }
                     }
                     return { ...m, tool_calls: currentTools };

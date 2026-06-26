@@ -33,7 +33,7 @@ const ToolItem = ({
   const Icon = isDelegate ? GitMerge : Wrench;
 
   let formattedArgs = "";
-  const args = tc.function.arguments || "";
+  const args = tc.function.arguments || tc.label || "";
   if (args) {
     if (
       tc.function.name === "execute_code" ||
@@ -45,14 +45,16 @@ const ToolItem = ({
         const lang = tc.function.name === "run_python" ? "python" : "code";
         formattedArgs = `\`\`\`${lang}\n${code}\n\`\`\``;
       } catch {
-        formattedArgs = `\`\`\`code\n${args}\n\`\`\``;
+        const cleanedArgs = args.replace(/\\n/g, "\n");
+        formattedArgs = `\`\`\`code\n${cleanedArgs}\n\`\`\``;
       }
     } else {
       try {
         const parsed = JSON.parse(args);
         formattedArgs = `\`\`\`json\n${JSON.stringify(parsed, null, 2)}\n\`\`\``;
       } catch {
-        formattedArgs = `\`\`\`json\n${args}\n\`\`\``;
+        const cleanedArgs = args.replace(/\\n/g, "\n");
+        formattedArgs = `\`\`\`json\n${cleanedArgs}\n\`\`\``;
       }
     }
   }

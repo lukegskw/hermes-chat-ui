@@ -104,6 +104,7 @@
 
 .content {
   flex: 1;
+  min-width: 0;
   font-size: 0.85rem;
   color: s.$color-black;
   padding-bottom: 4px;

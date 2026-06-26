@@ -183,8 +183,8 @@ export const sendChatMessageStream = async ({
                 type: "function",
                 function: {
                   name: parsed.tool,
-                  arguments: parsed.label || "",
                 },
+                label: parsed.label || "",
                 status: parsed.status,
               });
             }
@@ -225,8 +225,8 @@ export const sendChatMessageStream = async ({
               type: "function",
               function: {
                 name: parsed.tool,
-                arguments: parsed.label || "",
               },
+              label: parsed.label || "",
               status: parsed.status,
             });
           }

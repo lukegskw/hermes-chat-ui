@@ -14,6 +14,7 @@ export type ToolCall = {
     arguments: string;
   };
   status?: "running" | "completed" | "error";
+  label?: string;
 };
 
 export type ContentPart =

@@ -181,14 +181,15 @@ def _parse_and_accumulate(chunk: bytes, tool_calls: list):
                             "type": "function",
                             "function": {
                                 "name": data.get("tool", ""),
-                                "arguments": data.get("label", ""),
+                                "arguments": "",
                             },
+                            "label": data.get("label", ""),
                             "status": data.get("status", "running"),
                         })
                     else:
                         if data.get("status"):
                             tool_calls[existing_idx]["status"] = data["status"]
                         if data.get("label"):
-                            tool_calls[existing_idx]["function"]["arguments"] = data["label"]
+                            tool_calls[existing_idx]["label"] = data["label"]
             except json.JSONDecodeError:
                 pass
