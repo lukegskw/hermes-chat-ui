@@ -50,6 +50,44 @@ def _update_hermes_config_model(model_name: str) -> None:
         f"No hermes config.yaml found in any of: {_CONFIG_PATHS}"
     )
 
+
+def _load_config_system_prompt() -> str:
+    """Load agent.system_prompt from hermes config.yaml."""
+    for config_path in _CONFIG_PATHS:
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r") as f:
+                    config = yaml.safe_load(f) or {}
+                return str(config.get("agent", {}).get("system_prompt", "") or "").strip()
+            except Exception as e:
+                print(f"Error reading system_prompt from {config_path}: {e}")
+    return ""
+
+
+def _inject_config_system_prompt(body: dict) -> None:
+    """Inject agent.system_prompt from config.yaml into the request body."""
+    config_prompt = _load_config_system_prompt()
+    if not config_prompt:
+        return
+
+    messages = body.get("messages", [])
+    if not messages:
+        return
+
+    # Check if there's already a system message
+    has_system = any(m.get("role") == "system" for m in messages)
+    if has_system:
+        # Prepend config prompt to first system message
+        for m in messages:
+            if m.get("role") == "system":
+                existing = str(m.get("content", "") or "")
+                m["content"] = config_prompt + "\n\n" + existing
+                return
+    else:
+        # Insert config prompt as system message at position 0
+        messages.insert(0, {"role": "system", "content": config_prompt})
+
+
 @router.post("/api/chat/{conv_id}/cancel")
 async def cancel_chat(conv_id: str):
     """Explicitly cancel a running generation task for a conversation."""
@@ -129,7 +167,10 @@ async def chat_completions(request: Request):
     # Clean up custom headers from body if we added any before passing to native API
     if "conversation_id" in body:
         del body["conversation_id"]
-        
+    
+    # Inject agent.system_prompt from config.yaml into the messages
+    _inject_config_system_prompt(body)
+    
     # Handle model switch by updating config.yaml directly.
     # 
     # Why not use `/model X` as a chat message?
