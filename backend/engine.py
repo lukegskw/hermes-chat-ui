@@ -31,7 +31,7 @@ async def async_chat_engine(
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO messages (id, conversation_id, role, content_json, tool_calls_json, reasoning_content_json) VALUES (?, ?, ?, ?, ?, ?)",
-            (assistant_msg_id, conv_id, "assistant", json.dumps(full_content), json.dumps(tool_calls), json.dumps(full_reasoning_content))
+            (assistant_msg_id, conv_id, "assistant", json.dumps(full_content), json.dumps(tool_calls), json.dumps(full_reasoning_content) if full_reasoning_content else None)
         )
         # Also update the conversation timestamp
         cursor.execute("UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (conv_id,))
@@ -104,7 +104,7 @@ def _update_message_in_db(msg_id: str, content: str, reasoning_content: str, too
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE messages SET content_json = ?, reasoning_content_json = ?, tool_calls_json = ? WHERE id = ?",
-            (json.dumps(content), json.dumps(reasoning_content), json.dumps(tool_calls) if tool_calls else None, msg_id)
+            (json.dumps(content), json.dumps(reasoning_content) if reasoning_content else None, json.dumps(tool_calls) if tool_calls else None, msg_id)
         )
         conn.commit()
     except Exception as e:
@@ -132,6 +132,7 @@ def _extract_content(chunk: bytes) -> str:
 
 
 def _extract_reasoning_content(chunk: bytes) -> str:
+    reasoning_content = ""
     text = chunk.decode(errors="ignore")
     lines = text.split('\n')
     for line in lines:
@@ -142,10 +143,10 @@ def _extract_reasoning_content(chunk: bytes) -> str:
                 if choices:
                     delta = choices[0].get("delta", {})
                     if "reasoning_content" in delta and delta["reasoning_content"]:
-                        return delta["reasoning_content"]
+                        reasoning_content += delta["reasoning_content"]
             except json.JSONDecodeError:
                 pass
-    return ""
+    return reasoning_content
 
 
 def _parse_and_accumulate(chunk: bytes, tool_calls: list):
