@@ -53,6 +53,33 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
     }
   };
 
+  let finalContent =
+    typeof content === "string"
+      ? content
+      : content
+          .filter((p) => p.type === "text")
+          .map((p) => p.text)
+          .join("\n");
+
+  const extractedCodes: string[] = [];
+  if (
+    !isUser &&
+    message.tool_calls &&
+    message.tool_calls.some(
+      (tc) =>
+        tc.function.name === "execute_code" ||
+        tc.function.name === "run_python",
+    )
+  ) {
+    const codeBlockRegex = /```(?:python|py)\n([\s\S]*?)(?:```|$)/g;
+    let match;
+    while ((match = codeBlockRegex.exec(finalContent)) !== null) {
+      extractedCodes.push(match[1].trimEnd());
+    }
+    // Remove the blocks from the main message
+    finalContent = finalContent.replace(codeBlockRegex, "");
+  }
+
   return (
     <div
       className={`${styles.wrapper} ${isUser ? styles.isUser : styles.isHermes}`}
@@ -101,6 +128,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
                 toolCalls={message.tool_calls}
                 reasoningContent={message.reasoning_content}
                 isGenerating={message.isGenerating}
+                extractedCodes={extractedCodes}
               />
 
               {message.reasoning_content && (
@@ -156,15 +184,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               )}
             </div>
           ) : (
-            <MarkdownRenderer
-              content={(typeof content === "string"
-                ? content
-                : content
-                    .filter((p) => p.type === "text")
-                    .map((p) => p.text)
-                    .join("\n")
-              ).trim()}
-            />
+            <MarkdownRenderer content={finalContent.trim()} />
           )}
           {!isUser && message.isGenerating && (
             <div className={styles.typingIndicatorContainer}>

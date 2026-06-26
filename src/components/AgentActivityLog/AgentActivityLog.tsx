@@ -17,16 +17,19 @@ export type AgentActivityLogProps = {
   toolCalls?: ToolCall[];
   reasoningContent?: string;
   isGenerating?: boolean;
+  extractedCodes?: string[];
 };
 
 const ToolItem = ({
   tc,
   isGenerating,
   isDelegate,
+  injectedCode,
 }: {
   tc: ToolCall;
   isGenerating: boolean;
   isDelegate: boolean;
+  injectedCode?: string;
 }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -34,7 +37,11 @@ const ToolItem = ({
 
   let formattedArgs = "";
   const args = tc.function.arguments || tc.label || "";
-  if (args) {
+
+  if (injectedCode) {
+    const lang = tc.function.name === "run_python" ? "python" : "python";
+    formattedArgs = `\`\`\`${lang}\n${injectedCode}\n\`\`\``;
+  } else if (args) {
     if (
       tc.function.name === "execute_code" ||
       tc.function.name === "run_python"
@@ -110,6 +117,7 @@ export const AgentActivityLog = ({
   toolCalls = [],
   reasoningContent,
   isGenerating = false,
+  extractedCodes,
 }: AgentActivityLogProps) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -166,20 +174,34 @@ export const AgentActivityLog = ({
             </div>
           )}
 
-          {toolCalls.map((tc, index) => {
-            const isDelegate =
-              tc.function.name === "delegate_task" ||
-              tc.function.name === "delegate";
+          {(() => {
+            let pythonToolIndex = 0;
+            return toolCalls.map((tc, index) => {
+              const isDelegate =
+                tc.function.name === "delegate_task" ||
+                tc.function.name === "delegate";
 
-            return (
-              <ToolItem
-                key={index}
-                tc={tc}
-                isGenerating={isGenerating}
-                isDelegate={isDelegate}
-              />
-            );
-          })}
+              const isPythonTool =
+                tc.function.name === "execute_code" ||
+                tc.function.name === "run_python";
+
+              let injectedCode;
+              if (isPythonTool && extractedCodes) {
+                injectedCode = extractedCodes[pythonToolIndex];
+                pythonToolIndex++;
+              }
+
+              return (
+                <ToolItem
+                  key={index}
+                  tc={tc}
+                  isGenerating={isGenerating}
+                  isDelegate={isDelegate}
+                  injectedCode={injectedCode}
+                />
+              );
+            });
+          })()}
         </div>
       )}
     </div>
