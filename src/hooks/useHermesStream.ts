@@ -213,6 +213,26 @@ export const useHermesStream = (
 
     let assistantMessageContent = "";
 
+    // Strip think/reasoning/think tags from content (mirrors Hermes CLI behavior)
+    const stripThinkBlocks = (text: string): string => {
+      return text
+        .replace(/<think>[\s\S]*?<\/think>/gi, "")
+        .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+        .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, "");
+    };
+
+    // Extract reasoning from think/reasoning tags in content
+    const extractReasoningFromContent = (text: string): string => {
+      const parts: string[] = [];
+      const regex = /<(?:think|thinking|reasoning)>([\s\S]*?)<\/(?:think|thinking|reasoning)>/gi;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        const trimmed = match[1].trim();
+        if (trimmed) parts.push(trimmed);
+      }
+      return parts.join("\n");
+    };
+
     await sendChatMessageStream({
       endpoint,
       model: actualModel,
@@ -247,12 +267,20 @@ export const useHermesStream = (
           }
         }
 
+        // Clean think/reasoning tags from displayed content
+        const cleanContent = stripThinkBlocks(assistantMessageContent);
+        const reasoningContent = extractReasoningFromContent(assistantMessageContent);
+
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id === activeConversationId) {
               const newMessages = c.messages.map((m) => {
                 if (m.id === assistantMsgId) {
-                  return { ...m, content: m.content + chunk };
+                  return {
+                    ...m,
+                    content: cleanContent,
+                    reasoning_content: reasoningContent || undefined,
+                  };
                 }
                 return m;
               });
@@ -335,6 +363,13 @@ export const useHermesStream = (
         );
       },
       onDone: () => {
+        // Final cleanup: strip TITLE and think/reasoning tags from stored content
+        const finalContent = stripThinkBlocks(assistantMessageContent)
+          .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
+          .replace(/^[\s\S]*?<\/TITLE>\n*/i, "")
+          .trim();
+        const finalReasoning = extractReasoningFromContent(assistantMessageContent) || undefined;
+
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id === activeConversationId) {
@@ -345,13 +380,8 @@ export const useHermesStream = (
                     ? {
                         ...m,
                         isGenerating: false,
-                        content:
-                          typeof m.content === "string"
-                            ? m.content
-                                .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
-                                .replace(/^[\s\S]*?<\/TITLE>\n*/i, "")
-                                .trim()
-                            : m.content,
+                        content: finalContent,
+                        reasoning_content: finalReasoning,
                       }
                     : m,
                 ),
