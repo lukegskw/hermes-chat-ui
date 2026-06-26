@@ -87,7 +87,6 @@ export const sendChatMessageStream = async ({
       });
     });
 
-    const apiBase = endpoint.replace(/\/$/, "");
     const body: Record<string, unknown> = {
       model: model,
       messages: payloadMessages,
@@ -105,7 +104,7 @@ export const sendChatMessageStream = async ({
       headers["X-Conversation-Id"] = conversationId;
     }
 
-    const response = await fetch(`${apiBase}/v1/chat/completions`, {
+    const response = await fetch(`${endpoint}/v1/chat/completions`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),

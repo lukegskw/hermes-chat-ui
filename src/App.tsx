@@ -14,10 +14,11 @@ import {
   useSwipeDrawer,
   usePresenceHeartbeat,
 } from "./hooks";
+import { getApiUrl } from "./config";
+
+const HERMES_ENDPOINT = getApiUrl();
 
 export const App = () => {
-  const HERMES_ENDPOINT = "";
-
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isSettingsSheetOpen, setIsSettingsSheetOpen] =
     useState<boolean>(false);
