@@ -15,6 +15,7 @@ const generateId = () =>
 
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt: "",
+  enableXmlCodeBlocks: true,
 };
 
 export const useChatState = () => {

@@ -63,6 +63,7 @@ export type Conversation = {
 
 export type Settings = {
   systemPrompt: string;
+  enableXmlCodeBlocks?: boolean;
 };
 
 export type ImageValidationResult = {

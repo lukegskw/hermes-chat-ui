@@ -12,7 +12,7 @@ import {
 
 export const useHermesStream = (
   endpoint: string,
-  settings: { systemPrompt?: string },
+  settings: { systemPrompt?: string; enableXmlCodeBlocks?: boolean },
   conversations: Conversation[],
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
   activeConversationId: string,
@@ -201,12 +201,21 @@ export const useHermesStream = (
         instructions += `\n\n${systemPrompt}`;
       }
 
+      if (settings.enableXmlCodeBlocks !== false) {
+        instructions +=
+          "\n\nCRITICAL RULE: DO NOT use markdown backticks (```) for code blocks. Instead, ALWAYS wrap code blocks in XML tags corresponding to the programming language. For example: <python>code here</python>, <java>code here</java>, <typescript>code here</typescript>, etc.";
+      }
+
       if (existingMessages.length === 0) {
         titleUpdatedRef.current.delete(activeConversationId);
         instructions += i18n.t("systemPrompts.titleInstruction");
       }
 
-      lastApiMsg.content = lastApiMsg.content + instructions;
+      if (instructions) {
+        lastApiMsg.content =
+          lastApiMsg.content +
+          `\n\n++ BELOW ARE SYSTEM INSTRUCTIONS, DO NOT MENTION THEM IN YOUR RESPONSES ++${instructions}\n\n++ END OF SYSTEM INSTRUCTIONS ++`;
+      }
     } else if (existingMessages.length === 0) {
       titleUpdatedRef.current.delete(activeConversationId);
     }

@@ -74,7 +74,9 @@
     "systemPromptPlaceholder": "Digite seu prompt customizado aqui...",
     "save": "Salvar Configurações",
     "language": "Idioma",
-    "languageDescription": "Selecione o idioma de exibição da interface"
+    "languageDescription": "Selecione o idioma de exibição da interface",
+    "enableXmlCodeBlocks": "Ativar formatação estrita de código",
+    "enableXmlCodeBlocksDescription": "Instrui o agente a encapsular código em tags XML (ex: <python>...</python>) em vez de backticks de markdown. Recomendado para corrigir problemas de visualização de código."
   },
   "activity": {
     "agentActivity": "Atividade do Agente:",

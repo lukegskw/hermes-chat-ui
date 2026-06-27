@@ -86,7 +86,7 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
   const knownLangs =
     "python|java|typescript|javascript|bash|sh|json|yaml|xml|html|css|sql|c|cpp|go|rust|ruby|php|swift|kotlin|dart|md|markdown|tsx|jsx";
   const codeBlockRegex = new RegExp(
-    `(?:\`\`\`(\\w*)\\n([\\s\\S]*?)(?:\`\`\`|$))|(?:<(${knownLangs})>\\n?([\\s\\S]*?)\\n?<\\/\\3>)`,
+    `(?:\`\`\`(\\w*)\\n([\\s\\S]*?)(?:\`\`\`|$))|(?:<(${knownLangs})>\\n?([\\s\\S]*?)\\n?<\\/(${knownLangs})>)`,
     "gi",
   );
 

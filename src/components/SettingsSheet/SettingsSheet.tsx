@@ -28,6 +28,9 @@ export const SettingsSheet = ({
   const [tempSystemPrompt, setTempSystemPrompt] = useState(
     settings.systemPrompt || "",
   );
+  const [tempEnableXmlCodeBlocks, setTempEnableXmlCodeBlocks] = useState(
+    settings.enableXmlCodeBlocks ?? true,
+  );
   const [tempLanguage, setTempLanguage] = useState(i18n.language || "en");
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
@@ -38,6 +41,7 @@ export const SettingsSheet = ({
     setPrevIsOpen(isOpen);
     if (isOpen) {
       setTempSystemPrompt(settings.systemPrompt || "");
+      setTempEnableXmlCodeBlocks(settings.enableXmlCodeBlocks ?? true);
       setTempLanguage(i18n.language || "en");
     }
   }
@@ -49,6 +53,7 @@ export const SettingsSheet = ({
     }
     onSaveSettings({
       systemPrompt: tempSystemPrompt,
+      enableXmlCodeBlocks: tempEnableXmlCodeBlocks,
     });
     onClose();
   };
@@ -105,6 +110,29 @@ export const SettingsSheet = ({
               </button>
             </div>
             {status && <span className={styles.pushStatus}>{status}</span>}
+          </div>
+
+          <div className={styles.field}>
+            <div className={styles.notificationField}>
+              <div className={styles.notificationLabel}>
+                <label className={styles.label}>
+                  {t("settings.enableXmlCodeBlocks")}
+                </label>
+              </div>
+              <button
+                type="button"
+                className={`${styles.toggle} ${tempEnableXmlCodeBlocks ? styles.toggleActive : ""}`}
+                onClick={() =>
+                  setTempEnableXmlCodeBlocks(!tempEnableXmlCodeBlocks)
+                }
+                aria-pressed={tempEnableXmlCodeBlocks}
+              >
+                <span className={styles.toggleKnob} />
+              </button>
+            </div>
+            <p className={styles.description}>
+              {t("settings.enableXmlCodeBlocksDescription")}
+            </p>
           </div>
 
           <div className={styles.field}>

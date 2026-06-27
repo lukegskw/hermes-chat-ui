@@ -74,7 +74,9 @@
     "systemPromptPlaceholder": "Type your custom prompt here...",
     "save": "Save Settings",
     "language": "Language",
-    "languageDescription": "Select the display language for the interface"
+    "languageDescription": "Select the display language for the interface",
+    "enableXmlCodeBlocks": "Enable strict code formatting",
+    "enableXmlCodeBlocksDescription": "Instructs the agent to wrap code in language-specific XML tags (e.g., <python>...</python>) instead of markdown backticks. Recommended to fix missing code block styling."
   },
   "activity": {
     "agentActivity": "Agent Activity:",
