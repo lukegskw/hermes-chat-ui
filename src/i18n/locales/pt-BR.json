@@ -38,7 +38,8 @@
   "messages": {
     "you": "Você",
     "hermes": "Hermes",
-    "thinking": "Pensando...",
+    "generating": "Gerando resposta...",
+    "reasoning": "Raciocinando...",
     "reasoningProcess": "Processo de Raciocínio",
     "copyMessage": "Copiar mensagem",
     "attachment": "anexo"

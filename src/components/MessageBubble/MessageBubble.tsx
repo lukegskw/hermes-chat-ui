@@ -9,6 +9,7 @@ import { linkifyParts } from "../../utils";
 import { useClipboard } from "../../hooks";
 import { Bot, Check, Copy, Sparkles, User } from "../Icons";
 import styles from "./MessageBubble.module.scss";
+import { ThinkingIndicator } from "../ThinkingIndicator/ThinkingIndicador";
 
 export type MessageBubbleProps = {
   message: ChatWindowMessage;
@@ -140,18 +141,11 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               ).trim()}
             />
           )}
-          {!isUser && message.isGenerating && (
-            <div className={styles.typingIndicatorContainer}>
-              <div className={styles.typingDots}>
-                <div className={`${styles.typingDot} ${styles.dot1}`} />
-                <div className={`${styles.typingDot} ${styles.dot2}`} />
-                <div className={`${styles.typingDot} ${styles.dot3}`} />
-              </div>
-              <span className={styles.typingText}>
-                {t("messages.thinking")}
-              </span>
-            </div>
-          )}
+
+          <ThinkingIndicator
+            label={t("messages.generating")}
+            visible={!isUser && !!message.isGenerating}
+          />
         </div>
       </div>
     </div>

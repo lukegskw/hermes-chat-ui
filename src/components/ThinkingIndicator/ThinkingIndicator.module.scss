@@ -1,0 +1,31 @@
+@use '@styles' as s;
+
+.thinkingIndicatorContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.thinkingDots {
+  display: flex;
+  gap: 4px;
+}
+
+.thinkingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: s.$color-white;
+  animation: thinkingDot 1.4s infinite ease-in-out both;
+
+  &.dot1 { animation-delay: -0.32s; }
+  &.dot2 { animation-delay: -0.16s; }
+}
+
+.thinkingText {
+  @include s.label-style;
+  font-size: 0.75rem;
+  color: s.$color-white;
+  opacity: 0.8;
+}

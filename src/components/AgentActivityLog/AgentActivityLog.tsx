@@ -12,6 +12,7 @@ import { ToolCall } from "../../types";
 import { useTranslation } from "react-i18next";
 import { MarkdownRenderer } from "../MarkdownRenderer";
 import styles from "./AgentActivityLog.module.scss";
+import { ThinkingIndicator } from "../ThinkingIndicator/ThinkingIndicador";
 
 export type AgentActivityLogProps = {
   toolCalls?: ToolCall[];
@@ -204,7 +205,15 @@ export const ReasoningLog = ({
       icon={<BrainCircuit size={14} />}
       title={t("messages.reasoningProcess")}
       initiallyExpanded={initiallyExpanded}
-      expandedElement={<MarkdownRenderer content={reasoningContent} />}
+      expandedElement={
+        <>
+          <MarkdownRenderer content={reasoningContent} />
+          <ThinkingIndicator
+            visible={initiallyExpanded}
+            label={t("messages.reasoning")}
+          />
+        </>
+      }
     />
   );
 };
