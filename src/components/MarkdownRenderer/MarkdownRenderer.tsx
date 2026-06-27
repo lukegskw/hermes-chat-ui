@@ -83,7 +83,12 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
 
   // Split content by code blocks to separate code and text
   const parts: Part[] = [];
-  const codeBlockRegex = /```(\w*)\n([\s\S]*?)(?:```|$)/g;
+  const knownLangs =
+    "python|java|typescript|javascript|bash|sh|json|yaml|xml|html|css|sql|c|cpp|go|rust|ruby|php|swift|kotlin|dart|md|markdown|tsx|jsx";
+  const codeBlockRegex = new RegExp(
+    `(?:\`\`\`(\\w*)\\n([\\s\\S]*?)(?:\`\`\`|$))|(?:<(${knownLangs})>\\n?([\\s\\S]*?)\\n?<\\/\\3>)`,
+    "gi",
+  );
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -93,18 +98,26 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
     if (textBefore) {
       parts.push({ type: "markdown", value: textBefore });
     }
+
+    const lang = match[1] || match[3] || "";
+    const code = match[2] || match[4] || "";
+
     parts.push({
       type: "code",
-      language: match[1],
-      value: match[2].trimEnd(),
+      language: lang ? lang.toLowerCase() : "",
+      value: code.trimEnd(),
     });
     lastIndex = codeBlockRegex.lastIndex;
   }
 
   if (lastIndex < content.length) {
     const textAfter = content.substring(lastIndex);
+    const unclosedTagMatch = new RegExp(`^<(${knownLangs})>`, "i").exec(
+      textAfter,
+    );
+
     // If the last code block is unclosed (streaming), extract it as code
-    if (content.substring(lastIndex).startsWith("```")) {
+    if (textAfter.startsWith("```")) {
       const firstLineBreak = textAfter.indexOf("\n");
       const lang =
         firstLineBreak !== -1 ? textAfter.substring(3, firstLineBreak) : "";
@@ -113,6 +126,17 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
       parts.push({
         type: "code",
         language: lang,
+        value: code,
+      });
+    } else if (unclosedTagMatch) {
+      const lang = unclosedTagMatch[1];
+      const codeStart = unclosedTagMatch[0].length;
+      let code = textAfter.substring(codeStart);
+      if (code.startsWith("\n")) code = code.substring(1);
+
+      parts.push({
+        type: "code",
+        language: lang.toLowerCase(),
         value: code,
       });
     } else {
