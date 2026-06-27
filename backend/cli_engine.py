@@ -64,6 +64,66 @@ async def async_cli_chat_engine(
                 
             line = line_bytes.decode('utf-8').rstrip('\r\n')
             
+            # 1) Intercept tool call lines regardless of state
+            is_tool_line = False
+            if "┊" in line:
+                parts = line.split("┊", 1)
+                if len(parts) > 1:
+                    part_after_bar = parts[1].strip()
+                    tokens = part_after_bar.split()
+                    if len(tokens) >= 2:
+                        tool_text = " ".join(tokens[1:])
+                        # Tool text e.g., "preparing search_files…" or "search_files      *  1.5s"
+                        if tool_text.startswith("preparing ") or "*" in tool_text or "s" in tokens[-1]:
+                            is_tool_line = True
+            
+            if is_tool_line:
+                # Process tool call
+                part_after_bar = line.split("┊", 1)[1].strip()
+                tokens = part_after_bar.split()
+                tool_text = " ".join(tokens[1:])
+                
+                status = "running"
+                if "*" in tool_text or "s" in tokens[-1]:
+                    status = "completed"
+                    
+                if tool_text.startswith("preparing "):
+                    tool_name = tool_text.split("preparing ")[1].replace('…', '').strip()
+                else:
+                    tool_name = tokens[1].strip() # tokens[0] is emoji, tokens[1] is name
+                    
+                tool_id = f"cli_tool_{tool_call_counter}"
+                if status == "running":
+                    tool_call_counter += 1
+                    tool_calls.append({
+                        "id": tool_id,
+                        "type": "function",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": "",
+                        },
+                        "label": tool_text,
+                        "status": status,
+                    })
+                else:
+                    if tool_calls:
+                        tool_id = tool_calls[-1]["id"]
+                        tool_calls[-1]["status"] = status
+                        tool_calls[-1]["label"] = tool_text
+
+                # Emit tool call SSE
+                tool_call_event = {
+                    "type": "tool_call",
+                    "tool": tool_name,
+                    "status": status,
+                    "label": tool_text,
+                    "toolCallId": tool_id
+                }
+                event_str = json.dumps(tool_call_event, ensure_ascii=False)
+                await response_queue.put(f"data: {event_str}\n\n".encode('utf-8'))
+                continue
+            
+            # 2) Standard state machine for content and reasoning
             if state == "INIT":
                 if "┌─ Reasoning" in line:
                     state = "IN_REASONING"
@@ -80,46 +140,6 @@ async def async_cli_chat_engine(
                     parts = line.split("Session:")
                     if len(parts) > 1:
                         new_session_id = parts[1].strip()
-                    continue
-                elif "┊" in line and "🔎" in line:
-                    # Parse tool calls
-                    tool_text = line.split("🔎")[-1].strip()
-                    
-                    status = "running"
-                    if "*" in tool_text or "s" in tool_text.split()[-1]:
-                        status = "completed"
-                        
-                    tool_name = tool_text.split()[0].replace('…', '')
-                    
-                    tool_id = f"cli_tool_{tool_call_counter}"
-                    if status == "running":
-                        tool_call_counter += 1
-                        tool_calls.append({
-                            "id": tool_id,
-                            "type": "function",
-                            "function": {
-                                "name": tool_name,
-                                "arguments": "",
-                            },
-                            "label": tool_text,
-                            "status": status,
-                        })
-                    else:
-                        if tool_calls:
-                            tool_id = tool_calls[-1]["id"]
-                            tool_calls[-1]["status"] = status
-                            tool_calls[-1]["label"] = tool_text
-
-                    # Emit tool call SSE
-                    tool_call_event = {
-                        "type": "tool_call",
-                        "tool": tool_name,
-                        "status": status,
-                        "label": tool_text,
-                        "toolCallId": tool_id
-                    }
-                    event_str = json.dumps(tool_call_event, ensure_ascii=False)
-                    await response_queue.put(f"data: {event_str}\n\n".encode('utf-8'))
                     continue
                     
             elif state == "IN_REASONING":

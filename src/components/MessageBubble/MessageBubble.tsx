@@ -98,34 +98,10 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
             (message.tool_calls && message.tool_calls.length > 0)) && (
             <div className={styles.reasoningContainer}>
               <AgentActivityLog
-                toolCalls={message.tool_calls}
+                toolCalls={message.tool_calls || []}
                 reasoningContent={message.reasoning_content}
                 isGenerating={message.isGenerating}
               />
-
-              {message.reasoning_content && (
-                <div className={styles.reasoningBlock}>
-                  <button
-                    onClick={() => setShowReasoning(!showReasoning)}
-                    className={styles.reasoningToggle}
-                  >
-                    <BrainCircuit size={15} className={styles.reasoningIcon} />
-                    {t("messages.reasoningProcess")}
-                    <div className={styles.reasoningChevron}>
-                      {showReasoning ? (
-                        <ChevronDown size={15} />
-                      ) : (
-                        <ChevronRight size={15} />
-                      )}
-                    </div>
-                  </button>
-                  {showReasoning && (
-                    <div className={styles.reasoningContent}>
-                      {message.reasoning_content}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
