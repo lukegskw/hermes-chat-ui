@@ -1,5 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { AgentActivityLog, ChatWindowMessage, MarkdownRenderer } from "..";
+import {
+  AgentActivityLog,
+  ReasoningLog,
+  ChatWindowMessage,
+  MarkdownRenderer,
+} from "..";
 import { linkifyParts } from "../../utils";
 import { useClipboard } from "../../hooks";
 import { Bot, Check, Copy, Sparkles, User } from "../Icons";
@@ -88,8 +93,12 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
             <div className={styles.reasoningContainer}>
               <AgentActivityLog
                 toolCalls={message.tool_calls || []}
-                reasoningContent={message.reasoning_content}
                 isGenerating={message.isGenerating}
+              />
+
+              <ReasoningLog
+                reasoningContent={message.reasoning_content}
+                initiallyExpanded={message.isGenerating}
               />
             </div>
           )}

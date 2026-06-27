@@ -37,7 +37,7 @@
 
 // === COMPOSITES ===
 
-@mixin neo-button($bg, $color: v.$color-black, $shadow-size: v.$shadow-offset) {
+@mixin neo-button($bg, $color: v.$color-black, $shadow-size: v.$shadow-offset, $bg-hover: null) {
   @include neo-card($shadow-size);
   @include neo-press($shadow-size);
   @include flex-center;
@@ -48,6 +48,15 @@
   text-transform: uppercase;
   cursor: pointer;
   gap: 8px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    @if $bg-hover {
+      background-color: $bg-hover;
+    } @else {
+      background-color: darken($bg, 8%);
+    }
+  }
 }
 
 @mixin neo-icon-button($bg, $color: v.$color-black, $size: 36px) {

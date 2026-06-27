@@ -117,7 +117,7 @@
 }
 
 .saveBtn {
-  @include s.neo-button(s.$color-secondary);
+  @include s.neo-button(s.$color-secondary, $bg-hover: s.$color-secondary-dark);
   padding: 14px;
   font-size: 1rem;
   margin-top: 8px;

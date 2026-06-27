@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
-  Brain,
+  BrainCircuit,
   Wrench,
   GitMerge,
   Activity,
@@ -15,7 +15,6 @@ import styles from "./AgentActivityLog.module.scss";
 
 export type AgentActivityLogProps = {
   toolCalls?: ToolCall[];
-  reasoningContent?: string;
   isGenerating?: boolean;
 };
 
@@ -106,15 +105,44 @@ const ToolItem = ({
   );
 };
 
+const AgentLog = ({
+  icon,
+  title,
+  initiallyExpanded,
+  expandedElement,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  initiallyExpanded?: boolean;
+  expandedElement?: React.ReactNode;
+}) => {
+  const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
+
+  return (
+    <div className={styles.log}>
+      <div
+        className={styles.summary}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className={styles.summaryText}>
+          {icon}
+          <span>{title}</span>
+        </div>
+        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+      </div>
+
+      {isExpanded && <div className={styles.timeline}>{expandedElement}</div>}
+    </div>
+  );
+};
+
 export const AgentActivityLog = ({
   toolCalls = [],
-  reasoningContent,
   isGenerating = false,
 }: AgentActivityLogProps) => {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(false);
 
-  const hasContent = toolCalls.length > 0 || !!reasoningContent;
+  const hasContent = toolCalls.length > 0;
 
   if (!hasContent) {
     return null;
@@ -127,45 +155,19 @@ export const AgentActivityLog = ({
   const standardToolsCount = toolCalls.length - delegationsCount;
 
   const summaryParts = [];
-  if (reasoningContent) summaryParts.push(t("activity.reasoning"));
   if (standardToolsCount > 0)
     summaryParts.push(`${standardToolsCount} ${t("activity.tools")}`);
   if (delegationsCount > 0)
     summaryParts.push(`${delegationsCount} ${t("activity.subAgents")}`);
 
-  const summaryText = summaryParts.join(" · ");
+  const summaryText = t("activity.agentActivity") + summaryParts.join(" · ");
 
   return (
-    <div className={styles.log}>
-      <div
-        className={styles.summary}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className={styles.summaryText}>
-          <Activity size={14} />
-          <span>
-            {t("activity.agentActivity")} {summaryText}
-          </span>
-        </div>
-        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-      </div>
-
-      {isExpanded && (
+    <AgentLog
+      icon={<Activity size={14} />}
+      title={summaryText}
+      expandedElement={
         <div className={styles.timeline}>
-          {reasoningContent && (
-            <div className={styles.node}>
-              <div className={`${styles.icon} ${styles.default}`}>
-                <Brain size={12} />
-              </div>
-              <div className={styles.content}>
-                <div className={styles.title}>
-                  {t("activity.thoughtProcess")}
-                </div>
-                <div className={styles.description}>{reasoningContent}</div>
-              </div>
-            </div>
-          )}
-
           {toolCalls.map((tc, index) => {
             const isDelegate =
               tc.function.name === "delegate_task" ||
@@ -181,7 +183,28 @@ export const AgentActivityLog = ({
             );
           })}
         </div>
-      )}
-    </div>
+      }
+    />
+  );
+};
+
+export const ReasoningLog = ({
+  reasoningContent,
+  initiallyExpanded,
+}: {
+  reasoningContent?: string;
+  initiallyExpanded?: boolean;
+}) => {
+  const { t } = useTranslation();
+
+  if (!reasoningContent) return null;
+
+  return (
+    <AgentLog
+      icon={<BrainCircuit size={14} />}
+      title={t("messages.reasoningProcess")}
+      initiallyExpanded={initiallyExpanded}
+      expandedElement={<MarkdownRenderer content={reasoningContent} />}
+    />
   );
 };

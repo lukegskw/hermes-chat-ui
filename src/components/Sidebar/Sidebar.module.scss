@@ -127,7 +127,7 @@
   background-color: s.$color-bg;
 
   .btnPrimary {
-    @include s.neo-button(s.$color-secondary);
+    @include s.neo-button(s.$color-secondary, $bg-hover: s.$color-secondary-dark);
     width: 100%;
     padding: 12px;
     font-size: 0.95rem;
