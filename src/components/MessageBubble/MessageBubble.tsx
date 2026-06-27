@@ -1,18 +1,8 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentActivityLog, ChatWindowMessage, MarkdownRenderer } from "..";
 import { linkifyParts } from "../../utils";
 import { useClipboard } from "../../hooks";
-import {
-  Bot,
-  BrainCircuit,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Copy,
-  Sparkles,
-  User,
-} from "../Icons";
+import { Bot, Check, Copy, Sparkles, User } from "../Icons";
 import styles from "./MessageBubble.module.scss";
 
 export type MessageBubbleProps = {
@@ -23,7 +13,6 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const { t } = useTranslation();
   const { role, content, timestamp } = message;
   const isUser = role === "user";
-  const [showReasoning, setShowReasoning] = useState(true);
   const { copied, copyToClipboard } = useClipboard();
 
   const handleCopy = () => {
