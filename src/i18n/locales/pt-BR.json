@@ -2,16 +2,15 @@
   "common": {
     "online": "Online",
     "offline": "Offline",
-    "connecting": "Conectando..."
+    "connecting": "Conectando...",
+    "newChat": "Novo Chat"
   },
   "sidebar": {
-    "newChat": "Novo Chat",
     "activeModel": "Modelo Ativo",
     "fetchingModels": "Buscando Modelos...",
     "noModels": "Sem Modelos",
     "disconnected": "Hermes desconectado",
     "recentChats": "Chats Recentes",
-    "untitledChat": "Chat sem título",
     "noChats": "Nenhuma conversa iniciada",
     "settings": "Configurações",
     "deleteChats": "Apagar Chats",
@@ -24,7 +23,6 @@
     },
     "placeholder": "Envie uma mensagem para Hermes...",
     "conversationName": "Nome da conversa...",
-    "untitledChat": "Chat sem título",
     "moreOptions": "Mais opções",
     "rename": "Renomear",
     "compact": "Compactar",

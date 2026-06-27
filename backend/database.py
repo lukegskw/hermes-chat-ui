@@ -27,6 +27,7 @@ def init_db():
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
             model_id TEXT,
+            hermes_session_id TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -34,6 +35,12 @@ def init_db():
     # Migration: add model_id to existing db if missing
     try:
         cursor.execute("ALTER TABLE conversations ADD COLUMN model_id TEXT")
+    except sqlite3.OperationalError:
+        pass # Column already exists
+        
+    # Migration: add hermes_session_id to existing db if missing
+    try:
+        cursor.execute("ALTER TABLE conversations ADD COLUMN hermes_session_id TEXT")
     except sqlite3.OperationalError:
         pass # Column already exists
     
@@ -44,10 +51,17 @@ def init_db():
             role TEXT NOT NULL,
             content_json TEXT NOT NULL,
             tool_calls_json TEXT,
+            reasoning_content_json TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
         )
     """)
+    
+    # Migration: add reasoning_content_json to existing db if missing
+    try:
+        cursor.execute("ALTER TABLE messages ADD COLUMN reasoning_content_json TEXT")
+    except sqlite3.OperationalError:
+        pass # Column already exists
     
     conn.commit()
     conn.close()

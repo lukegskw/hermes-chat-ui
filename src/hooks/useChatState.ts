@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getApiUrl } from "../config/env";
 import { ChatMessage, Conversation, Settings } from "../types";
 import {
@@ -12,20 +13,12 @@ import {
 const generateId = () =>
   `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-const buildNewChat = (id?: string, modelId?: string): Conversation => {
-  return {
-    id: id || generateId(),
-    title: "New Chat",
-    messages: [],
-    modelId: modelId,
-  };
-};
-
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt: "",
 };
 
 export const useChatState = () => {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<Settings>(() => {
     const saved = localStorage.getItem("hermes_settings");
     if (saved) {
@@ -39,6 +32,18 @@ export const useChatState = () => {
     }
     return DEFAULT_SETTINGS;
   });
+
+  const buildNewChat = useCallback(
+    (id?: string, modelId?: string): Conversation => {
+      return {
+        id: id || generateId(),
+        title: t("chat.untitledChat"),
+        messages: [],
+        modelId: modelId,
+      };
+    },
+    [t],
+  );
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string>("");
@@ -88,7 +93,7 @@ export const useChatState = () => {
       if (list.length > 0) return list[0].id;
       return fallbackId;
     });
-  }, [endpoint]);
+  }, [buildNewChat, endpoint]);
 
   // Initial load
   useEffect(() => {

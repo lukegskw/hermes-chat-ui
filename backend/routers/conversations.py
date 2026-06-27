@@ -45,6 +45,7 @@ async def get_conversation(conv_id: str):
             "id": m["id"],
             "role": m["role"],
             "content": json.loads(m["content_json"]),
+            "reasoning_content": json.loads(m["reasoning_content_json"]) if "reasoning_content_json" in m.keys() and m["reasoning_content_json"] else None,
             "tool_calls": json.loads(m["tool_calls_json"]) if m["tool_calls_json"] else None,
             "timestamp": m["timestamp"]
         })

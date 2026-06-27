@@ -162,11 +162,35 @@ async def chat_completions(request: Request):
         except Exception as e:
             print(f"Error switching model via config.yaml: {e}")
 
+    # Import new engine
+    from ..cli_engine import async_cli_chat_engine
+    
+    # Read hermes_session_id from db
+    hermes_session_id = None
+    try:
+        from ..database import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT hermes_session_id FROM conversations WHERE id = ?", (conv_id,))
+        row = cursor.fetchone()
+        if row and row["hermes_session_id"]:
+            hermes_session_id = row["hermes_session_id"]
+        conn.close()
+    except Exception as e:
+        print(f"Error reading hermes_session_id from DB: {e}")
+
     response_queue = asyncio.Queue()
 
-    # Launch background task
+    # Launch background task using the CLI engine
+    # Extract the user message content as a string
+    user_message_str = ""
+    if messages and messages[-1]["role"] == "user":
+        user_message_str = messages[-1].get("content", "")
+    elif "user_content" in body:
+        user_message_str = body["user_content"]
+        
     bg_task = asyncio.create_task(
-        async_chat_engine(conv_id, user_msg_id, body, headers, response_queue)
+        async_cli_chat_engine(conv_id, user_msg_id, user_message_str, hermes_session_id, response_queue)
     )
     active_tasks[conv_id] = bg_task
     bg_task.add_done_callback(lambda t: active_tasks.pop(conv_id, None))

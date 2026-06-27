@@ -169,6 +169,15 @@ export const sendChatMessageStream = async ({
               }
             }
 
+            // Handle custom reasoning format
+            if (
+              parsed.type === "reasoning" &&
+              parsed.content &&
+              onReasoningChunk
+            ) {
+              onReasoningChunk(parsed.content);
+            }
+
             // Handle Hermes custom tool events
             if (parsed.toolCallId && parsed.tool && onToolCallChunk) {
               if (!toolIndexMap.has(parsed.toolCallId)) {
@@ -211,6 +220,14 @@ export const sendChatMessageStream = async ({
             for (const tc of delta.tool_calls) {
               onToolCallChunk(tc);
             }
+          }
+
+          if (
+            parsed.type === "reasoning" &&
+            parsed.content &&
+            onReasoningChunk
+          ) {
+            onReasoningChunk(parsed.content);
           }
 
           if (parsed.toolCallId && parsed.tool && onToolCallChunk) {

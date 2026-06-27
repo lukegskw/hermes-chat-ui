@@ -99,7 +99,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
         <div className={styles.newChatContainer}>
           <button onClick={onNewChat} className={styles.btnPrimary}>
             <Plus size={16} />
-            {t("sidebar.newChat")}
+            {t("common.newChat")}
           </button>
         </div>
 
@@ -181,7 +181,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
                     />
 
                     <span className={styles.conversationTitle}>
-                      {conv.title || t("sidebar.untitledChat")}
+                      {conv.title || t("common.newChat")}
                     </span>
                   </div>
                 </div>
