@@ -258,7 +258,7 @@ export const ChatWindow = ({
                   setIsEditingTitle(true);
                 }}
               >
-                {activeConversation.title || t("chat.untitledChat")}
+                {activeConversation.title || t("common.newChat")}
               </span>
             )
           ) : (

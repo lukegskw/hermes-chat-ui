@@ -37,7 +37,7 @@ export const useChatState = () => {
     (id?: string, modelId?: string): Conversation => {
       return {
         id: id || generateId(),
-        title: t("chat.untitledChat"),
+        title: t("common.newChat"),
         messages: [],
         modelId: modelId,
       };
