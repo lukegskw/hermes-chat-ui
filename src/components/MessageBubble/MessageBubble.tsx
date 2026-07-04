@@ -39,9 +39,15 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
     if (!timeStr) return "";
     try {
       const date = new Date(timeStr);
+      const isToday = date.toDateString() === new Date().toDateString();
       return date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
+        ...(isToday
+          ? {}
+          : {
+              month: "2-digit",
+              day: "2-digit",
+              year: "numeric",
+            }),
       });
     } catch {
       return "";
