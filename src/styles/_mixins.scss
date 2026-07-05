@@ -1,4 +1,5 @@
 @use 'variables' as v;
+@use 'sass:color';
 
 // === PRIMITIVES ===
 
@@ -54,7 +55,7 @@
     @if $bg-hover {
       background-color: $bg-hover;
     } @else {
-      background-color: darken($bg, 8%);
+      background-color: color.scale($bg, $lightness: -8%);
     }
   }
 }
