@@ -84,7 +84,7 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
   // Split content by code blocks to separate code and text
   const parts: Part[] = [];
   const knownLangs =
-    "python|java|typescript|javascript|bash|sh|json|yaml|xml|html|css|sql|c|cpp|go|rust|ruby|php|swift|kotlin|dart|md|markdown|tsx|jsx";
+    "python|java|typescript|javascript|bash|sh|json|yaml|xml|html|css|sql|c|cpp|go|rust|ruby|php|swift|kotlin|dart|md|markdown|tsx|jsx|plaintext";
   const codeBlockRegex = new RegExp(
     `(?:\`\`\`(\\w*)\\n([\\s\\S]*?)(?:\`\`\`|$))|(?:<(${knownLangs})>\\n?([\\s\\S]*?)\\n?<\\/(${knownLangs})>)`,
     "gi",
