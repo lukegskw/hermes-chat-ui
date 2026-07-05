@@ -5,6 +5,9 @@ import os
 import aiohttp
 import json
 import yaml
+import base64
+import uuid
+import yaml
 
 from ..engine import async_chat_engine
 
@@ -184,13 +187,43 @@ async def chat_completions(request: Request):
     # Launch background task using the CLI engine
     # Extract the user message content as a string
     user_message_str = ""
+    image_path = None
+    
     if messages and messages[-1]["role"] == "user":
-        user_message_str = messages[-1].get("content", "")
+        content = messages[-1].get("content", "")
+        if isinstance(content, list):
+            # Multimodal content
+            text_parts = []
+            for part in content:
+                if part.get("type") == "text":
+                    text_parts.append(part.get("text", ""))
+                elif part.get("type") == "image_url" and not image_path:
+                    # Extract base64 and save to /tmp
+                    img_data = part.get("image_url", {}).get("url", "")
+                    if img_data.startswith("data:image"):
+                        # Extract base64 string
+                        try:
+                            b64_str = img_data.split(",")[1]
+                            img_bytes = base64.b64decode(b64_str)
+                            temp_filename = f"/tmp/hermes_upload_{uuid.uuid4().hex}.png"
+                            with open(temp_filename, "wb") as f:
+                                f.write(img_bytes)
+                            image_path = temp_filename
+                        except Exception as e:
+                            print(f"Failed to decode/save image: {e}")
+            user_message_str = "\n".join(text_parts)
+        else:
+            user_message_str = content
     elif "user_content" in body:
-        user_message_str = body["user_content"]
+        content = body["user_content"]
+        if isinstance(content, list):
+            text_parts = [p.get("text", "") for p in content if p.get("type") == "text"]
+            user_message_str = "\n".join(text_parts)
+        else:
+            user_message_str = content
         
     bg_task = asyncio.create_task(
-        async_cli_chat_engine(conv_id, user_msg_id, user_message_str, hermes_session_id, response_queue)
+        async_cli_chat_engine(conv_id, user_msg_id, user_message_str, hermes_session_id, response_queue, image_path)
     )
     active_tasks[conv_id] = bg_task
     bg_task.add_done_callback(lambda t: active_tasks.pop(conv_id, None))

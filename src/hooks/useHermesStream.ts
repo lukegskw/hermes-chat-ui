@@ -122,13 +122,21 @@ export const useHermesStream = (
 
     // 2. Add user message
     let messageContent: string | ContentPart[] = text;
+    const updatedMessages = [...existingMessages];
 
     if (attachments && attachments.length > 0) {
       const contentParts: ContentPart[] = [];
       if (text) {
         contentParts.push({ type: "text", text });
       }
-      for (const file of attachments) {
+
+      let hasWarning = false;
+      const filesToProcess = attachments.slice(0, 1);
+      if (attachments.length > 1) {
+        hasWarning = true;
+      }
+
+      for (const file of filesToProcess) {
         try {
           const base64Data = await fileToBase64(file);
           contentParts.push({
@@ -140,6 +148,18 @@ export const useHermesStream = (
         }
       }
       messageContent = contentParts;
+
+      if (hasWarning) {
+        const warningMsg: ChatMessage = {
+          id: `msg_${Date.now() - 1}`,
+          role: "system",
+          content: i18n.t(
+            "messages.multipleImagesWarning",
+            "The current mode only supports sending 1 image per message. Only the first image was sent.",
+          ),
+        };
+        updatedMessages.push(warningMsg);
+      }
     }
 
     const userMsg: ChatMessage = {
@@ -148,7 +168,7 @@ export const useHermesStream = (
       content: messageContent,
     };
 
-    const updatedMessages = [...existingMessages, userMsg];
+    updatedMessages.push(userMsg);
 
     let title = targetConv ? targetConv.title : "Nova Conversa";
     if (title === "Nova Conversa") {

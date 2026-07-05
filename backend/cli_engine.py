@@ -13,6 +13,7 @@ async def async_cli_chat_engine(
     user_message: str,
     hermes_session_id: str | None,
     response_queue: asyncio.Queue,
+    image_path: str | None = None,
 ) -> str | None:
     """
     Spawns 'hermes chat -q MESSAGE [--resume SESSION_ID]' as a subprocess,
@@ -41,6 +42,8 @@ async def async_cli_chat_engine(
         conn.close()
 
     cmd = ["hermes", "chat", "-q", user_message]
+    if image_path:
+        cmd.extend(["--image", image_path])
     if hermes_session_id:
         cmd.extend(["--resume", hermes_session_id])
 
@@ -184,6 +187,13 @@ async def async_cli_chat_engine(
                     continue
 
         await process.wait()
+
+        # Cleanup temp image if it exists
+        if image_path and os.path.exists(image_path):
+            try:
+                os.remove(image_path)
+            except Exception as e:
+                logger.error(f"Failed to remove temp image {image_path}: {e}")
 
     except Exception as e:
         logger.error(f"Error in async_cli_chat_engine: {e}")

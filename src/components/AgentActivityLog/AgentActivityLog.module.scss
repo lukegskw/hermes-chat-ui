@@ -32,12 +32,32 @@
   gap: 8px;
 }
 
+.timelineWrapper {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s ease;
+  opacity: 0;
+  background-color: s.$color-surface;
+
+  &.expanded {
+    max-height: 600px; /* Generous height for expanded manual view */
+    opacity: 1;
+    overflow-y: auto;
+  }
+
+  &.isStreaming {
+    max-height: 180px;
+    overflow-y: auto;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+  }
+}
+
 .timeline {
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background-color: s.$color-surface;
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 

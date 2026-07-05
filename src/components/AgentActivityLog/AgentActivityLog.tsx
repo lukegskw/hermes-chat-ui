@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -111,13 +111,38 @@ const AgentLog = ({
   title,
   initiallyExpanded,
   expandedElement,
+  isStreaming,
 }: {
   icon?: React.ReactNode;
   title: string;
   initiallyExpanded?: boolean;
   expandedElement?: React.ReactNode;
+  isStreaming?: boolean;
 }) => {
   const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const wasStreaming = useRef(isStreaming);
+
+  useEffect(() => {
+    // Auto collapse when streaming finishes
+    if (wasStreaming.current && !isStreaming) {
+      setIsExpanded(false);
+    }
+    wasStreaming.current = isStreaming;
+  }, [isStreaming]);
+
+  useEffect(() => {
+    // Auto scroll to bottom during streaming
+    if (isStreaming && timelineRef.current) {
+      // Use requestAnimationFrame to ensure DOM has updated before scrolling
+      requestAnimationFrame(() => {
+        if (timelineRef.current) {
+          const el = timelineRef.current;
+          el.scrollTop = el.scrollHeight;
+        }
+      });
+    }
+  }, [expandedElement, isStreaming]);
 
   return (
     <div className={styles.log}>
@@ -132,7 +157,12 @@ const AgentLog = ({
         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </div>
 
-      {isExpanded && <div className={styles.timeline}>{expandedElement}</div>}
+      <div
+        ref={timelineRef}
+        className={`${styles.timelineWrapper} ${isExpanded ? styles.expanded : ""} ${isStreaming ? styles.isStreaming : ""}`}
+      >
+        <div className={styles.timeline}>{expandedElement}</div>
+      </div>
     </div>
   );
 };
@@ -167,6 +197,7 @@ export const AgentActivityLog = ({
     <AgentLog
       icon={<Activity size={14} />}
       title={summaryText}
+      isStreaming={isGenerating}
       expandedElement={
         <div className={styles.timeline}>
           {toolCalls.map((tc, index) => {
@@ -205,6 +236,7 @@ export const ReasoningLog = ({
       icon={<BrainCircuit size={14} />}
       title={t("messages.reasoningProcess")}
       initiallyExpanded={initiallyExpanded}
+      isStreaming={initiallyExpanded}
       expandedElement={
         <>
           <MarkdownRenderer content={reasoningContent} />
