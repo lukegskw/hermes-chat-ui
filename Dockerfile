@@ -1,5 +1,5 @@
 # Define arguments before any FROM statement so they can be used in FROM directives
-ARG HERMES_AGENT_VERSION=latest
+ARG HERMES_AGENT_VERSION=latest@sha256:4f0cf12465c50a12e6a747e319794640ab87ec1ce260b1ce9070c3c8950506c8
 
 # Stage 1: Build the SPA
 FROM node:20-alpine AS build
