@@ -149,6 +149,7 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
     const lines = text.split("\n");
     let insideList = false;
     let listType: "ul" | "ol" | null = null;
+    let listStartNumber: number | undefined = undefined;
     let listItems: string[] = [];
     const elements: React.ReactNode[] = [];
 
@@ -156,7 +157,13 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
       if (listItems.length > 0) {
         const Tag = listType === "ol" ? "ol" : "ul";
         elements.push(
-          <Tag key={`list-${key}`} className={styles.list}>
+          <Tag
+            key={`list-${key}`}
+            className={styles.list}
+            {...(listType === "ol" && listStartNumber !== undefined
+              ? { start: listStartNumber }
+              : {})}
+          >
             {listItems.map((item, idx) => (
               <li key={idx} className={styles.listItem}>
                 {renderInline(item)}
@@ -229,11 +236,15 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
 
         // Accumulate plain characters
         const plainChar = str[i];
-        const lastPart = parts[parts.length - 1];
-        if (parts.length > 0 && typeof lastPart === "string") {
-          parts[parts.length - 1] = lastPart + plainChar;
+        if (plainChar === "\n") {
+          parts.push(<br key={`br-${i}`} />);
         } else {
-          parts.push(plainChar);
+          const lastPart = parts[parts.length - 1];
+          if (parts.length > 0 && typeof lastPart === "string") {
+            parts[parts.length - 1] = lastPart + plainChar;
+          } else {
+            parts.push(plainChar);
+          }
         }
         i++;
       }
@@ -242,6 +253,15 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
 
     lines.forEach((line, idx) => {
       const trimmed = line.trim();
+
+      // Check for indented lines (sublists or continuations)
+      const isIndented = line.startsWith("  ") || line.startsWith("\t");
+      if (insideList && isIndented && trimmed !== "") {
+        if (listItems.length > 0) {
+          listItems[listItems.length - 1] += "\n" + trimmed;
+        }
+        return;
+      }
 
       // Headers
       if (trimmed.startsWith("# ")) {
@@ -290,13 +310,23 @@ export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
           flushList(idx);
           insideList = true;
           listType = "ol";
+
+          // Extract the starting number from the text (e.g., "2" from "2. Item")
+          const match = trimmed.match(/^(\d+)\.\s/);
+          if (match) {
+            listStartNumber = parseInt(match[1], 10);
+          } else {
+            listStartNumber = 1;
+          }
         }
         const itemText = trimmed.replace(/^\d+\.\s/, "");
         listItems.push(itemText);
       }
       // Empty Line
       else if (trimmed === "") {
-        flushList(idx);
+        if (!insideList) {
+          flushList(idx);
+        }
       }
       // Regular Paragraph
       else {

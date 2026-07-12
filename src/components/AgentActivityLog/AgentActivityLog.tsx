@@ -121,15 +121,16 @@ const AgentLog = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
   const timelineRef = useRef<HTMLDivElement>(null);
-  const wasStreaming = useRef(isStreaming);
+  const [prevIsStreaming, setPrevIsStreaming] = useState(isStreaming);
 
-  useEffect(() => {
-    // Auto collapse when streaming finishes
-    if (wasStreaming.current && !isStreaming) {
+  if (isStreaming !== prevIsStreaming) {
+    setPrevIsStreaming(isStreaming);
+    if (isStreaming) {
+      setIsExpanded(true);
+    } else {
       setIsExpanded(false);
     }
-    wasStreaming.current = isStreaming;
-  }, [isStreaming]);
+  }
 
   useEffect(() => {
     // Auto scroll to bottom during streaming

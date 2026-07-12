@@ -43,13 +43,12 @@
     max-height: 600px; /* Generous height for expanded manual view */
     opacity: 1;
     overflow-y: auto;
-  }
 
-  &.isStreaming {
-    max-height: 180px;
-    overflow-y: auto;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+    &.isStreaming {
+      max-height: 180px;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+    }
   }
 }
 

@@ -47,6 +47,15 @@
   margin-bottom: 0.75rem;
   color: inherit;
   font-weight: 500;
+  padding-left: 0;
+}
+
+ol.list {
+  list-style-type: decimal;
+}
+
+ul.list {
+  list-style-type: disc;
 }
 
 .listItem {
