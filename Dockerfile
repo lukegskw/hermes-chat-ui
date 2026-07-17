@@ -30,6 +30,10 @@ COPY backend /app/backend
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-EXPOSE 8643
+# Config injection script — runs BEFORE s6 services (dashboard, gateway) start
+COPY scripts/00-inject-config /etc/cont-init.d/00-inject-config
+RUN chmod +x /etc/cont-init.d/00-inject-config
+
+EXPOSE 8643 9119
 
 CMD ["/app/entrypoint.sh"]

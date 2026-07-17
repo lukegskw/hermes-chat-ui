@@ -1,64 +1,11 @@
 #!/bin/sh
 
-# Inject Docker environment variables into Hermes config.yaml
-echo "Auto-populating config.yaml..."
-python3 -c "
-import os, yaml, hashlib, secrets
+# NOTE: Config injection (env_passthrough, dashboard auth) is handled by
+# /etc/cont-init.d/00-inject-config which runs BEFORE s6 services start.
+# Dashboard is managed by s6 via HERMES_DASHBOARD env var.
 
-config_path = os.path.join(os.environ.get('HERMES_HOME', '/opt/data'), 'config.yaml')
-try:
-    config = {}
-    if os.path.exists(config_path):
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f) or {}
-
-    # --- env_passthrough ---
-    if 'terminal' not in config: config['terminal'] = {}
-    passthrough = set(config['terminal'].get('env_passthrough', []) or [])
-    exclude_exact = {'PATH', 'HOME', 'HOSTNAME', 'PWD', 'OLDPWD', 'TERM', 'SHLVL', 'SHELL', 'LANG', 'LANGUAGE', 'VIRTUAL_ENV', 'VIRTUAL_ENV_PROMPT', 'PYTHONUNBUFFERED', 'PS1', '_', 'HERMES_UID', 'HERMES_GID', 'HERMES_S6_SUPERVISED_CHILD', 'HERMES_WEB_DIST', 'HERMES_TUI_DIR'}
-    exclude_prefixes = ('LC_', 'npm_', 'S6_', 'AGENT_BROWSER_', 'PLAYWRIGHT_')
-    for k in os.environ.keys():
-        if k in exclude_exact or any(k.startswith(p) for p in exclude_prefixes): continue
-        passthrough.add(k)
-    config['terminal']['env_passthrough'] = sorted(list(passthrough))
-    print('Updated terminal.env_passthrough')
-
-    # --- Dashboard basic_auth (from env vars) ---
-    dash_user = os.environ.get('HERMES_DASHBOARD_USER', '')
-    dash_pass = os.environ.get('HERMES_DASHBOARD_PASSWORD', '')
-    if dash_user and dash_pass:
-        if 'dashboard' not in config: config['dashboard'] = {}
-        if 'basic_auth' not in config['dashboard']: config['dashboard']['basic_auth'] = {}
-        salt = secrets.token_hex(16)
-        pw_hash = hashlib.sha256((salt + dash_pass).encode()).hexdigest()
-        password_hash = salt + ':' + pw_hash
-        config['dashboard']['basic_auth']['username'] = dash_user
-        config['dashboard']['basic_auth']['password_hash'] = password_hash
-        if not config['dashboard']['basic_auth'].get('secret'):
-            config['dashboard']['basic_auth']['secret'] = secrets.token_hex(32)
-        print('Updated dashboard.basic_auth for user:', dash_user)
-    else:
-        print('Skipping dashboard auth setup (HERMES_DASHBOARD_USER / HERMES_DASHBOARD_PASSWORD not set)')
-
-    with open(config_path, 'w') as f:
-        yaml.dump(config, f, default_flow_style=False)
-    print('Config saved successfully')
-except Exception as e:
-    print('Failed to update config.yaml:', e)
-"
-
-# Start hermes-agent gateway (with dashboard if auth is configured)
+# Start hermes-agent gateway in background
 echo "Starting Hermes Agent gateway..."
-# Enable s6-supervised dashboard if credentials are provided
-if [ -n "${HERMES_DASHBOARD_USER}" ] && [ -n "${HERMES_DASHBOARD_PASSWORD}" ]; then
-    export HERMES_DASHBOARD=1
-    export HERMES_DASHBOARD_HOST=0.0.0.0
-    export HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
-    echo "Dashboard enabled (s6-supervised) on port ${HERMES_DASHBOARD_PORT}"
-else
-    echo "Dashboard disabled — set HERMES_DASHBOARD_USER and HERMES_DASHBOARD_PASSWORD to enable"
-fi
-
 if [ "$(id -u)" = "0" ]; then
     echo "Running as root, dropping privileges using shim..."
     /opt/hermes/docker/entrypoint.sh hermes gateway run --accept-hooks &

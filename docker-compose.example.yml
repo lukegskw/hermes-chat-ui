@@ -43,6 +43,10 @@ services:
       - API_SERVER_MODEL_NAME=${API_SERVER_MODEL_NAME}
       
       # --- Dashboard (Optional — set credentials to enable) ---
+      # HERMES_DASHBOARD=1 tells s6 to supervise the dashboard process
+      # HERMES_DASHBOARD_HOST=0.0.0.0 binds to all interfaces (requires auth)
+      - HERMES_DASHBOARD=${HERMES_DASHBOARD:-1}
+      - HERMES_DASHBOARD_HOST=0.0.0.0
       - HERMES_DASHBOARD_USER=${HERMES_DASHBOARD_USER}
       - HERMES_DASHBOARD_PASSWORD=${HERMES_DASHBOARD_PASSWORD}
       - HERMES_DASHBOARD_PORT=${DASHBOARD_PORT:-9119}
