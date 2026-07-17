@@ -25,6 +25,15 @@ except Exception as e:
     print('Failed to update config.yaml:', e)
 "
 
+# Start hermes-agent dashboard in background
+echo "Starting Hermes Agent dashboard..."
+DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
+if [ "$(id -u)" = "0" ]; then
+    /opt/hermes/docker/entrypoint.sh hermes dashboard --host 0.0.0.0 --port ${DASHBOARD_PORT} --insecure &
+else
+    hermes dashboard --host 0.0.0.0 --port ${DASHBOARD_PORT} --insecure &
+fi
+
 # Start hermes-agent gateway in background
 echo "Starting Hermes Agent gateway..."
 if [ "$(id -u)" = "0" ]; then
