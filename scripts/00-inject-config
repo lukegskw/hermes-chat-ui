@@ -5,7 +5,7 @@
 echo "[00-inject-config] Populating config.yaml from environment..."
 
 python3 -c "
-import os, yaml, hashlib, secrets
+import os, yaml, secrets
 
 config_path = os.path.join(os.environ.get('HERMES_HOME', '/opt/data'), 'config.yaml')
 try:
@@ -40,9 +40,30 @@ try:
             config['dashboard'] = {}
         if 'basic_auth' not in config['dashboard']:
             config['dashboard']['basic_auth'] = {}
-        salt = secrets.token_hex(16)
-        pw_hash = hashlib.sha256((salt + dash_pass).encode()).hexdigest()
-        password_hash = salt + ':' + pw_hash
+
+        # Use the Hermes Agent's native hash_password function
+        password_hash = None
+        try:
+            from plugins.dashboard_auth.basic import hash_password
+            password_hash = hash_password(dash_pass)
+            print('[00-inject-config] Hashed password using Hermes native hash_password')
+        except ImportError:
+            pass
+
+        # Fallback: try bcrypt directly
+        if password_hash is None:
+            try:
+                import bcrypt
+                password_hash = bcrypt.hashpw(dash_pass.encode(), bcrypt.gensalt()).decode()
+                print('[00-inject-config] Hashed password using bcrypt fallback')
+            except ImportError:
+                pass
+
+        # Last resort: store plain password (dashboard may accept it)
+        if password_hash is None:
+            password_hash = dash_pass
+            print('[00-inject-config] WARNING: Could not hash password, storing as-is')
+
         config['dashboard']['basic_auth']['username'] = dash_user
         config['dashboard']['basic_auth']['password_hash'] = password_hash
         if not config['dashboard']['basic_auth'].get('secret'):
