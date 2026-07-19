@@ -109,10 +109,22 @@ async def async_cli_chat_engine(
                         "status": status,
                     })
                 else:
-                    if tool_calls:
+                    if tool_calls and tool_calls[-1]["status"] == "running" and tool_calls[-1]["function"]["name"] == tool_name:
                         tool_id = tool_calls[-1]["id"]
                         tool_calls[-1]["status"] = status
                         tool_calls[-1]["label"] = tool_text
+                    else:
+                        tool_call_counter += 1
+                        tool_calls.append({
+                            "id": tool_id,
+                            "type": "function",
+                            "function": {
+                                "name": tool_name,
+                                "arguments": "",
+                            },
+                            "label": tool_text,
+                            "status": status,
+                        })
 
                 # Emit tool call SSE
                 tool_call_event = {
