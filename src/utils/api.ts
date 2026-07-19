@@ -257,6 +257,11 @@ export const sendChatMessageStream = async ({
     if (error instanceof Error && error.name === "AbortError") {
       // User aborted stream, do not trigger error callback
       onDone();
+    } else if (document.visibilityState === "hidden") {
+      // iOS/WebKit kills SSE connections when the app is minimized.
+      // The backend continues generating. Treat as a clean finish —
+      // the sync-on-focus in useChatState will load the real response.
+      onDone();
     } else {
       onError(error instanceof Error ? error : new Error(String(error)));
     }

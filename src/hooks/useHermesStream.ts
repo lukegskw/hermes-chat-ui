@@ -329,7 +329,7 @@ export const useHermesStream = (
                       status?: "running" | "completed" | "error";
                       label?: string;
                     };
-                    const index = delta.index || 0;
+                    const index = delta.index ?? 0;
                     if (!currentTools[index]) {
                       currentTools[index] = {
                         id: delta.id,

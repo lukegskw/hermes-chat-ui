@@ -159,6 +159,21 @@ export const useChatState = () => {
                 if (dbMessageIds.has(m.id)) return false;
                 if (m.isGenerating) return true; // Always keep actively generating messages
 
+                // Drop local assistant messages whose content is a prefix of (or
+                // contained within) a DB message — this happens when the PWA was
+                // backgrounded mid-stream and the backend finished independently.
+                if (m.role === "assistant" && typeof m.content === "string") {
+                  const localContent = m.content;
+                  const isStalePartial = mergedMessages.some(
+                    (dbMsg: ChatMessage) =>
+                      dbMsg.role === "assistant" &&
+                      typeof dbMsg.content === "string" &&
+                      (dbMsg.content.includes(localContent.split("\n\n")[0]) ||
+                        localContent.includes("Load failed")),
+                  );
+                  if (isStalePartial) return false;
+                }
+
                 // Deduplicate if content exactly matches
                 const isDuplicate = mergedMessages.some(
                   (dbMsg: ChatMessage) =>
