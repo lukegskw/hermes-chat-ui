@@ -42,17 +42,22 @@ export const App = () => {
     activeConversation,
     activeMessages,
     isInitializing,
+    isLoadingMessages,
+    isCreatingChat,
+    isLoadingMore,
+    hasMoreConversations,
+    sessionError,
     handleNewChat,
     handleSelectConversation,
     handleDeleteConversation,
     handleRenameConversation,
-    handleClearAll,
+    handleLoadMore,
+    reloadConversation,
   } = useChatState();
 
   const {
     models,
     selectedModel,
-    pendingModelId,
     isConnected,
     isFetchingModels,
     connectionError,
@@ -65,19 +70,19 @@ export const App = () => {
     handleSendMessage,
     handleStopGeneration,
     handleCleanupConversation,
-    handleCleanupAllConversations,
   } = useHermesStream(
     HERMES_ENDPOINT,
     settings,
     conversations,
     setConversations,
     activeConversationId,
-    pendingModelId || selectedModel,
+    selectedModel,
+    reloadConversation,
   );
 
   const { t } = useTranslation();
 
-  if (isInitializing || isFetchingModels) {
+  if (isInitializing) {
     return (
       <div className="loadingScreen">
         <div className="text">{t("loading.initializing")}</div>
@@ -110,10 +115,10 @@ export const App = () => {
             handleNewChat(selectedModel);
             setIsSidebarOpen(false);
           }}
-          onClearAll={() => {
-            handleClearAll();
-            handleCleanupAllConversations();
-          }}
+          isCreatingChat={isCreatingChat}
+          hasMoreConversations={hasMoreConversations}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={handleLoadMore}
           models={models}
           selectedModel={selectedModel}
           onSelectModel={handleSelectModel}
@@ -131,19 +136,23 @@ export const App = () => {
           activeConversation={activeConversation}
           onRenameConversation={handleRenameConversation}
           onDeleteConversation={(id) => {
-            handleDeleteConversation(id);
-            handleCleanupConversation(id);
+            void handleDeleteConversation(id, () => {
+              if (id === activeConversationId && isGenerating) {
+                return handleStopGeneration();
+              }
+            }).then((deleted) => {
+              if (deleted) handleCleanupConversation(id);
+            });
           }}
           isGenerating={isGenerating}
           onSendMessage={handleSendMessage}
           onStopGeneration={handleStopGeneration}
-          selectedModel={
-            activeConversation?.modelId || pendingModelId || selectedModel
-          }
+          selectedModel={activeConversation?.modelId || selectedModel}
           models={models}
           onSelectModel={handleConversationModelChange}
           isFetchingModels={isFetchingModels}
-          connectionError={connectionError}
+          connectionError={sessionError || connectionError}
+          isLoadingMessages={isLoadingMessages}
         />
         <SettingsSheet
           isOpen={isSettingsSheetOpen}

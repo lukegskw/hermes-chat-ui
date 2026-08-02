@@ -1,4 +1,4 @@
-@use '@styles' as s;
+@use "@styles" as s;
 
 .main {
   flex: 1;
@@ -221,6 +221,15 @@
 }
 
 /* Messages Area */
+.connectionBanner {
+  padding: 10px 16px;
+  border-bottom: s.$border-width solid s.$color-black;
+  background: s.$color-danger;
+  color: s.$color-white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .messagesViewArea {
   flex: 1;
   overflow-y: auto;
@@ -230,6 +239,13 @@
   flex-direction: column;
   position: relative;
   min-width: 0;
+}
+
+.messagesLoading {
+  margin: auto;
+  color: s.$color-white;
+  opacity: 0.75;
+  font-weight: 700;
 }
 
 .messagesContainer {
@@ -433,7 +449,7 @@
   @include s.body-text;
   color: s.$color-white;
   padding: 0 12px 0 0;
-  
+
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
   }

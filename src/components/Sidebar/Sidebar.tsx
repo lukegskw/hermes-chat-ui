@@ -7,7 +7,6 @@ import {
   Plus,
   Settings as SettingsIcon,
   Sparkles,
-  Trash2,
   X,
 } from "../Icons";
 import styles from "./Sidebar.module.scss";
@@ -23,7 +22,10 @@ export type SidebarProps = {
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
   onNewChat: () => void;
-  onClearAll: () => void;
+  isCreatingChat?: boolean;
+  hasMoreConversations?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
   models: Model[];
   selectedModel: string;
   onSelectModel: (modelId: string) => void;
@@ -42,7 +44,10 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
       activeConversationId,
       onSelectConversation,
       onNewChat,
-      onClearAll,
+      isCreatingChat,
+      hasMoreConversations,
+      isLoadingMore,
+      onLoadMore,
       models,
       selectedModel,
       onSelectModel,
@@ -97,9 +102,13 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
 
         {/* New Chat Button */}
         <div className={styles.newChatContainer}>
-          <button onClick={onNewChat} className={styles.btnPrimary}>
+          <button
+            onClick={onNewChat}
+            className={styles.btnPrimary}
+            disabled={isCreatingChat}
+          >
             <Plus size={16} />
-            {t("common.newChat")}
+            {isCreatingChat ? t("sidebar.creatingChat") : t("common.newChat")}
           </button>
         </div>
 
@@ -180,9 +189,14 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
                       className={styles.conversationIcon}
                     />
 
-                    <span className={styles.conversationTitle}>
-                      {conv.title || t("common.newChat")}
-                    </span>
+                    <div className={styles.conversationText}>
+                      <span className={styles.conversationTitle}>
+                        {conv.title || t("common.newChat")}
+                      </span>
+                      <span className={styles.conversationSource}>
+                        {conv.source || "Hermes"}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -191,6 +205,15 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             <div className={styles.conversationsEmpty}>
               {t("sidebar.noChats")}
             </div>
+          )}
+          {hasMoreConversations && onLoadMore && (
+            <button
+              onClick={onLoadMore}
+              className={styles.loadMoreButton}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? t("sidebar.loadingMore") : t("sidebar.loadMore")}
+            </button>
           )}
         </div>
 
@@ -202,17 +225,6 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
               <SettingsIcon size={14} />
               {t("sidebar.settings")}
             </button>
-
-            {conversations.length > 0 && (
-              <button
-                onClick={onClearAll}
-                className={styles.btnDanger}
-                title={t("sidebar.deleteChats")}
-              >
-                <Trash2 size={14} />
-                {t("sidebar.deleteChats")}
-              </button>
-            )}
           </div>
         </div>
       </aside>

@@ -13,7 +13,9 @@
     "recentChats": "Recent Chats",
     "noChats": "No conversations started",
     "settings": "Settings",
-    "deleteChats": "Delete Chats",
+    "creatingChat": "Creating chat...",
+    "loadMore": "Load more",
+    "loadingMore": "Loading...",
     "closePanel": "Close panel"
   },
   "chat": {
@@ -25,8 +27,9 @@
     "conversationName": "Conversation name...",
     "moreOptions": "More Options",
     "rename": "Rename",
-    "compact": "Compact",
     "delete": "Delete",
+    "deleteConfirm": "Delete ‘{{title}}’ from Hermes permanently? This {{source}} session will disappear from the CLI, dashboard, cron, and every other interface.",
+    "imageConversation": "Image conversation",
     "dropImages": "Drop images here",
     "attachImage": "Attach image",
     "stopGeneration": "Stop generation",
@@ -42,7 +45,8 @@
     "reasoningProcess": "Reasoning Process",
     "reasoning": "Reasoning...",
     "copyMessage": "Copy message",
-    "attachment": "attachment"
+    "attachment": "attachment",
+    "multipleImagesWarning": "Only one image can be sent at a time. The first image was used."
   },
   "approval": {
     "title": "Action Requires Approval",
@@ -101,7 +105,11 @@
     "approvalDenied": "[APPROVAL_DENIED] Command rejected by user. Do not execute the command.",
     "approvalGranted": "[APPROVAL_GRANTED] Permission granted by user. You may proceed with command execution.",
     "unsupportedFormat": "Unsupported format ({{type}}). Only JPEG, PNG, GIF, and WebP are allowed.",
-    "imageTooLarge": "Image too large. The limit is {{size}}MB."
+    "imageTooLarge": "Image too large. The limit is {{size}}MB.",
+    "sessionLoadFailed": "Could not load Hermes sessions.",
+    "sessionCreateFailed": "Could not create a Hermes session.",
+    "sessionDeleteFailed": "Could not delete the Hermes session.",
+    "sessionRenameFailed": "Could not rename the Hermes session."
   },
   "loading": {
     "initializing": "Loading your smart assistant..."

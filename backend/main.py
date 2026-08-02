@@ -1,12 +1,10 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
 
-from .routers import config, conversations, chat, notifications
-
-# Initialize database
-from . import database
+from .routers import config, notifications, sessions
 
 app = FastAPI(title="Hermes Chat UI Proxy")
 
@@ -20,8 +18,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(config.router)
-app.include_router(conversations.router)
-app.include_router(chat.router)
+app.include_router(sessions.router)
 app.include_router(notifications.router, prefix="/api/push")
 
 # Mount SPA
@@ -33,6 +30,7 @@ else:
 
 if __name__ == "__main__":
     import uvicorn
+
     print("Starting Hermes Proxy (Async Chat Engine)...")
-    port = int(os.environ.get("HERMES_PROXY_PORT", os.environ.get("PORT", 8643)))
+    port = int(os.environ.get("HERMES_PROXY_PORT", os.environ.get("PORT", "8643")))
     uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=False)

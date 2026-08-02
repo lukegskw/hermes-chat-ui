@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   Send,
@@ -6,7 +12,6 @@ import {
   Sparkles,
   Terminal,
   Menu,
-  DatabaseZap,
   Paperclip,
   X as XIcon,
   MoreHorizontal,
@@ -18,6 +23,7 @@ import { ChatMessage, Model, ConversationAPI } from "../../types";
 import { validateImageFile, fileToBase64 } from "../../utils";
 import { useTranslation } from "react-i18next";
 import styles from "./ChatWindow.module.scss";
+import { decideChatScroll } from "./scrollPolicy";
 
 export type ChatWindowMessage = ChatMessage & {
   id: string;
@@ -38,6 +44,7 @@ export type ChatWindowProps = {
   onSelectModel: (modelId: string) => void;
   isFetchingModels?: boolean;
   connectionError?: string;
+  isLoadingMessages?: boolean;
 };
 
 export const ChatWindow = ({
@@ -54,6 +61,7 @@ export const ChatWindow = ({
   onSelectModel,
   isFetchingModels,
   connectionError,
+  isLoadingMessages = false,
 }: ChatWindowProps) => {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
@@ -64,7 +72,11 @@ export const ChatWindow = ({
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesViewRef = useRef<HTMLDivElement>(null);
+  const activeSessionRef = useRef("");
+  const pendingInitialScrollRef = useRef(false);
+  const isNearBottomRef = useRef(true);
+  const wasGeneratingRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -93,14 +105,53 @@ export const ChatWindow = ({
     setIsEditingTitle(false);
   };
 
-  // Auto-scroll to bottom of messages
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  const activeSessionId = activeConversation?.id ?? "";
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isGenerating]);
+    const viewport = messagesViewRef.current;
+    if (!viewport) return;
+    const handleScroll = () => {
+      const distanceFromBottom =
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      isNearBottomRef.current = distanceFromBottom <= 64;
+    };
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
+    return () => viewport.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    const viewport = messagesViewRef.current;
+    if (!viewport) return;
+
+    const sessionChanged = activeSessionRef.current !== activeSessionId;
+    if (sessionChanged) {
+      activeSessionRef.current = activeSessionId;
+    }
+
+    const hasPersistedMessages = (activeConversation?.messageCount ?? 0) > 0;
+    const waitingForHistory =
+      messages.length === 0 && (isLoadingMessages || hasPersistedMessages);
+    const decision = decideChatScroll({
+      sessionChanged,
+      hasActiveSession: Boolean(activeSessionId),
+      pendingInitialScroll: pendingInitialScrollRef.current,
+      waitingForHistory,
+      generationStarted: isGenerating && !wasGeneratingRef.current,
+      isGenerating,
+      isNearBottom: isNearBottomRef.current,
+    });
+    pendingInitialScrollRef.current = decision.pendingInitialScroll;
+    isNearBottomRef.current = decision.isNearBottom;
+    if (decision.scrollToBottom) {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+    wasGeneratingRef.current = isGenerating;
+  }, [
+    activeConversation?.messageCount,
+    activeSessionId,
+    isGenerating,
+    isLoadingMessages,
+    messages,
+  ]);
 
   // Handle textarea height auto-grow
   useEffect(() => {
@@ -293,15 +344,6 @@ export const ChatWindow = ({
                     >
                       <Edit2 size={16} /> {t("chat.rename")}
                     </button>
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        onSendMessage("/compact");
-                      }}
-                      className={styles.actionMenuItem}
-                    >
-                      <DatabaseZap size={16} /> {t("chat.compact")}
-                    </button>
                     <div className={styles.actionMenuDivider} />
                     <button
                       onClick={() => {
@@ -336,15 +378,6 @@ export const ChatWindow = ({
                         >
                           <Edit2 size={16} /> {t("chat.rename")}
                         </button>
-                        <button
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            onSendMessage("/compact");
-                          }}
-                          className={styles.actionMenuItem}
-                        >
-                          <DatabaseZap size={16} /> {t("chat.compact")}
-                        </button>
                         <div className={styles.actionMenuDivider} />
                         <button
                           onClick={() => {
@@ -369,8 +402,15 @@ export const ChatWindow = ({
       </div>
 
       {/* Messages View Area */}
-      <div className={styles.messagesViewArea}>
-        {messages.length > 0 ? (
+      {connectionError && (
+        <div className={styles.connectionBanner} role="alert">
+          {connectionError}
+        </div>
+      )}
+      <div ref={messagesViewRef} className={styles.messagesViewArea}>
+        {isLoadingMessages && messages.length === 0 ? (
+          <div className={styles.messagesLoading}>{t("chat.loading")}</div>
+        ) : messages.length > 0 ? (
           <div className={styles.messagesContainer}>
             {messages
               .filter(
@@ -406,8 +446,6 @@ export const ChatWindow = ({
                 }
                 return <MessageBubble key={msg.id} message={filteredMsg} />;
               })}
-
-            <div ref={messagesEndRef} />
           </div>
         ) : (
           /* High-Fidelity Welcome & Suggestions Dashboard */

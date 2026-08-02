@@ -1,7 +1,7 @@
 <div align="center">
   <img src="public/icon.png" alt="Hermes Chat UI Logo" width="150" />
   <h1>Hermes Chat UI</h1>
-  <p>A modern, feature-rich web interface for <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>.</p>
+  <p>A self-hosted web UI for <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>, packaged for Docker and NAS deployments.</p>
 
   <p>
     <a href="https://github.com/lukegskw/hermes-chat-ui/pkgs/container/hermes-chat-ui"><img src="https://img.shields.io/badge/GHCR%20Image-Available-blue" alt="Docker Package" /></a>
@@ -10,55 +10,75 @@
   </p>
 </div>
 
-## Overview
+## Why this project exists
+
+Hermes Chat UI provides a customizable interface that can run entirely on private infrastructure. The Docker image includes Hermes Agent, the UI, and a small server-side proxy, so it works well on UGREEN, Synology, Portainer, or any standard Docker host without a separate Hermes installation.
+
+The original deployment runs on a UGREEN NAS and is accessed through [Tailscale](https://tailscale.com/). That private-network model is also the recommended way to run the project.
 
 <div align="center">
   <img src="docs/assets/screenshot-1.png" alt="Hermes Chat UI in action" width="800" />
 </div>
 
-## Oh no, another chat UI? Why did you build this?
-
-Hermes Chat UI is a standalone web application designed to provide a rich chat interface for the Hermes Agent.
-
-While there are existing community web UIs for Hermes Agent, many of them require a local installation on the host machine or don't support containerized deployments out of the box. **This project solves that by packaging the entire stack — agent, API proxy, and web UI — into a single Docker image.** This makes it trivial to deploy on a Synology NAS, Ugreen NAS, Portainer, or any standard Docker host.
-With this setup, I can run the entire system on my UGREEN NAS and am now able to access it from anywhere via [Tailscale](https://tailscale.com/) (though it's also accessible on the local network).
-
-> [!IMPORTANT]  
-> **No Extra Installation of `hermes-agent` Needed!** The official `hermes-agent` is fully packaged inside this Docker image. You do not need to install or run the agent separately. However, because the agent runs internally, any specific agent configuration (like local LLMs, tools, or memory systems) must be configured by you via environment variables or volume mounts, as detailed in the [official Hermes Agent documentation](https://github.com/NousResearch/hermes-agent).
-
 ## Features
 
-- **Progressive Web App (PWA)**: Installable on desktop and mobile.
-- **Mobile First**: Fully responsive design that works beautifully on your phone.
-- **Real-time Streaming**: Watch the agent's thought process and responses stream in real-time.
-- **Tool Approval UI**: Safely review and approve/deny tool execution requests directly from the chat.
-- **Context Compression**: Explicit support for context compression to manage long conversations.
-- **Conversation Persistence**: All chats are automatically saved to a local SQLite database.
-- **Model Switching**: Easily switch between available models from the sidebar.
-- **Internationalization (i18n)**: Interface available in English and Portuguese (auto-detected).
-- **Neo-Brutalist Design**: A unique, high-contrast visual style with hard shadows.
+- Installable Progressive Web App for desktop and mobile.
+- Responsive, mobile-first interface.
+- Real-time answer, reasoning, and tool-activity streaming.
+- Inline image input supported by the Hermes Sessions API.
+- Model selection and per-session model persistence.
+- English and Brazilian Portuguese interfaces.
+- Canonical Hermes history: sessions created by this UI, the CLI, dashboard, cron, and other integrations appear together.
+- Paginated session list suitable for long-lived installations.
+- Background completion and Web Push support.
 
----
+## Session data and deletion
 
-## Quick Start (Docker)
+Hermes Agent is the only source of truth for sessions and messages. The UI uses the official Hermes Sessions API and does not maintain a second chat database or access Hermes SQLite tables directly.
 
-The easiest way to run Hermes Chat UI is using Docker Compose.
+This has two important consequences:
 
-1. Download the template configurations:
+1. A session created outside this UI is visible here.
+2. Deleting a session here permanently deletes the canonical Hermes session, so it disappears from the CLI, dashboard, cron, and every other Hermes interface.
 
-```bash
-curl -o docker-compose.example.yml https://raw.githubusercontent.com/lukegskw/hermes-chat-ui/main/docker-compose.example.yml
-curl -o .env.example https://raw.githubusercontent.com/lukegskw/hermes-chat-ui/main/.env.example
+Bulk deletion is intentionally unavailable.
+
+Versions of Hermes Chat UI before this architecture stored UI conversations in `/opt/data/hermes_chats.db`. That file is no longer opened and is not migrated automatically. An upgrade leaves the file untouched for manual recovery or rollback.
+
+> [!IMPORTANT]
+> Back up the `/opt/data` volume before upgrading. Hermes owns its current session database and schema migrations.
+
+## Architecture
+
+```mermaid
+graph LR
+    Browser[Browser / PWA] -->|HTTP :8643| Proxy[FastAPI proxy]
+    Proxy -->|Bearer token, HTTP :8642| API[Hermes Sessions API]
+    API --> DB[(Hermes state database)]
+    API <--> Agent[Hermes Agent]
+    Agent <--> LLM[Local or remote LLM]
+    Agent <--> Tools[Tools and integrations]
 ```
 
-2. Create your local config files:
+The browser communicates only with the proxy on the UI origin. The proxy injects `API_SERVER_KEY` server-side, so the Hermes bearer token is never included in browser JavaScript. At startup, the UI checks `/v1/capabilities` and requires Hermes session resources, session chat, and streaming support. There is no legacy database fallback.
+
+## Quick start with Docker Compose
+
+1. Download the examples:
+
+```bash
+curl -O https://raw.githubusercontent.com/lukegskw/hermes-chat-ui/main/docker-compose.example.yml
+curl -O https://raw.githubusercontent.com/lukegskw/hermes-chat-ui/main/.env.example
+```
+
+2. Create local configuration files:
 
 ```bash
 cp docker-compose.example.yml docker-compose.yml
 cp .env.example .env
 ```
 
-3. **IMPORTANT:** Edit `.env` and set your `API_SERVER_KEY`.
+3. Edit `.env`. At minimum, replace `API_SERVER_KEY=changeme` with a strong random value and configure Hermes/model credentials according to the [official Hermes Agent documentation](https://github.com/NousResearch/hermes-agent).
 
 4. Start the container:
 
@@ -66,109 +86,103 @@ cp .env.example .env
 docker compose up -d
 ```
 
-3. Open your browser and navigate to `http://localhost:8643`.
+5. Open `http://localhost:8643`. The native Hermes dashboard is available at `http://localhost:9119` when enabled.
 
----
+No separate `hermes-agent` installation is required. Configuration and persistent state live in the mounted `/opt/data` volume.
 
-## Configuration Reference
+## Configuration
 
-The application can be configured via environment variables.
+### Ports and API
 
-### Core Settings
+| Variable                | Description                                                         | Default   |
+| ----------------------- | ------------------------------------------------------------------- | --------- |
+| `PROXY_PORT`            | Host port for the UI and FastAPI proxy                              | `8643`    |
+| `BACKEND_PORT`          | Host port for the native Hermes API                                 | `8642`    |
+| `DASHBOARD_PORT`        | Host and container port for the Hermes dashboard                    | `9119`    |
+| `API_SERVER_ENABLED`    | Enable the Hermes native API; must remain enabled                   | `true`    |
+| `API_SERVER_KEY`        | Required bearer key shared only by Hermes and the server-side proxy | none      |
+| `API_SERVER_HOST`       | Hermes API bind address inside the container                        | `0.0.0.0` |
+| `API_SERVER_PORT`       | Hermes API port inside the container                                | `8642`    |
+| `API_SERVER_MODEL_NAME` | Optional model name reported by the API                             | none      |
 
-| Variable         | Description                                          | Default |
-| ---------------- | ---------------------------------------------------- | ------- |
-| `BACKEND_PORT`   | Port for the native Hermes Agent API                 | `8642`  |
-| `PROXY_PORT`     | Port for the Web UI and augmented API                | `8643`  |
-| `HERMES_API_KEY` | **REQUIRED**. Secure key shared between UI and Agent | _None_  |
+### Dashboard
 
-### Built-in API Server
+| Variable                    | Description                         | Default |
+| --------------------------- | ----------------------------------- | ------- |
+| `HERMES_DASHBOARD`          | Enable the bundled Hermes dashboard | `1`     |
+| `HERMES_DASHBOARD_USER`     | Dashboard username                  | none    |
+| `HERMES_DASHBOARD_PASSWORD` | Dashboard password                  | none    |
 
-| Variable                | Description                                               | Default   |
-| ----------------------- | --------------------------------------------------------- | --------- |
-| `API_SERVER_ENABLED`    | Enable the OpenAI-compatible API server                   | `true`    |
-| `API_SERVER_KEY`        | Secure key for the API (usually same as `HERMES_API_KEY`) | _None_    |
-| `API_SERVER_HOST`       | Host address to bind the API server                       | `0.0.0.0` |
-| `API_SERVER_PORT`       | Port for the API server                                   | `8642`    |
-| `API_SERVER_MODEL_NAME` | Default model name to report via API                      | _None_    |
+### Optional integrations
 
-### Integrations (Optional)
+| Variable              | Description                                             | Default                   |
+| --------------------- | ------------------------------------------------------- | ------------------------- |
+| `HA_URL`              | Home Assistant URL                                      | none                      |
+| `HA_TOKEN`            | Home Assistant long-lived access token                  | none                      |
+| `GITHUB_TOKEN`        | GitHub personal access token used by Hermes tools       | none                      |
+| `VAPID_SUBJECT`       | Contact URI used for Web Push                           | `mailto:push@example.com` |
+| `HERMES_PUSH_API_KEY` | Optional bearer key for the internal push-send endpoint | none                      |
 
-| Variable       | Description                                                  | Default |
-| -------------- | ------------------------------------------------------------ | ------- |
-| `HA_URL`       | Home Assistant URL (e.g., `http://homeassistant.local:8123`) | _None_  |
-| `HA_TOKEN`     | Home Assistant Long-Lived Access Token                       | _None_  |
-| `GITHUB_TOKEN` | GitHub Personal Access Token                                 | _None_  |
+## Security
 
----
+This project is designed for one trusted user on a private network. The UI proxy itself is not a multi-user authentication layer.
 
-## Architecture
+> [!WARNING]
+> Do not expose ports `8642`, `8643`, or `9119` directly to the public internet. Use Tailscale, a VPN, or a properly configured authenticated reverse proxy with TLS. Set dashboard credentials whenever the dashboard is reachable by another machine.
 
-```mermaid
-graph LR
-    Browser[Browser / PWA] -->|HTTP :8643| Proxy[FastAPI Proxy]
-    Proxy <-->|SQLite| DB[(Conversations DB)]
-    Proxy <-->|HTTP :8642| Gateway[Hermes Agent Gateway]
-    Gateway <--> LLM[Local/Remote LLM]
-    Gateway <--> Tools[Tools / Integrations]
-```
+Keep `.env` out of version control, use a strong `API_SERVER_KEY`, and restrict access to the persisted `/opt/data` directory. The example Compose file deliberately tracks the moving `:latest` application tag; pin a release tag yourself if you prefer controlled upgrades.
 
-The Docker image contains everything needed to run the app. It starts the Hermes Agent Gateway in the background, waits for it to become healthy, and then launches a lightweight FastAPI proxy. The proxy serves the compiled React application and augments the native API with conversation persistence.
+## Troubleshooting
 
----
+### “Sessions API unavailable”
 
-## Local Development
+The bundled or externally configured Hermes instance is too old or does not advertise the required capability flags. Update Hermes; this UI does not fall back to its former database.
+
+### Sessions are missing
+
+Confirm that the UI proxy and the CLI/dashboard use the same `/opt/data` volume. The UI requests sessions from every source and includes child sessions. Use “Load more” when more than 50 sessions exist.
+
+### `401` or `403` from Hermes
+
+Confirm that `API_SERVER_KEY` is set once in `.env` and passed to the container. The browser should never be configured with this key.
+
+### The UI cannot reach Hermes
+
+Check container logs and verify that `API_SERVER_ENABLED=true` and `API_SERVER_PORT` matches the container-side API port. The proxy defaults to `http://localhost:8642` inside the all-in-one image.
+
+## Local development
 
 Prerequisites:
 
-- Node.js 20+
-- Python 3.11+
-- [uv](https://github.com/astral-sh/uv) package manager
+- Node.js 24
+- Python 3.11 or newer
+- [uv](https://github.com/astral-sh/uv)
+- A current Hermes Agent API exposing the Sessions API
 
-1. Clone the repository:
-
-```bash
-git clone https://github.com/lukegskw/hermes-chat-ui.git
-cd hermes-chat-ui
-```
-
-2. Set up your environment:
+Install and start the frontend:
 
 ```bash
-cp .env.example .env
-# Edit .env and set your API keys
-```
-
-3. Install frontend dependencies:
-
-```bash
-npm install
-```
-
-4. Start the frontend development server:
-
-```bash
+npm ci
 npm run dev
 ```
 
-5. (In a separate terminal) Start the backend proxy:
+In another terminal, create a Python environment and start the proxy:
 
 ```bash
-cd backend
-# Create a venv and install dependencies based on your agent setup
-uv run uvicorn main:app --host 0.0.0.0 --port 8643 --reload
+uv venv .venv
+uv pip install --python .venv/bin/python -r backend/requirements.txt
+API_SERVER_KEY=your-key \
+HERMES_API_URL=http://127.0.0.1:8642 \
+HERMES_PROXY_PORT=8643 \
+.venv/bin/python -m backend.main
 ```
 
----
+The Vite app connects to the proxy on port `8643` during development. Run `npm run test`, `npm run type-check`, `npm run lint`, and `npm run build` before submitting a change.
 
 ## Contributing
 
-Contributions are welcome! Please ensure you:
-
-- Follow the existing Neo-brutalist design system.
-- Maintain strict TypeScript type safety (no `any`, no implicit typing).
-- Test UI changes in both English and Portuguese.
+Contributions are welcome. Please preserve strict TypeScript safety, test UI changes in English and Portuguese, and avoid adding a second session persistence path.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Licensed under the MIT License. See [LICENSE](LICENSE).

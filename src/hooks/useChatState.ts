@@ -1,271 +1,360 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { getApiUrl } from "../config/env";
 import { ChatMessage, Conversation, Settings } from "../types";
 import {
-  deleteAllConversations,
+  ApiError,
+  assertSessionCapabilities,
+  createConversation,
   deleteConversation,
-  fetchConversation,
+  fetchConversationMessages,
   fetchConversations,
   updateConversationTitle,
 } from "../utils";
 
-const generateId = () =>
-  `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const PAGE_SIZE = 50;
 
 const DEFAULT_SETTINGS: Settings = {
   systemPrompt: "",
   enableXmlCodeBlocks: true,
 };
 
+const messagesEqual = (left: ChatMessage[], right: ChatMessage[]) =>
+  left.length === right.length &&
+  JSON.stringify(left) === JSON.stringify(right);
+
+const mergeSessions = (
+  previous: Conversation[],
+  incoming: Conversation[],
+  retainedId?: string,
+): Conversation[] => {
+  const previousById = new Map(
+    previous.map((session) => [session.id, session]),
+  );
+  const incomingIds = new Set(incoming.map((session) => session.id));
+  const merged = incoming.map((session) => {
+    const existing = previousById.get(session.id);
+    return existing
+      ? {
+          ...session,
+          messages: existing.messages,
+          modelId: session.modelId || existing.modelId,
+        }
+      : session;
+  });
+  const retained = retainedId
+    ? previous.find(
+        (session) => session.id === retainedId && !incomingIds.has(session.id),
+      )
+    : undefined;
+  return retained ? [...merged, retained] : merged;
+};
+
 export const useChatState = () => {
   const { t } = useTranslation();
+  const endpoint = getApiUrl();
   const [settings, setSettings] = useState<Settings>(() => {
     const saved = localStorage.getItem("hermes_settings");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-
-        return parsed;
-      } catch {
-        return DEFAULT_SETTINGS;
-      }
+    if (!saved) return DEFAULT_SETTINGS;
+    try {
+      return JSON.parse(saved) as Settings;
+    } catch {
+      return DEFAULT_SETTINGS;
     }
-    return DEFAULT_SETTINGS;
   });
-
-  const buildNewChat = useCallback(
-    (id?: string, modelId?: string): Conversation => {
-      return {
-        id: id || generateId(),
-        title: t("common.newChat"),
-        messages: [],
-        modelId: modelId,
-      };
-    },
-    [t],
-  );
-
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string>("");
-  const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const [activeConversationId, setActiveConversationId] = useState("");
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreConversations, setHasMoreConversations] = useState(false);
+  const [sessionError, setSessionError] = useState("");
+  const activeIdRef = useRef(activeConversationId);
+  const sessionCountRef = useRef(0);
+  const conversationsRef = useRef<Conversation[]>([]);
 
-  const endpoint = getApiUrl();
+  useEffect(() => {
+    activeIdRef.current = activeConversationId;
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    sessionCountRef.current = conversations.length;
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   useEffect(() => {
     localStorage.setItem("hermes_settings", JSON.stringify(settings));
   }, [settings]);
 
-  // Expose reload method for external components and focus sync
-  const loadConversationsList = useCallback(async () => {
-    const list = await fetchConversations(endpoint);
+  const handleApiError = useCallback((error: unknown, fallback: string) => {
+    if (error instanceof Error && error.name === "AbortError") return;
+    const message = error instanceof Error ? error.message : fallback;
+    setSessionError(message);
+  }, []);
 
-    // Pre-generate a fallback ID in case no conversations exist at all
-    const fallbackId = generateId();
-
-    setConversations((prev) => {
-      const dbIds = new Set(list.map((c) => c.id));
-      const mergedList = list.map((apiConv) => {
-        const localConv = prev.find((c) => c.id === apiConv.id);
-        if (localConv) {
-          return {
-            ...apiConv,
-            modelId: apiConv.modelId || localConv.modelId,
-            messages:
-              localConv.messages.length > 0
-                ? localConv.messages
-                : apiConv.messages,
-          } as Conversation;
-        }
-        return apiConv as Conversation;
+  const loadFirstPage = useCallback(
+    async (options: { signal?: AbortSignal } = {}) => {
+      const page = await fetchConversations(endpoint, {
+        limit: PAGE_SIZE,
+        offset: 0,
+        signal: options.signal,
       });
-      // Keep local conversations that aren't in the DB yet
-      const localOnly = prev.filter((c) => !dbIds.has(c.id));
-      const localAndMergedLists = [...localOnly, ...mergedList];
-      if (localAndMergedLists.length === 0) {
-        const newConv = buildNewChat(fallbackId);
-        localAndMergedLists.push(newConv);
-      }
-      return localAndMergedLists;
-    });
+      setConversations((previous) =>
+        mergeSessions(
+          previous,
+          page.conversations as Conversation[],
+          activeIdRef.current,
+        ),
+      );
+      setHasMoreConversations(page.hasMore);
+      setSessionError("");
+      setActiveConversationId((current) => {
+        if (
+          current &&
+          page.conversations.some((session) => session.id === current)
+        ) {
+          return current;
+        }
+        return current || page.conversations[0]?.id || "";
+      });
+      return page;
+    },
+    [endpoint],
+  );
 
-    setActiveConversationId((prev) => {
-      if (prev) return prev;
-      if (list.length > 0) return list[0].id;
-      return fallbackId;
-    });
-  }, [buildNewChat, endpoint]);
+  const refreshLoadedSessions = useCallback(
+    async (signal?: AbortSignal) => {
+      const desiredCount = Math.max(PAGE_SIZE, sessionCountRef.current);
+      const loaded: Conversation[] = [];
+      let offset = 0;
+      let hasMore = true;
 
-  // Initial load
-  useEffect(() => {
-    let active = true;
-    const initialLoad = async () => {
-      setIsInitializing(true);
-      await loadConversationsList();
-      if (active) {
-        setIsInitializing(false);
-      }
-    };
-    void initialLoad();
-    return () => {
-      active = false;
-    };
-  }, [loadConversationsList]);
-
-  // Load active conversation details from backend
-  useEffect(() => {
-    const fetchActive = () => {
-      if (activeConversationId) {
-        fetchConversation(endpoint, activeConversationId).then((data) => {
-          if (data) {
-            setConversations((prev) => {
-              const prevConv = prev.find((c) => c.id === data.id);
-              if (!prevConv) {
-                return [...prev, data as Conversation];
-              }
-
-              // Clean TITLE from db messages so they match frontend messages
-              const dbMessages = data.messages.map((dbMsg: ChatMessage) => {
-                if (
-                  dbMsg.role === "assistant" &&
-                  typeof dbMsg.content === "string"
-                ) {
-                  return {
-                    ...dbMsg,
-                    content: dbMsg.content
-                      .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
-                      .replace(/^[\s\S]*?<\/TITLE>\n*/i, "")
-                      .trim(),
-                  };
-                }
-                return dbMsg;
-              });
-              const mergedMessages = dbMessages.map((dbMsg: ChatMessage) => {
-                const localEquivalent = prevConv.messages.find(
-                  (m) => m.id === dbMsg.id,
-                );
-                // If the frontend is actively generating this message, it is the source of truth.
-                if (localEquivalent && localEquivalent.isGenerating) {
-                  return localEquivalent;
-                }
-                return dbMsg;
-              });
-
-              // Append purely local messages that aren't in the DB yet
-              const dbMessageIds = new Set(
-                mergedMessages.map((m: ChatMessage) => m.id),
-              );
-              const localOnlyMessages = prevConv.messages.filter((m) => {
-                if (dbMessageIds.has(m.id)) return false;
-                if (m.isGenerating) return true; // Always keep actively generating messages
-
-                // Drop local assistant messages whose content is a prefix of (or
-                // contained within) a DB message — this happens when the PWA was
-                // backgrounded mid-stream and the backend finished independently.
-                if (m.role === "assistant" && typeof m.content === "string") {
-                  const localContent = m.content;
-                  const isStalePartial = mergedMessages.some(
-                    (dbMsg: ChatMessage) =>
-                      dbMsg.role === "assistant" &&
-                      typeof dbMsg.content === "string" &&
-                      (dbMsg.content.includes(localContent.split("\n\n")[0]) ||
-                        localContent.includes("Load failed")),
-                  );
-                  if (isStalePartial) return false;
-                }
-
-                // Deduplicate if content exactly matches
-                const isDuplicate = mergedMessages.some(
-                  (dbMsg: ChatMessage) =>
-                    dbMsg.role === m.role &&
-                    (typeof m.content === "string" &&
-                    typeof dbMsg.content === "string"
-                      ? dbMsg.content === m.content
-                      : JSON.stringify(dbMsg.content) ===
-                        JSON.stringify(m.content)),
-                );
-                return !isDuplicate;
-              });
-              mergedMessages.push(...localOnlyMessages);
-
-              const uiData = {
-                ...data,
-                modelId: data.modelId || prevConv.modelId,
-                messages: mergedMessages,
-              } as Conversation;
-              return prev.map((c) => (c.id === data.id ? uiData : c));
-            });
-          }
+      while (offset < desiredCount && hasMore) {
+        const page = await fetchConversations(endpoint, {
+          limit: Math.min(200, desiredCount - offset),
+          offset,
+          signal,
         });
+        loaded.push(...(page.conversations as Conversation[]));
+        offset += page.conversations.length;
+        hasMore = page.hasMore;
+        if (page.conversations.length === 0) break;
+      }
+
+      setConversations((previous) =>
+        mergeSessions(previous, loaded, activeIdRef.current),
+      );
+      setHasMoreConversations(hasMore);
+      setSessionError("");
+    },
+    [endpoint],
+  );
+
+  const reloadConversation = useCallback(
+    async (id: string, signal?: AbortSignal) => {
+      try {
+        const messages = await fetchConversationMessages(endpoint, id, signal);
+        setConversations((previous) =>
+          previous.map((session) => {
+            if (
+              session.id !== id ||
+              messagesEqual(session.messages, messages)
+            ) {
+              return session;
+            }
+            return { ...session, messages, messageCount: messages.length };
+          }),
+        );
+        setSessionError("");
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          const remaining = conversationsRef.current.filter(
+            (session) => session.id !== id,
+          );
+          conversationsRef.current = remaining;
+          setConversations(remaining);
+          setActiveConversationId((current) =>
+            current === id ? remaining[0]?.id || "" : current,
+          );
+          return;
+        }
+        handleApiError(error, t("errors.sessionLoadFailed"));
+      }
+    },
+    [endpoint, handleApiError, t],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const initialize = async () => {
+      try {
+        await assertSessionCapabilities(endpoint);
+        await loadFirstPage({ signal: controller.signal });
+      } catch (error) {
+        handleApiError(error, t("errors.sessionLoadFailed"));
+      } finally {
+        if (!controller.signal.aborted) setIsInitializing(false);
       }
     };
+    void initialize();
+    return () => controller.abort();
+  }, [endpoint, handleApiError, loadFirstPage, t]);
 
-    fetchActive();
+  useEffect(() => {
+    if (!activeConversationId) return;
+    const controller = new AbortController();
+    // The state update happens after the external history request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void reloadConversation(activeConversationId, controller.signal);
+    return () => controller.abort();
+  }, [activeConversationId, reloadConversation]);
 
-    // Auto-sync on window focus (for iOS PWA wake up)
+  useEffect(() => {
+    let controller: AbortController | null = null;
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        loadConversationsList();
-        fetchActive();
-      }
+      if (document.visibilityState !== "visible") return;
+      controller?.abort();
+      controller = new AbortController();
+      const signal = controller.signal;
+      const activeId = activeIdRef.current;
+      void Promise.all([
+        refreshLoadedSessions(signal),
+        activeId ? reloadConversation(activeId, signal) : Promise.resolve(),
+      ]).catch((error: unknown) => {
+        handleApiError(error, t("errors.sessionLoadFailed"));
+      });
     };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () =>
+    return () => {
+      controller?.abort();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [activeConversationId, endpoint, loadConversationsList]);
+    };
+  }, [handleApiError, refreshLoadedSessions, reloadConversation, t]);
 
-  const handleNewChat = async (modelId?: string) => {
-    const newConv = buildNewChat(undefined, modelId);
-
-    setConversations((prev) => [newConv, ...prev]);
-    setActiveConversationId(newConv.id);
-  };
-
-  const handleSelectConversation = (id: string) => {
-    setActiveConversationId(id);
-  };
-
-  const handleDeleteConversation = async (id: string) => {
-    const remaining = conversations.filter((c) => c.id !== id);
-    setConversations(remaining);
-
-    if (activeConversationId === id) {
-      setActiveConversationId(remaining.length > 0 ? remaining[0].id : "");
+  const handleLoadMore = useCallback(async () => {
+    if (!hasMoreConversations || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const page = await fetchConversations(endpoint, {
+        limit: PAGE_SIZE,
+        offset: conversations.length,
+      });
+      setConversations((previous) => {
+        const existingIds = new Set(previous.map((session) => session.id));
+        return [
+          ...previous,
+          ...(page.conversations as Conversation[]).filter(
+            (session) => !existingIds.has(session.id),
+          ),
+        ];
+      });
+      setHasMoreConversations(page.hasMore);
+    } catch (error) {
+      handleApiError(error, t("errors.sessionLoadFailed"));
+      toast.error(t("errors.sessionLoadFailed"));
+    } finally {
+      setIsLoadingMore(false);
     }
+  }, [
+    conversations.length,
+    endpoint,
+    handleApiError,
+    hasMoreConversations,
+    isLoadingMore,
+    t,
+  ]);
 
-    await deleteConversation(endpoint, id);
-  };
+  const handleNewChat = useCallback(
+    async (modelId?: string) => {
+      if (isCreatingChat) return;
+      setIsCreatingChat(true);
+      try {
+        const session = await createConversation(endpoint, { modelId });
+        setConversations((previous) => [
+          session as Conversation,
+          ...previous.filter((item) => item.id !== session.id),
+        ]);
+        setActiveConversationId(session.id);
+        setSessionError("");
+      } catch (error) {
+        handleApiError(error, t("errors.sessionCreateFailed"));
+        toast.error(t("errors.sessionCreateFailed"));
+      } finally {
+        setIsCreatingChat(false);
+      }
+    },
+    [endpoint, handleApiError, isCreatingChat, t],
+  );
 
-  const handleRenameConversation = async (id: string, newTitle: string) => {
-    if (!newTitle.trim()) return;
+  const handleDeleteConversation = useCallback(
+    async (
+      id: string,
+      beforeDelete?: () => void | Promise<void>,
+    ): Promise<boolean> => {
+      const session = conversations.find((item) => item.id === id);
+      if (!session) return false;
+      const confirmed = window.confirm(
+        t("chat.deleteConfirm", {
+          title: session.title || t("common.newChat"),
+          source: session.source || "Hermes",
+        }),
+      );
+      if (!confirmed) return false;
+      try {
+        await beforeDelete?.();
+        await deleteConversation(endpoint, id);
+        const remaining = conversations.filter((item) => item.id !== id);
+        setConversations(remaining);
+        setActiveConversationId((current) =>
+          current === id ? remaining[0]?.id || "" : current,
+        );
+        return true;
+      } catch (error) {
+        handleApiError(error, t("errors.sessionDeleteFailed"));
+        toast.error(t("errors.sessionDeleteFailed"));
+        return false;
+      }
+    },
+    [conversations, endpoint, handleApiError, t],
+  );
 
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c)),
-    );
-    await updateConversationTitle(endpoint, id, newTitle);
-  };
+  const handleRenameConversation = useCallback(
+    async (id: string, newTitle: string) => {
+      const title = newTitle.trim();
+      if (!title) return;
+      const previousTitle =
+        conversations.find((item) => item.id === id)?.title ?? "";
+      setConversations((previous) =>
+        previous.map((session) =>
+          session.id === id ? { ...session, title } : session,
+        ),
+      );
+      try {
+        await updateConversationTitle(endpoint, id, title);
+      } catch (error) {
+        setConversations((previous) =>
+          previous.map((session) =>
+            session.id === id ? { ...session, title: previousTitle } : session,
+          ),
+        );
+        handleApiError(error, t("errors.sessionRenameFailed"));
+        toast.error(t("errors.sessionRenameFailed"));
+      }
+    },
+    [conversations, endpoint, handleApiError, t],
+  );
 
-  const handleClearAll = async () => {
-    if (
-      window.confirm(
-        "Tem certeza de que deseja apagar permanentemente todas as conversas?",
-      )
-    ) {
-      setConversations([]);
-      setActiveConversationId("");
-      await deleteAllConversations(endpoint);
-      handleNewChat();
-    }
-  };
-
-  const handleSaveSettings = (newSettings: Settings) => {
+  const handleSaveSettings = (newSettings: Settings) =>
     setSettings(newSettings);
-  };
-
   const activeConversation =
-    conversations.find((c) => c.id === activeConversationId) || null;
-  const activeMessages = activeConversation ? activeConversation.messages : [];
+    conversations.find((session) => session.id === activeConversationId) ||
+    null;
+  const isLoadingMessages = Boolean(
+    activeConversation &&
+    activeConversation.messages.length === 0 &&
+    (activeConversation.messageCount ?? 0) > 0,
+  );
 
   return {
     settings,
@@ -274,15 +363,19 @@ export const useChatState = () => {
     conversations,
     setConversations,
     activeConversationId,
-    setActiveConversationId,
     activeConversation,
-    activeMessages,
+    activeMessages: activeConversation?.messages ?? [],
     isInitializing,
+    isLoadingMessages,
+    isCreatingChat,
+    isLoadingMore,
+    hasMoreConversations,
+    sessionError,
     handleNewChat,
-    handleSelectConversation,
+    handleSelectConversation: setActiveConversationId,
     handleDeleteConversation,
     handleRenameConversation,
-    handleClearAll,
-    reloadConversations: loadConversationsList,
+    handleLoadMore,
+    reloadConversation,
   };
 };

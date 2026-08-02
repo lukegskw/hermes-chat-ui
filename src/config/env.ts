@@ -12,10 +12,6 @@ export const envConfig: AppConfig = {
     window.APP_CONFIG?.HERMES_API_URL ||
     import.meta.env.VITE_HERMES_API_URL ||
     "",
-  HERMES_API_KEY:
-    window.APP_CONFIG?.HERMES_API_KEY ||
-    import.meta.env.VITE_HERMES_API_KEY ||
-    "",
   HERMES_PROXY_PORT:
     window.APP_CONFIG?.HERMES_PROXY_PORT ||
     import.meta.env.VITE_HERMES_PROXY_PORT ||
