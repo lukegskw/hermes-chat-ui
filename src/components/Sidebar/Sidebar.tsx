@@ -203,7 +203,17 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
                         {conv.title || t("common.newChat")}
                       </span>
                       <span className={styles.conversationSource}>
-                        {conv.source || "Hermes"}
+                        {(() => {
+                          const s = (conv.source || "").toLowerCase();
+                          if (
+                            s === "hermes_browser" ||
+                            s === "tui" ||
+                            s === "cli"
+                          ) {
+                            return t("sidebar.userSource");
+                          }
+                          return conv.source || "Hermes";
+                        })()}
                       </span>
                     </div>
                   </div>

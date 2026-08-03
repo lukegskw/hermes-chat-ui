@@ -527,7 +527,7 @@ export const ChatWindow = ({
                     (msg.tool_calls && msg.tool_calls.length > 0) ||
                     msg.isGenerating,
                 )
-                .map((msg) => {
+                .map((msg, index) => {
                   let filteredMsg = msg;
                   if (
                     msg.role === "assistant" &&
@@ -553,7 +553,7 @@ export const ChatWindow = ({
                       content: cleanContent.trim(),
                     };
                   }
-                  return <MessageBubble key={msg.id} message={filteredMsg} />;
+                  return <MessageBubble key={index} message={filteredMsg} />;
                 })}
             </div>
           ) : (

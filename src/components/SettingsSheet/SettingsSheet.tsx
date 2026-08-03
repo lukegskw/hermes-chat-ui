@@ -31,6 +31,9 @@ export const SettingsSheet = ({
   const [tempEnableXmlCodeBlocks, setTempEnableXmlCodeBlocks] = useState(
     settings.enableXmlCodeBlocks ?? true,
   );
+  const [tempShowOnlyUserChats, setTempShowOnlyUserChats] = useState(
+    settings.showOnlyUserChats ?? false,
+  );
   const [tempLanguage, setTempLanguage] = useState(i18n.language || "en");
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
@@ -42,6 +45,7 @@ export const SettingsSheet = ({
     if (isOpen) {
       setTempSystemPrompt(settings.systemPrompt || "");
       setTempEnableXmlCodeBlocks(settings.enableXmlCodeBlocks ?? true);
+      setTempShowOnlyUserChats(settings.showOnlyUserChats ?? false);
       setTempLanguage(i18n.language || "en");
     }
   }
@@ -54,6 +58,7 @@ export const SettingsSheet = ({
     onSaveSettings({
       systemPrompt: tempSystemPrompt,
       enableXmlCodeBlocks: tempEnableXmlCodeBlocks,
+      showOnlyUserChats: tempShowOnlyUserChats,
     });
     onClose();
   };
@@ -132,6 +137,27 @@ export const SettingsSheet = ({
             </div>
             <p className={styles.description}>
               {t("settings.enableXmlCodeBlocksDescription")}
+            </p>
+          </div>
+
+          <div className={styles.field}>
+            <div className={styles.notificationField}>
+              <div className={styles.notificationLabel}>
+                <label className={styles.label}>
+                  {t("settings.showOnlyUserChats")}
+                </label>
+              </div>
+              <button
+                type="button"
+                className={`${styles.toggle} ${tempShowOnlyUserChats ? styles.toggleActive : ""}`}
+                onClick={() => setTempShowOnlyUserChats(!tempShowOnlyUserChats)}
+                aria-pressed={tempShowOnlyUserChats}
+              >
+                <span className={styles.toggleKnob} />
+              </button>
+            </div>
+            <p className={styles.description}>
+              {t("settings.showOnlyUserChatsDescription")}
             </p>
           </div>
 

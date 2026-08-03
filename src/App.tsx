@@ -109,6 +109,14 @@ export const App = () => {
     [],
   );
 
+  const filteredConversations = settings.showOnlyUserChats
+    ? conversations.filter((c) => {
+        if (c.id === activeConversationId) return true;
+        const s = (c.source || "").toLowerCase();
+        return s === "hermes_browser" || s === "tui" || s === "cli";
+      })
+    : conversations;
+
   if (isInitializing) {
     return (
       <div className="loadingScreen">
@@ -142,7 +150,7 @@ export const App = () => {
           onToggleSidebar={() => {
             if (!isTranscribing) setIsSidebarOpen((prev) => !prev);
           }}
-          conversations={conversations}
+          conversations={filteredConversations}
           activeConversationId={activeConversationId}
           onSelectConversation={(id) => {
             if (isTranscribing) return;

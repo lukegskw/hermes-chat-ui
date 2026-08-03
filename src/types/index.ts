@@ -73,6 +73,7 @@ export type ConversationsPage = {
 export type Settings = {
   systemPrompt: string;
   enableXmlCodeBlocks?: boolean;
+  showOnlyUserChats?: boolean;
 };
 
 export type ImageValidationResult = {

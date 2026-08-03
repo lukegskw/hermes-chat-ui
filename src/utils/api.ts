@@ -490,11 +490,23 @@ export const sendChatMessageStream = async ({
         if (event === "assistant.delta" && typeof payload.delta === "string") {
           onChunk(payload.delta);
         } else if (
-          event === "tool.progress" &&
-          payload.tool_name === "_thinking" &&
-          typeof payload.delta === "string"
+          event === "run.completed" &&
+          Array.isArray(payload.messages)
         ) {
-          onReasoningChunk?.(payload.delta);
+          const reasoningParts = payload.messages
+            .filter(
+              (msg: unknown) =>
+                msg && (msg as Record<string, unknown>).role === "assistant",
+            )
+            .map(
+              (msg: unknown) =>
+                (msg as Record<string, unknown>).reasoning_content ||
+                (msg as Record<string, unknown>).reasoning,
+            )
+            .filter(Boolean);
+          if (reasoningParts.length > 0) {
+            onReasoningChunk?.(reasoningParts.join("\n\n"));
+          }
         } else if (
           ["tool.started", "tool.completed", "tool.failed"].includes(event)
         ) {
