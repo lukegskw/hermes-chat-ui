@@ -3,6 +3,7 @@ import json
 from contextlib import suppress
 from dataclasses import dataclass, field
 from urllib.parse import quote
+from uuid import uuid4
 
 import aiohttp
 from fastapi import APIRouter, Request
@@ -77,19 +78,25 @@ def _extract_completed_content(buffer: str) -> tuple[str, str]:
     return remainder, completed
 
 
-def _send_completion_notification(content: str) -> None:
+def _send_completion_notification(session_id: str, content: str) -> None:
     if not content:
         return
     try:
         from ..push import send_push_notification
-        from .notifications import _load_subscriptions, is_any_client_active
+        from .notifications import _load_subscriptions, is_any_client_visible
 
-        if is_any_client_active():
+        if is_any_client_visible():
             return
+
         preview = content.strip()
         if len(preview) > 100:
             preview = f"{preview[:100]}..."
-        payload = {"title": "New message", "body": preview, "url": "/"}
+        payload = {
+            "title": "New message",
+            "body": preview,
+            "url": "/",
+            "notification_id": f"{session_id}:{uuid4().hex}",
+        }
         for subscription in _load_subscriptions():
             send_push_notification(subscription, payload)
     except Exception as exc:  # noqa: BLE001 - notifications must not fail a run
@@ -126,7 +133,9 @@ async def _consume_upstream_stream(
         if active_streams.get(session_id) is active:
             active_streams.pop(session_id, None)
         if completed_content:
-            await asyncio.to_thread(_send_completion_notification, completed_content)
+            await asyncio.to_thread(
+                _send_completion_notification, session_id, completed_content
+            )
 
 
 @router.get("/v1/capabilities")

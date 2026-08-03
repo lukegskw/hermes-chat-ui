@@ -3,8 +3,8 @@ import i18n from "../i18n";
 import { ChatMessage, ContentPart, Conversation, ToolCall } from "../types";
 import {
   cancelSessionChat,
-  fileToBase64,
   logger,
+  prepareImageContent,
   sendChatMessageStream,
   updateConversationTitle,
 } from "../utils";
@@ -56,7 +56,10 @@ export const useHermesStream = (
     );
   };
 
-  const handleSendMessage = async (text: string, attachments?: File[]) => {
+  const handleSendMessage = async (
+    text: string,
+    attachments?: File[],
+  ): Promise<boolean> => {
     const conversationId = activeConversationId;
     const target = conversations.find(
       (conversation) => conversation.id === conversationId,
@@ -66,30 +69,17 @@ export const useHermesStream = (
       (!text.trim() && (!attachments || attachments.length === 0)) ||
       generatingStates[conversationId]
     ) {
-      return;
+      return false;
     }
 
     let messageContent: string | ContentPart[] = text.trim();
     const optimisticMessages = [...target.messages];
     if (attachments && attachments.length > 0) {
-      const parts: ContentPart[] = [];
-      if (text.trim()) parts.push({ type: "text", text: text.trim() });
       try {
-        parts.push({
-          type: "image_url",
-          image_url: { url: await fileToBase64(attachments[0]) },
-        });
+        messageContent = await prepareImageContent(text.trim(), attachments);
       } catch (error) {
-        logger.error({ error }, "Failed to convert image to base64");
-        return;
-      }
-      messageContent = parts;
-      if (attachments.length > 1) {
-        optimisticMessages.push({
-          id: `local_warning_${Date.now()}`,
-          role: "system",
-          content: i18n.t("messages.multipleImagesWarning"),
-        });
+        logger.error({ error }, "Failed to prepare images for Hermes");
+        throw error;
       }
     }
 
@@ -142,7 +132,7 @@ export const useHermesStream = (
       .filter(Boolean)
       .join("\n\n");
 
-    await sendChatMessageStream({
+    void sendChatMessageStream({
       endpoint,
       model: target.modelId || selectedModel,
       message: messageContent,
@@ -248,7 +238,10 @@ export const useHermesStream = (
         }));
         delete abortControllersRef.current[conversationId];
       },
+    }).catch((error: unknown) => {
+      logger.error({ error }, "Unexpected Hermes stream failure");
     });
+    return true;
   };
 
   const handleStopGeneration = async () => {

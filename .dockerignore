@@ -6,6 +6,8 @@
 .venv
 node_modules
 dist
+.DS_Store
+*.tar
 docs
 hermes-data
 .env

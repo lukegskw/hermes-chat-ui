@@ -38,6 +38,25 @@
     "loading": "Carregando...",
     "noModels": "Sem modelos"
   },
+  "audio": {
+    "startRecording": "Gravar mensagem de voz",
+    "stopRecording": "Parar gravação",
+    "cancelRecording": "Cancelar gravação",
+    "cancelTranscription": "Cancelar transcrição",
+    "retry": "Tentar novamente",
+    "recording": "Gravando…",
+    "transcribing": "Transcrevendo mensagem de voz…",
+    "unsupported": "Mensagens de voz não são compatíveis com este navegador.",
+    "secureContextRequired": "Mensagens de voz exigem HTTPS. Abra este app por um endereço HTTPS seguro e tente novamente.",
+    "unavailable": "A transcrição de voz não está disponível nesta instalação do Hermes.",
+    "permissionDenied": "A permissão para usar o microfone foi negada.",
+    "tooLarge": "A gravação ficou grande demais. Grave uma mensagem menor.",
+    "busy": "Outra gravação está sendo transcrita. Tente novamente em instantes.",
+    "noSpeech": "Nenhuma fala foi detectada.",
+    "transcriptionFailed": "Não foi possível transcrever a mensagem de voz. Você pode tentar novamente.",
+    "sendFailed": "Não foi possível enviar a transcrição. Você pode tentar novamente.",
+    "reviewTranscript": "Transcrição adicionada. Revise antes de enviar."
+  },
   "messages": {
     "you": "Você",
     "hermes": "Hermes",
@@ -45,8 +64,7 @@
     "reasoning": "Raciocinando...",
     "reasoningProcess": "Processo de Raciocínio",
     "copyMessage": "Copiar mensagem",
-    "attachment": "anexo",
-    "multipleImagesWarning": "Apenas uma imagem pode ser enviada por vez. A primeira imagem foi usada."
+    "attachment": "anexo"
   },
   "approval": {
     "title": "Ação Requer Aprovação",
@@ -106,6 +124,8 @@
     "approvalGranted": "[APPROVAL_GRANTED] Permissão concedida pelo usuário. Pode prosseguir com a execução do comando.",
     "unsupportedFormat": "Formato não suportado ({{type}}). Apenas JPEG, PNG, GIF e WebP são permitidos.",
     "imageTooLarge": "Imagem muito grande. O limite é {{size}}MB.",
+    "imagesTooLarge": "Essas imagens continuam grandes demais para serem enviadas juntas, mesmo após a compressão.",
+    "imageProcessingFailed": "Não foi possível preparar essas imagens para envio.",
     "sessionLoadFailed": "Não foi possível carregar as sessões do Hermes.",
     "sessionCreateFailed": "Não foi possível criar uma sessão no Hermes.",
     "sessionDeleteFailed": "Não foi possível apagar a sessão do Hermes.",

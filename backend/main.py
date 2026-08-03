@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .routers import config, notifications, sessions
+from .routers import audio, config, notifications, sessions
 
 app = FastAPI(title="Hermes Chat UI Proxy")
 
@@ -19,6 +19,7 @@ app.add_middleware(
 # Include routers
 app.include_router(config.router)
 app.include_router(sessions.router)
+app.include_router(audio.router)
 app.include_router(notifications.router, prefix="/api/push")
 
 # Mount SPA

@@ -191,6 +191,91 @@ const normalizeToolCalls = (toolCalls: unknown): ToolCall[] | undefined => {
   return normalized.length > 0 ? normalized : undefined;
 };
 
+type SessionMessage = z.infer<typeof SessionMessageSchema>;
+
+const toChatMessage = (
+  sessionId: string,
+  message: SessionMessage,
+  index: number,
+): ChatMessage => ({
+  id: `${sessionId}_${message.id ?? index}`,
+  role: message.role,
+  content: normalizeContent(message.content),
+  reasoning_content:
+    message.reasoning_content ?? message.reasoning ?? undefined,
+  tool_calls: normalizeToolCalls(message.tool_calls),
+  timestamp: message.timestamp
+    ? new Date(message.timestamp * 1000).toISOString()
+    : undefined,
+});
+
+const mergeAssistantMessages = (
+  pending: ChatMessage,
+  next: ChatMessage,
+): ChatMessage => {
+  const pendingText =
+    typeof pending.content === "string" ? pending.content.trim() : "";
+  const nextText = typeof next.content === "string" ? next.content.trim() : "";
+  const toolCalls = [...(pending.tool_calls ?? []), ...(next.tool_calls ?? [])];
+  const uniqueToolCalls = Array.from(
+    new Map(toolCalls.map((toolCall) => [toolCall.id, toolCall])).values(),
+  );
+
+  return {
+    ...pending,
+    content: nextText || pendingText,
+    reasoning_content:
+      [pending.reasoning_content, next.reasoning_content]
+        .filter(Boolean)
+        .join("\n\n") || undefined,
+    tool_calls: uniqueToolCalls.length > 0 ? uniqueToolCalls : undefined,
+    timestamp: next.timestamp ?? pending.timestamp,
+  };
+};
+
+/**
+ * Hermes persists one assistant row containing tool calls, one row per tool
+ * result, and a final assistant row. The live stream displays that as one
+ * assistant turn, so history must reconstruct the same visual unit.
+ */
+export const normalizeSessionMessages = (
+  sessionId: string,
+  messages: SessionMessage[],
+): ChatMessage[] => {
+  const normalized: ChatMessage[] = [];
+  let pendingAssistant: ChatMessage | null = null;
+
+  const flushPendingAssistant = () => {
+    if (!pendingAssistant) return;
+    normalized.push(pendingAssistant);
+    pendingAssistant = null;
+  };
+
+  messages.forEach((message, index) => {
+    if (message.role === "tool") return;
+    const next = toChatMessage(sessionId, message, index);
+
+    if (message.role !== "assistant") {
+      flushPendingAssistant();
+      normalized.push(next);
+      return;
+    }
+
+    const containsToolCalls = Boolean(next.tool_calls?.length);
+    if (pendingAssistant) {
+      pendingAssistant = mergeAssistantMessages(pendingAssistant, next);
+      if (!containsToolCalls && next.content) flushPendingAssistant();
+    } else if (containsToolCalls) {
+      pendingAssistant = next;
+    } else {
+      normalized.push(next);
+    }
+  });
+
+  flushPendingAssistant();
+  return normalized;
+};
+
 export const fetchModels = async (
   endpoint: string,
 ): Promise<{ models: Model[]; defaultModel: string }> => {
@@ -253,17 +338,7 @@ export const fetchConversationMessages = async (
     ),
   );
   const parsed = SessionMessagesSchema.parse(await response.json());
-  return parsed.data.map((message, index) => ({
-    id: `${parsed.session_id}_${message.id ?? index}`,
-    role: message.role,
-    content: normalizeContent(message.content),
-    reasoning_content:
-      message.reasoning_content ?? message.reasoning ?? undefined,
-    tool_calls: normalizeToolCalls(message.tool_calls),
-    timestamp: message.timestamp
-      ? new Date(message.timestamp * 1000).toISOString()
-      : undefined,
-  }));
+  return normalizeSessionMessages(parsed.session_id, parsed.data);
 };
 
 export const createConversation = async (

@@ -12,6 +12,7 @@ import {
   fetchConversations,
   updateConversationTitle,
 } from "../utils";
+import { reconcileSessionMessages } from "./sessionMessageReconciliation";
 
 const PAGE_SIZE = 50;
 
@@ -157,13 +158,24 @@ export const useChatState = () => {
         const messages = await fetchConversationMessages(endpoint, id, signal);
         setConversations((previous) =>
           previous.map((session) => {
+            if (session.id !== id) {
+              return session;
+            }
+            const reconciledMessages = reconcileSessionMessages(
+              session.messages,
+              messages,
+            );
             if (
-              session.id !== id ||
-              messagesEqual(session.messages, messages)
+              reconciledMessages === session.messages ||
+              messagesEqual(session.messages, reconciledMessages)
             ) {
               return session;
             }
-            return { ...session, messages, messageCount: messages.length };
+            return {
+              ...session,
+              messages: reconciledMessages,
+              messageCount: reconciledMessages.length,
+            };
           }),
         );
         setSessionError("");

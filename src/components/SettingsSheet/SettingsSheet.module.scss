@@ -139,7 +139,7 @@
   align-items: center;
   gap: 8px;
   color: s.$color-black;
-  
+
   .label {
     color: s.$color-black;
     margin: 0;
@@ -155,15 +155,15 @@
   cursor: pointer;
   padding: 0;
   transition: all 0.2s ease;
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   &.toggleActive {
     background-color: s.$color-secondary;
-    
+
     .toggleKnob {
       transform: translateX(20px);
     }

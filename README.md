@@ -25,7 +25,8 @@ The original deployment runs on a UGREEN NAS and is accessed through [Tailscale]
 - Installable Progressive Web App for desktop and mobile.
 - Responsive, mobile-first interface.
 - Real-time answer, reasoning, and tool-activity streaming.
-- Inline image input supported by the Hermes Sessions API.
+- Multiple inline images, automatically resized and compressed before they are sent through the Hermes Sessions API.
+- Voice-message recording in the web app and PWA. Hermes transcribes the recording, the UI places the resulting text in the composer for review, and only an explicitly sent transcript reaches the session.
 - Model selection and per-session model persistence.
 - English and Brazilian Portuguese interfaces.
 - Canonical Hermes history: sessions created by this UI, the CLI, dashboard, cron, and other integrations appear together.
@@ -54,6 +55,7 @@ Versions of Hermes Chat UI before this architecture stored UI conversations in `
 graph LR
     Browser[Browser / PWA] -->|HTTP :8643| Proxy[FastAPI proxy]
     Proxy -->|Bearer token, HTTP :8642| API[Hermes Sessions API]
+    Proxy -->|temporary local file| STT[Hermes native STT]
     API --> DB[(Hermes state database)]
     API <--> Agent[Hermes Agent]
     Agent <--> LLM[Local or remote LLM]
@@ -61,6 +63,18 @@ graph LR
 ```
 
 The browser communicates only with the proxy on the UI origin. The proxy injects `API_SERVER_KEY` server-side, so the Hermes bearer token is never included in browser JavaScript. At startup, the UI checks `/v1/capabilities` and requires Hermes session resources, session chat, and streaming support. There is no legacy database fallback.
+
+### Voice messages and media limits
+
+The backend calls the same bundled Hermes STT path used by Hermes voice features. The browser records locally, uploads one temporary audio file for transcription, and the proxy deletes that file immediately after success or failure. Audio is never attached to a Hermes session or written to the app's database. A successful transcript is appended to the current composer draft for review and editing; the user must send it explicitly as a normal chat message.
+
+There is no duration limit in the UI, but a recording must be at most 25 MiB. A recording that exceeds this limit is stopped and must be recorded again. If transcription or network delivery fails, the browser keeps the audio in memory only long enough to offer a retry; closing or reloading the app discards it.
+
+Images are compressed as a group. The final request is kept below the Hermes API's approximately 10 MB request limit. If all selected images cannot fit after compression, the UI sends none of them and keeps the draft intact.
+
+Voice recording normally requires HTTPS (or a secure localhost origin), microphone permission, a browser with `MediaRecorder`, and a Hermes image that exposes its bundled STT dependencies. For a trusted private HTTP host, Chrome desktop can explicitly treat one origin as secure; see [Using voice on a private HTTP origin](#using-voice-on-a-private-http-origin). No application code bypasses the browser security model.
+
+Hermes remains the single source of STT configuration. Provider, model, credentials, and language behavior are read from `/opt/data/config.yaml`; this UI does not maintain parallel environment variables or settings.
 
 ## Quick start with Docker Compose
 
@@ -113,6 +127,34 @@ No separate `hermes-agent` installation is required. Configuration and persisten
 | `HERMES_DASHBOARD_USER`     | Dashboard username                  | none    |
 | `HERMES_DASHBOARD_PASSWORD` | Dashboard password                  | none    |
 
+### Speech-to-text
+
+Configure voice transcription in `config.yaml`, the same file used by Hermes integrations such as Telegram and Discord. Recent Hermes versions default the global STT language hint to English. Set `language: ""` explicitly to detect the language independently for every recording:
+
+```yaml
+stt:
+  enabled: true
+  provider: openai
+  language: ""
+  openai:
+    model: gpt-4o-transcribe
+```
+
+The OpenAI provider requires `VOICE_TOOLS_OPENAI_KEY` or `OPENAI_API_KEY` in the Hermes environment. A fully local configuration is also supported:
+
+```yaml
+stt:
+  enabled: true
+  provider: local
+  language: ""
+  local:
+    model: small
+```
+
+Local model options include `tiny`, `base`, `small`, `medium`, and `large-v3`. Larger models generally improve short multilingual recordings but require more memory and processing time. Other native Hermes STT providers and models can be configured in the same file; consult the [Hermes Voice & TTS documentation](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/tts.md#voice-message-transcription-stt).
+
+`GET /api/audio/capabilities` reports the resolved provider, model, and language mode for diagnostics. It never returns provider credentials.
+
 ### Optional integrations
 
 | Variable              | Description                                             | Default                   |
@@ -150,6 +192,43 @@ Confirm that `API_SERVER_KEY` is set once in `.env` and passed to the container.
 
 Check container logs and verify that `API_SERVER_ENABLED=true` and `API_SERVER_PORT` matches the container-side API port. The proxy defaults to `http://localhost:8642` inside the all-in-one image.
 
+### Voice messages are unavailable
+
+Confirm that the bundled Hermes image matches the version pinned by this project and that its STT provider is configured. The chat continues to work without voice support. The proxy intentionally isolates this Hermes internal API so an incompatible Hermes update disables only the microphone.
+
+### Voice messages are transcribed as English
+
+Check `/opt/data/config.yaml`. Current Hermes defaults `stt.language` to `"en"`, which forces an English hint even when the recording uses another language. Set the global value to an empty string and restart the container:
+
+```yaml
+stt:
+  language: ""
+```
+
+Confirm the effective configuration with `GET /api/audio/capabilities`; its `stt.language` value should be `"auto"`.
+
+### Using voice on a private HTTP origin
+
+Microphone capture normally requires a secure origin. For Chrome desktop only, a trusted private origin can be explicitly allowed for local testing or a private-network deployment:
+
+1. Open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`.
+2. Enable the flag and add the exact origin, including scheme and port, for example `http://hermes-nas:8643`.
+3. Relaunch Chrome using the button shown on the flags page.
+4. Reload the UI and grant microphone permission when prompted.
+
+The value must match the URL in the address bar exactly. If needed, run `window.isSecureContext` and `navigator.mediaDevices` in DevTools to confirm that Chrome accepted the origin.
+
+> [!WARNING]
+> This flag weakens Chrome's normal protection for the listed origin. Use it only for a host you control on a trusted private network. It is a per-browser setting, is not deployed by this app, and is not a general substitute for HTTPS.
+
+### A voice recording is too large
+
+The technical upload cap is 25 MiB. Record a shorter or lower-quality message; the UI intentionally does not impose an arbitrary duration limit.
+
+### The PWA badge does not appear on iPhone
+
+Install the app on the Home Screen, allow notifications, and verify the iOS version supports Home Screen web-app badges. The app cannot override a system-level notification or badge preference.
+
 ## Local development
 
 Prerequisites:
@@ -177,7 +256,7 @@ HERMES_PROXY_PORT=8643 \
 .venv/bin/python -m backend.main
 ```
 
-The Vite app connects to the proxy on port `8643` during development. Run `npm run test`, `npm run type-check`, `npm run lint`, and `npm run build` before submitting a change.
+The Vite app connects to the proxy on port `8643` during development. For backend tests, install `backend/requirements-dev.txt` in the same environment and run `.venv/bin/python -m pytest backend/tests`. Run `npm run test`, `npm run type-check`, `npm run lint`, and `npm run build` before submitting a change.
 
 ## Contributing
 

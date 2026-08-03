@@ -4,23 +4,23 @@ Handles subscription management and notification sending.
 """
 import json
 import os
+import threading
+import time
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import BaseModel
-import time
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, Field
 
 from ..push import get_vapid_public_key, send_push_notification
 
 router = APIRouter(tags=["notifications"])
 
-_last_heartbeat_at: float = 0.0
-
-def is_any_client_active(threshold_seconds: int = 60) -> bool:
-    """Return True if a heartbeat was received within the threshold."""
-    return (time.time() - _last_heartbeat_at) <= threshold_seconds
-
 SUBSCRIPTIONS_FILE = os.environ.get("SUBSCRIPTIONS_FILE", "/opt/data/push_subscriptions.json")
+PRESENCE_TTL_SECONDS = 45.0
+
+_visible_clients: dict[str, float] = {}
+_presence_lock = threading.Lock()
+
 
 def _get_subscriptions_path() -> Path:
     main_path = Path(SUBSCRIPTIONS_FILE).expanduser()
@@ -28,6 +28,7 @@ def _get_subscriptions_path() -> Path:
     if not main_path.exists() and fallback_path.exists():
         return fallback_path
     return main_path
+
 
 class PushSubscriptionKeys(BaseModel):
     p256dh: str
@@ -45,6 +46,45 @@ class NotificationPayload(BaseModel):
     url: str | None = None
     icon: str | None = None
     tag: str | None = None
+    notification_id: str | None = None
+
+
+class ClientPresence(BaseModel):
+    client_id: str = Field(min_length=1, max_length=128)
+    visible: bool
+
+
+def update_client_presence(
+    client_id: str, visible: bool, *, now: float | None = None
+) -> None:
+    """Track only visible clients; hidden clients stop suppressing push immediately."""
+    observed_at = time.monotonic() if now is None else now
+    with _presence_lock:
+        if visible:
+            _visible_clients[client_id] = observed_at
+        else:
+            _visible_clients.pop(client_id, None)
+
+
+def is_any_client_visible(*, now: float | None = None) -> bool:
+    """Return whether a client has renewed its visible state within the TTL."""
+    observed_at = time.monotonic() if now is None else now
+    cutoff = observed_at - PRESENCE_TTL_SECONDS
+    with _presence_lock:
+        expired = [
+            client_id
+            for client_id, last_seen in _visible_clients.items()
+            if last_seen < cutoff
+        ]
+        for client_id in expired:
+            _visible_clients.pop(client_id, None)
+        return bool(_visible_clients)
+
+
+def _clear_client_presence() -> None:
+    """Reset process-local presence state (used by tests)."""
+    with _presence_lock:
+        _visible_clients.clear()
 
 
 def _load_subscriptions() -> list[dict]:
@@ -86,12 +126,11 @@ async def vapid_public_key():
     return {"publicKey": key}
 
 
-@router.post("/heartbeat")
-async def heartbeat():
-    """Receive presence heartbeat from active clients."""
-    global _last_heartbeat_at
-    _last_heartbeat_at = time.time()
-    return Response(status_code=204)
+@router.post("/presence")
+async def client_presence(payload: ClientPresence):
+    """Publish ephemeral visibility shared by browser and installed PWA contexts."""
+    update_client_presence(payload.client_id, payload.visible)
+    return {"status": "visible" if payload.visible else "hidden"}
 
 
 @router.post("/subscribe")
@@ -120,7 +159,7 @@ async def unsubscribe(payload: dict):
     endpoint = payload.get("endpoint")
     if not endpoint:
         raise HTTPException(status_code=400, detail="endpoint is required")
-        
+
     subscriptions = _load_subscriptions()
     subscriptions = [s for s in subscriptions if s.get("endpoint") != endpoint]
 
@@ -152,12 +191,12 @@ async def send_notification(payload: NotificationPayload, request: Request):
         "url": payload.url,
         "icon": payload.icon,
         "tag": payload.tag,
+        "notification_id": payload.notification_id,
     }
 
     sent = 0
     failed = 0
-    endpoints_to_remove = []
-    
+
     for sub in subscriptions:
         success = send_push_notification(sub, data)
         if success:

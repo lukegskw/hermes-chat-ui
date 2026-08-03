@@ -139,7 +139,7 @@ body {
 /* Tooltips */
 [data-tooltip] {
   position: relative;
-  
+
   &::before {
     content: attr(data-tooltip);
     position: absolute;
