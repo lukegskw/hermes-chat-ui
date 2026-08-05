@@ -57,6 +57,30 @@ export const isPushSupported = (): boolean => {
   return "serviceWorker" in navigator && "PushManager" in window;
 };
 
+type BadgeNavigator = Navigator & {
+  clearAppBadge?: () => Promise<void>;
+};
+
+export const clearPwaBadge = async (): Promise<void> => {
+  const badgeNavigator = navigator as BadgeNavigator;
+  try {
+    if (typeof badgeNavigator.clearAppBadge === "function") {
+      await badgeNavigator.clearAppBadge();
+    }
+  } catch (error) {
+    logger.error({ error }, "Failed to clear the PWA badge");
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    if (registration.active) {
+      registration.active.postMessage({ type: "clear-app-badge" });
+    }
+  } catch (error) {
+    logger.error({ error }, "Failed to clear persisted PWA badge state");
+  }
+};
+
 export const getNotificationPermission = (): NotificationPermission => {
   if (!("Notification" in window)) {
     return "denied";

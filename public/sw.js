@@ -1,4 +1,8 @@
-const CACHE_NAME = 'hermes-chat-cache-v1';
+const CACHE_NAME = 'hermes-chat-cache-v4';
+const BADGE_DATABASE = 'hermes-chat-badge';
+const BADGE_STORE = 'state';
+const BADGE_KEY = 'unread-responses';
+const MAX_SEEN_NOTIFICATION_IDS = 100;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -65,6 +69,78 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+const openBadgeDatabase = () => new Promise((resolve, reject) => {
+  const request = indexedDB.open(BADGE_DATABASE, 1);
+  request.onupgradeneeded = () => request.result.createObjectStore(BADGE_STORE);
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+
+const readBadgeState = async () => {
+  const database = await openBadgeDatabase();
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = database.transaction(BADGE_STORE, 'readonly').objectStore(BADGE_STORE).get(BADGE_KEY);
+      request.onsuccess = () => resolve(request.result || { count: 0, seenIds: [] });
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    database.close();
+  }
+};
+
+const writeBadgeState = async (state) => {
+  const database = await openBadgeDatabase();
+  try {
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(BADGE_STORE, 'readwrite');
+      transaction.objectStore(BADGE_STORE).put(state, BADGE_KEY);
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } finally {
+    database.close();
+  }
+};
+
+const clearAppBadge = async () => {
+  try {
+    const state = await readBadgeState();
+    await writeBadgeState({ ...state, count: 0 });
+  } catch (error) {
+    console.warn('[Service Worker] Could not persist badge reset:', error);
+  }
+  try {
+    if (typeof self.navigator.clearAppBadge === 'function') {
+      await self.navigator.clearAppBadge();
+    }
+  } catch (error) {
+    console.warn('[Service Worker] Could not clear app badge:', error);
+  }
+};
+
+const incrementAppBadge = async (notificationId) => {
+  try {
+    const state = await readBadgeState();
+    const seenIds = Array.isArray(state.seenIds) ? state.seenIds : [];
+    if (notificationId && seenIds.includes(notificationId)) return false;
+    const nextState = {
+      count: Math.max(0, Number(state.count) || 0) + 1,
+      seenIds: notificationId
+        ? [...seenIds, notificationId].slice(-MAX_SEEN_NOTIFICATION_IDS)
+        : seenIds,
+    };
+    await writeBadgeState(nextState);
+    if (typeof self.navigator.setAppBadge === 'function') {
+      await self.navigator.setAppBadge(nextState.count);
+    }
+    return true;
+  } catch (error) {
+    console.warn('[Service Worker] Could not update app badge:', error);
+    return true;
+  }
+};
+
 // Push Notification Event
 self.addEventListener('push', (event) => {
   let data = {
@@ -73,6 +149,7 @@ self.addEventListener('push', (event) => {
     icon: '/icon.png',
     url: '/',
     tag: 'hermes-message',
+    notification_id: null,
   };
 
   if (event.data) {
@@ -94,18 +171,18 @@ self.addEventListener('push', (event) => {
     requireInteraction: false,
   };
 
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      // Check if any window is currently visible or focused
-      for (const client of clients) {
-        if (client.visibilityState === 'visible' || client.focused) {
-          // App is open and visible/focused, no need to show a push notification
-          return;
-        }
-      }
-      return self.registration.showNotification(data.title, options);
-    })
-  );
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (clients.some((client) => client.visibilityState === 'visible' || client.focused)) return;
+    const shouldNotify = data.notification_id
+      ? await incrementAppBadge(data.notification_id)
+      : true;
+    if (shouldNotify) await self.registration.showNotification(data.title, options);
+  })());
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'clear-app-badge') event.waitUntil(clearAppBadge());
 });
 
 // Notification Click Event
@@ -114,7 +191,7 @@ self.addEventListener('notificationclick', (event) => {
   const url = event.notification.data?.url || '/';
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    clearAppBadge().then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true })).then((clients) => {
       // Focus existing window if available
       for (const client of clients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {

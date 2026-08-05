@@ -7,7 +7,6 @@ import {
   Plus,
   Settings as SettingsIcon,
   Sparkles,
-  Trash2,
   X,
 } from "../Icons";
 import styles from "./Sidebar.module.scss";
@@ -17,13 +16,17 @@ export type Settings = {
 };
 
 export type SidebarProps = {
+  disabled?: boolean;
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
   conversations: Conversation[];
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
   onNewChat: () => void;
-  onClearAll: () => void;
+  isCreatingChat?: boolean;
+  hasMoreConversations?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
   models: Model[];
   selectedModel: string;
   onSelectModel: (modelId: string) => void;
@@ -36,13 +39,17 @@ export type SidebarProps = {
 export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
   (
     {
+      disabled = false,
       isSidebarOpen,
       onToggleSidebar,
       conversations,
       activeConversationId,
       onSelectConversation,
       onNewChat,
-      onClearAll,
+      isCreatingChat,
+      hasMoreConversations,
+      isLoadingMore,
+      onLoadMore,
       models,
       selectedModel,
       onSelectModel,
@@ -59,6 +66,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
       <aside
         ref={ref}
         className={`${styles.container} ${isSidebarOpen ? styles.open : ""}`}
+        aria-disabled={disabled}
       >
         {/* Sidebar Header with Notch Support */}
         <div className={styles.header}>
@@ -90,6 +98,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             onClick={onToggleSidebar}
             className={styles.mobileCloseBtn}
             title={t("sidebar.closePanel")}
+            disabled={disabled}
           >
             <X size={20} />
           </button>
@@ -97,9 +106,13 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
 
         {/* New Chat Button */}
         <div className={styles.newChatContainer}>
-          <button onClick={onNewChat} className={styles.btnPrimary}>
+          <button
+            onClick={onNewChat}
+            className={styles.btnPrimary}
+            disabled={disabled || isCreatingChat}
+          >
             <Plus size={16} />
-            {t("common.newChat")}
+            {isCreatingChat ? t("sidebar.creatingChat") : t("common.newChat")}
           </button>
         </div>
 
@@ -115,7 +128,9 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
               onChange={(e) => onSelectModel(e.target.value)}
               className={styles.modelSelect}
               disabled={
-                (!isConnected && !isFetchingModels) || models.length === 0
+                disabled ||
+                (!isConnected && !isFetchingModels) ||
+                models.length === 0
               }
             >
               {models.length === 0 && isFetchingModels ? (
@@ -171,8 +186,11 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
               return (
                 <div
                   key={conv.id}
-                  onClick={() => onSelectConversation(conv.id)}
+                  onClick={() => {
+                    if (!disabled) onSelectConversation(conv.id);
+                  }}
                   className={`${styles.conversationItem} ${isActive ? styles.active : ""}`}
+                  aria-disabled={disabled}
                 >
                   <div className={styles.conversationItemContent}>
                     <MessageSquare
@@ -180,9 +198,24 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
                       className={styles.conversationIcon}
                     />
 
-                    <span className={styles.conversationTitle}>
-                      {conv.title || t("common.newChat")}
-                    </span>
+                    <div className={styles.conversationText}>
+                      <span className={styles.conversationTitle}>
+                        {conv.title || t("common.newChat")}
+                      </span>
+                      <span className={styles.conversationSource}>
+                        {(() => {
+                          const s = (conv.source || "").toLowerCase();
+                          if (
+                            s === "hermes_browser" ||
+                            s === "tui" ||
+                            s === "cli"
+                          ) {
+                            return t("sidebar.userSource");
+                          }
+                          return conv.source || "Hermes";
+                        })()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -192,27 +225,29 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
               {t("sidebar.noChats")}
             </div>
           )}
+          {hasMoreConversations && onLoadMore && (
+            <button
+              onClick={onLoadMore}
+              className={styles.loadMoreButton}
+              disabled={disabled || isLoadingMore}
+            >
+              {isLoadingMore ? t("sidebar.loadingMore") : t("sidebar.loadMore")}
+            </button>
+          )}
         </div>
 
         {/* Sidebar Footer (Settings and Actions) */}
         <div className={styles.footer}>
           {/* Buttons Column */}
           <div className={styles.footerButtons}>
-            <button onClick={onOpenSettings} className={styles.btnWarning}>
+            <button
+              onClick={onOpenSettings}
+              className={styles.btnWarning}
+              disabled={disabled}
+            >
               <SettingsIcon size={14} />
               {t("sidebar.settings")}
             </button>
-
-            {conversations.length > 0 && (
-              <button
-                onClick={onClearAll}
-                className={styles.btnDanger}
-                title={t("sidebar.deleteChats")}
-              >
-                <Trash2 size={14} />
-                {t("sidebar.deleteChats")}
-              </button>
-            )}
           </div>
         </div>
       </aside>

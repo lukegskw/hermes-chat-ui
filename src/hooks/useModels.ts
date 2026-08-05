@@ -12,7 +12,6 @@ export const useModels = (
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isFetchingModels, setIsFetchingModels] = useState<boolean>(true);
   const [connectionError, setConnectionError] = useState<string>("");
-  const [pendingModelId, setPendingModelId] = useState<string | null>(null);
 
   const checkConnectionAndFetchModels = async () => {
     try {
@@ -61,7 +60,7 @@ export const useModels = (
 
   const handleConversationModelChange = (modelId: string) => {
     if (!activeConversationId) {
-      setPendingModelId(modelId);
+      setSelectedModel(modelId);
       return;
     }
     setConversations((prev) =>
@@ -75,7 +74,6 @@ export const useModels = (
   return {
     models,
     selectedModel,
-    pendingModelId,
     isConnected,
     isFetchingModels,
     connectionError,

@@ -23,7 +23,7 @@ export type ContentPart =
 
 export type ChatMessage = {
   id: string;
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant" | "system" | "tool";
   content: string | ContentPart[];
   reasoning_content?: string;
   tool_calls?: ToolCall[];
@@ -35,17 +35,18 @@ export type ConversationAPI = {
   id: string;
   title: string;
   modelId?: string | null;
+  source?: string | null;
   messages: ChatMessage[];
-  updated_at?: string | null;
+  lastActive?: number | null;
+  messageCount?: number;
 };
 
 export type SendChatMessageStreamOptions = {
   endpoint: string;
-  model: string;
-  messages: ChatMessage[];
-  systemPrompt: string | undefined;
-  conversationId?: string;
-  userContent?: string;
+  model?: string;
+  message: string | ContentPart[];
+  instructions?: string;
+  conversationId: string;
   onChunk: (chunk: string) => void;
   onReasoningChunk?: (chunk: string) => void;
   onToolCallChunk?: (toolCallDelta: unknown) => void;
@@ -59,11 +60,20 @@ export type Conversation = {
   title: string;
   messages: ChatMessage[];
   modelId?: string | null;
+  source?: string | null;
+  lastActive?: number | null;
+  messageCount?: number;
+};
+
+export type ConversationsPage = {
+  conversations: ConversationAPI[];
+  hasMore: boolean;
 };
 
 export type Settings = {
   systemPrompt: string;
   enableXmlCodeBlocks?: boolean;
+  showOnlyUserChats?: boolean;
 };
 
 export type ImageValidationResult = {
@@ -73,7 +83,6 @@ export type ImageValidationResult = {
 
 export type AppConfig = {
   HERMES_API_URL?: string;
-  HERMES_API_KEY?: string;
   HERMES_PROXY_PORT?: string;
 };
 

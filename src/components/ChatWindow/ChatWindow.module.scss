@@ -1,4 +1,4 @@
-@use '@styles' as s;
+@use "@styles" as s;
 
 .main {
   flex: 1;
@@ -221,6 +221,15 @@
 }
 
 /* Messages Area */
+.connectionBanner {
+  padding: 10px 16px;
+  border-bottom: s.$border-width solid s.$color-black;
+  background: s.$color-danger;
+  color: s.$color-white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .messagesViewArea {
   flex: 1;
   overflow-y: auto;
@@ -230,6 +239,13 @@
   flex-direction: column;
   position: relative;
   min-width: 0;
+}
+
+.messagesLoading {
+  margin: auto;
+  color: s.$color-white;
+  opacity: 0.75;
+  font-weight: 700;
 }
 
 .messagesContainer {
@@ -301,6 +317,24 @@
   gap: 12px;
   overflow-x: auto;
   padding: 4px 0;
+}
+
+.voiceStatus {
+  max-width: 800px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: s.$color-white;
+  font-size: 0.78rem;
+  font-weight: 700;
+
+  button {
+    @include s.neo-button(s.$color-secondary);
+    padding: 4px 8px;
+    color: s.$color-black;
+    font-size: 0.72rem;
+  }
 }
 
 .attachmentThumbnail {
@@ -433,7 +467,7 @@
   @include s.body-text;
   color: s.$color-white;
   padding: 0 12px 0 0;
-  
+
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
   }
@@ -446,6 +480,23 @@
 }
 
 .btnAttach {
+  @include s.neo-icon-button(s.$color-surface, s.$color-white, 36px);
+}
+
+.btnVoice {
+  @include s.neo-icon-button(s.$color-surface, s.$color-white, 36px);
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+}
+
+.btnVoiceStop {
+  @include s.neo-icon-button(s.$color-danger, s.$color-white, 36px);
+}
+
+.btnVoiceCancel {
   @include s.neo-icon-button(s.$color-surface, s.$color-white, 36px);
 }
 
@@ -463,4 +514,30 @@
 .btnStop {
   @include s.neo-icon-button(s.$color-danger, s.$color-white, 36px);
   opacity: 1;
+}
+
+.transcriptionOverlay {
+  @include s.overlay-backdrop(3000);
+  @include s.flex-center;
+  padding: 24px;
+}
+
+.transcriptionDialog {
+  @include s.neo-card;
+  background-color: s.$color-surface;
+  color: s.$color-white;
+  width: min(100%, 420px);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.transcriptionCancel {
+  @include s.neo-button(s.$color-danger, s.$color-white);
+  min-height: 44px;
+  padding: 10px 16px;
 }

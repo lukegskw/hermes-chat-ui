@@ -13,8 +13,11 @@
     "recentChats": "Chats Recentes",
     "noChats": "Nenhuma conversa iniciada",
     "settings": "Configurações",
-    "deleteChats": "Apagar Chats",
-    "closePanel": "Fechar painel"
+    "creatingChat": "Criando chat...",
+    "loadMore": "Carregar mais",
+    "loadingMore": "Carregando...",
+    "closePanel": "Fechar painel",
+    "userSource": "Usuário"
   },
   "chat": {
     "welcome": {
@@ -25,8 +28,9 @@
     "conversationName": "Nome da conversa...",
     "moreOptions": "Mais opções",
     "rename": "Renomear",
-    "compact": "Compactar",
     "delete": "Apagar",
+    "deleteConfirm": "Apagar ‘{{title}}’ permanentemente do Hermes? Esta sessão de {{source}} desaparecerá do CLI, dashboard, cron e todas as outras interfaces.",
+    "imageConversation": "Conversa com imagem",
     "dropImages": "Solte imagens aqui",
     "attachImage": "Anexar imagem",
     "stopGeneration": "Parar geração",
@@ -34,6 +38,25 @@
     "runningWith": "RODANDO COM:",
     "loading": "Carregando...",
     "noModels": "Sem modelos"
+  },
+  "audio": {
+    "startRecording": "Gravar mensagem de voz",
+    "stopRecording": "Parar gravação",
+    "cancelRecording": "Cancelar gravação",
+    "cancelTranscription": "Cancelar transcrição",
+    "retry": "Tentar novamente",
+    "recording": "Gravando…",
+    "transcribing": "Transcrevendo mensagem de voz…",
+    "unsupported": "Mensagens de voz não são compatíveis com este navegador.",
+    "secureContextRequired": "Mensagens de voz exigem HTTPS. Abra este app por um endereço HTTPS seguro e tente novamente.",
+    "unavailable": "A transcrição de voz não está disponível nesta instalação do Hermes.",
+    "permissionDenied": "A permissão para usar o microfone foi negada.",
+    "tooLarge": "A gravação ficou grande demais. Grave uma mensagem menor.",
+    "busy": "Outra gravação está sendo transcrita. Tente novamente em instantes.",
+    "noSpeech": "Nenhuma fala foi detectada.",
+    "transcriptionFailed": "Não foi possível transcrever a mensagem de voz. Você pode tentar novamente.",
+    "sendFailed": "Não foi possível enviar a transcrição. Você pode tentar novamente.",
+    "reviewTranscript": "Transcrição adicionada. Revise antes de enviar."
   },
   "messages": {
     "you": "Você",
@@ -77,7 +100,9 @@
     "language": "Idioma",
     "languageDescription": "Selecione o idioma de exibição da interface",
     "enableXmlCodeBlocks": "Ativar formatação estrita de código",
-    "enableXmlCodeBlocksDescription": "Instrui o agente a encapsular código em tags XML (ex: <python>...</python>) em vez de backticks de markdown. Recomendado para corrigir problemas de visualização de código."
+    "enableXmlCodeBlocksDescription": "Instrui o agente a encapsular código em tags XML (ex: <python>...</python>) em vez de backticks de markdown. Recomendado para corrigir problemas de visualização de código.",
+    "showOnlyUserChats": "Mostrar apenas meus chats",
+    "showOnlyUserChatsDescription": "Ocultar sessões automatizadas como CRON jobs e sub-agentes da sidebar."
   },
   "activity": {
     "agentActivity": "Atividade do Agente:",
@@ -101,7 +126,13 @@
     "approvalDenied": "[APPROVAL_DENIED] Comando rejeitado pelo usuário. Não execute o comando.",
     "approvalGranted": "[APPROVAL_GRANTED] Permissão concedida pelo usuário. Pode prosseguir com a execução do comando.",
     "unsupportedFormat": "Formato não suportado ({{type}}). Apenas JPEG, PNG, GIF e WebP são permitidos.",
-    "imageTooLarge": "Imagem muito grande. O limite é {{size}}MB."
+    "imageTooLarge": "Imagem muito grande. O limite é {{size}}MB.",
+    "imagesTooLarge": "Essas imagens continuam grandes demais para serem enviadas juntas, mesmo após a compressão.",
+    "imageProcessingFailed": "Não foi possível preparar essas imagens para envio.",
+    "sessionLoadFailed": "Não foi possível carregar as sessões do Hermes.",
+    "sessionCreateFailed": "Não foi possível criar uma sessão no Hermes.",
+    "sessionDeleteFailed": "Não foi possível apagar a sessão do Hermes.",
+    "sessionRenameFailed": "Não foi possível renomear a sessão do Hermes."
   },
   "loading": {
     "initializing": "Carregando o seu assistente inteligente..."
