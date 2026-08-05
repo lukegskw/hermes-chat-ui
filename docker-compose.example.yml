@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   hermes:
-    image: ghcr.io/lukegskw/hermes-chat-ui:latest
+    image: ghcr.io/lukegskw/hermes-chat-ui:latest@sha256:18158212d71da021d9a350d635d6400dd16678db6df863e03e8f6da404b19483
     container_name: hermes-agent
     restart: unless-stopped
 
