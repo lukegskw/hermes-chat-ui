@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import tempfile
 from collections.abc import AsyncIterator
@@ -13,6 +14,7 @@ from fastapi.responses import JSONResponse
 from .. import hermes_stt
 
 router = APIRouter(tags=["audio"])
+logger = logging.getLogger(__name__)
 
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
 CHUNK_BYTES = 64 * 1024
@@ -73,7 +75,17 @@ async def create_transcription(audio: UploadFile = File(...)):
         await audio.close()
         return _error(415, "audio_unsupported_format", "Unsupported audio recording format")
 
-    if not hermes_stt.is_available():
+    try:
+        hermes_stt.ensure_available()
+    except hermes_stt.HermesSttConfigurationError as exc:
+        logger.warning("Hermes STT configuration is unavailable: %s", exc)
+        await audio.close()
+        return _error(
+            503,
+            "audio_configuration_unavailable",
+            "Hermes voice transcription configuration is unavailable",
+        )
+    except hermes_stt.HermesSttUnavailable:
         await audio.close()
         return _error(503, "audio_unavailable", "Hermes voice transcription is unavailable")
 
@@ -100,9 +112,17 @@ async def create_transcription(audio: UploadFile = File(...)):
 
             try:
                 transcription = await asyncio.to_thread(hermes_stt.transcribe, temporary_path)
+            except hermes_stt.HermesSttConfigurationError as exc:
+                logger.warning("Hermes STT configuration became unavailable: %s", exc)
+                return _error(
+                    503,
+                    "audio_configuration_unavailable",
+                    "Hermes voice transcription configuration is unavailable",
+                )
             except hermes_stt.HermesSttUnavailable:
                 return _error(503, "audio_unavailable", "Hermes voice transcription is unavailable")
-            except hermes_stt.HermesSttFailed:
+            except hermes_stt.HermesSttFailed as exc:
+                logger.warning("Hermes STT provider failed: %s", exc)
                 return _error(422, "audio_transcription_failed", "Hermes could not transcribe the recording")
     finally:
         await audio.close()

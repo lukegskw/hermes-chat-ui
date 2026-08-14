@@ -11,16 +11,18 @@ import {
   Mic,
   Square,
   Sparkles,
-  Terminal,
   Menu,
   Paperclip,
   X as XIcon,
-  MoreHorizontal,
-  Edit2,
-  Trash2,
 } from "../Icons";
 import { MessageBubble } from "..";
-import { ChatMessage, Model, ConversationAPI } from "../../types";
+import { ConversationActionMenu } from "../ConversationActionMenu";
+import type {
+  SelectFieldGroup,
+  SelectFieldItem,
+  SelectFieldOption,
+} from "../SelectField";
+import { ChatMessage, ConversationAPI } from "../../types";
 import {
   appendTranscriptToDraft,
   ImagePreparationError,
@@ -49,9 +51,16 @@ export type ChatWindowProps = {
   onStopGeneration: () => void;
   endpoint: string;
   selectedModel: string;
-  models: Model[];
-  onSelectModel: (modelId: string) => void;
+  modelOptionGroups: SelectFieldGroup[];
+  conversationModelValue: string;
+  reasoningEffort?: string | null;
+  reasoningSupported?: boolean;
+  reasoningEfforts: string[];
+  defaultReasoning: string;
+  onSelectModel: (modelId: string) => Promise<boolean>;
+  onSelectReasoningEffort?: (reasoningEffort: string) => Promise<boolean>;
   isFetchingModels?: boolean;
+  isUpdatingRuntime?: boolean;
   connectionError?: string;
   isLoadingMessages?: boolean;
   interactionLocked?: boolean;
@@ -69,9 +78,16 @@ export const ChatWindow = ({
   onStopGeneration,
   endpoint,
   selectedModel,
-  models,
+  modelOptionGroups,
+  conversationModelValue,
+  reasoningEffort,
+  reasoningSupported = true,
+  reasoningEfforts,
+  defaultReasoning,
   onSelectModel,
+  onSelectReasoningEffort,
   isFetchingModels,
+  isUpdatingRuntime = false,
   connectionError,
   isLoadingMessages = false,
   interactionLocked = false,
@@ -79,7 +95,6 @@ export const ChatWindow = ({
 }: ChatWindowProps) => {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleText, setEditTitleText] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
@@ -113,6 +128,43 @@ export const ChatWindow = ({
     (voice.isTranscribing ? null : voice.messageKey) ||
     (voice.isRecording ? "audio.recording" : null) ||
     null;
+  const reasoningAvailable = reasoningSupported && reasoningEfforts.length > 0;
+  const defaultReasoningLabel =
+    defaultReasoning === "provider"
+      ? t("chat.providerDefault")
+      : defaultReasoning === "none"
+        ? t("chat.hermesDefaultDisabled")
+        : t("chat.hermesDefaultEffort", { effort: defaultReasoning });
+  const reasoningOptions: SelectFieldOption[] = reasoningAvailable
+    ? [
+        { value: "", label: defaultReasoningLabel },
+        ...reasoningEfforts.map((effort) => ({ value: effort, label: effort })),
+      ]
+    : [
+        {
+          value: "",
+          label: reasoningSupported
+            ? t("chat.reasoningUnavailable")
+            : t("chat.reasoningUnsupported"),
+        },
+      ];
+  const conversationModelOptions: SelectFieldItem[] =
+    modelOptionGroups.length > 0
+      ? conversationModelValue
+        ? modelOptionGroups
+        : [
+            {
+              value: "",
+              label: t("chat.selectModelProvider"),
+              disabled: true,
+            },
+            ...modelOptionGroups,
+          ]
+      : isFetchingModels
+        ? [{ value: conversationModelValue, label: t("chat.loading") }]
+        : connectionError
+          ? [{ value: "", label: `${connectionError.substring(0, 30)}...` }]
+          : [{ value: conversationModelValue, label: t("chat.noModels") }];
 
   const isTouchDevice = useMemo(
     () => window.matchMedia("(pointer: coarse)").matches,
@@ -325,7 +377,6 @@ export const ChatWindow = ({
   const handleStartRecording = () => {
     if (isInteractionLocked) return;
     transcriptionSessionRef.current = activeConversation?.id ?? null;
-    setIsMenuOpen(false);
     setIsEditingTitle(false);
     setIsDragging(false);
     void voice.start();
@@ -333,7 +384,6 @@ export const ChatWindow = ({
 
   const handleRetryTranscription = () => {
     if (isInteractionLocked) return;
-    setIsMenuOpen(false);
     setIsEditingTitle(false);
     setIsDragging(false);
     voice.retry();
@@ -412,97 +462,39 @@ export const ChatWindow = ({
 
           <div className={styles.headerRight}>
             {activeConversation && (
-              <div style={{ position: "relative" }}>
-                <button
-                  onClick={() => {
-                    if (!isInteractionLocked) setIsMenuOpen(!isMenuOpen);
-                  }}
-                  className={styles.headerMoreBtn}
-                  title={t("chat.moreOptions")}
-                  disabled={isInteractionLocked}
-                >
-                  <MoreHorizontal size={20} />
-                </button>
-
-                {isMenuOpen && (
-                  <>
-                    {/* Desktop Action Menu (Inline) */}
-                    <div
-                      className={`${styles.actionMenuDropdown} ${styles.desktopMenu}`}
-                    >
-                      <button
-                        onClick={() => {
-                          if (isInteractionLocked) return;
-                          setIsMenuOpen(false);
-                          setEditTitleText(activeConversation.title || "");
-                          setIsEditingTitle(true);
-                        }}
-                        className={styles.actionMenuItem}
-                        disabled={isInteractionLocked}
-                      >
-                        <Edit2 size={16} /> {t("chat.rename")}
-                      </button>
-                      <div className={styles.actionMenuDivider} />
-                      <button
-                        onClick={() => {
-                          if (isInteractionLocked) return;
-                          setIsMenuOpen(false);
-                          if (onDeleteConversation) {
-                            onDeleteConversation(activeConversation.id);
-                          }
-                        }}
-                        className={`${styles.actionMenuItem} ${styles.deleteItem}`}
-                        disabled={isInteractionLocked}
-                      >
-                        <Trash2 size={16} /> {t("chat.delete")}
-                      </button>
-                    </div>
-
-                    {/* Mobile Action Menu (Portal Bottom Sheet) */}
-                    {createPortal(
-                      <>
-                        <div
-                          className={styles.actionMenuBackdrop}
-                          onClick={() => {
-                            if (!isInteractionLocked) setIsMenuOpen(false);
-                          }}
-                        />
-                        <div
-                          className={`${styles.actionMenuDropdown} ${styles.mobileMenu}`}
-                        >
-                          <button
-                            onClick={() => {
-                              if (isInteractionLocked) return;
-                              setIsMenuOpen(false);
-                              setEditTitleText(activeConversation.title || "");
-                              setIsEditingTitle(true);
-                            }}
-                            className={styles.actionMenuItem}
-                            disabled={isInteractionLocked}
-                          >
-                            <Edit2 size={16} /> {t("chat.rename")}
-                          </button>
-                          <div className={styles.actionMenuDivider} />
-                          <button
-                            onClick={() => {
-                              if (isInteractionLocked) return;
-                              setIsMenuOpen(false);
-                              if (onDeleteConversation) {
-                                onDeleteConversation(activeConversation.id);
-                              }
-                            }}
-                            className={`${styles.actionMenuItem} ${styles.deleteItem}`}
-                            disabled={isInteractionLocked}
-                          >
-                            <Trash2 size={16} /> {t("chat.delete")}
-                          </button>
-                        </div>
-                      </>,
-                      document.body,
-                    )}
-                  </>
-                )}
-              </div>
+              <ConversationActionMenu
+                key={activeConversation.id}
+                conversationTitle={
+                  activeConversation.title || t("common.newChat")
+                }
+                modelLabel={selectedModel || t("chat.noModels")}
+                modelValue={conversationModelValue}
+                modelOptions={conversationModelOptions}
+                modelDisabled={modelOptionGroups.length === 0}
+                reasoningLabel={
+                  reasoningAvailable
+                    ? reasoningEffort || defaultReasoningLabel
+                    : reasoningOptions[0].label
+                }
+                reasoningValue={reasoningAvailable ? reasoningEffort || "" : ""}
+                reasoningOptions={reasoningOptions}
+                reasoningDisabled={!selectedModel || !reasoningAvailable}
+                busy={isUpdatingRuntime}
+                disabled={isInteractionLocked}
+                onSelectModel={onSelectModel}
+                onSelectReasoning={async (value) =>
+                  (await onSelectReasoningEffort?.(value)) ?? false
+                }
+                onRename={() => {
+                  if (isInteractionLocked) return;
+                  setEditTitleText(activeConversation.title || "");
+                  setIsEditingTitle(true);
+                }}
+                onDelete={() => {
+                  if (isInteractionLocked) return;
+                  onDeleteConversation?.(activeConversation.id);
+                }}
+              />
             )}
           </div>
         </div>
@@ -609,59 +601,6 @@ export const ChatWindow = ({
           )}
 
           <form onSubmit={handleSubmit} className={styles.chatInputForm}>
-            {/* Active Model Indicator inside Input Bar */}
-            <div className={styles.modelIndicatorBar}>
-              <div className={styles.modelIndicatorContent}>
-                <Terminal size={11} className={styles.terminalIcon} />
-                {t("chat.runningWith")}
-                <div className={styles.modelSelectWrapper}>
-                  <select
-                    value={selectedModel}
-                    onChange={(e) => onSelectModel(e.target.value)}
-                    className={styles.modelSelectInput}
-                    disabled={isInteractionLocked || models.length === 0}
-                  >
-                    {models.length === 0 && isFetchingModels ? (
-                      <option value={selectedModel || ""}>
-                        {selectedModel || t("chat.loading")}
-                      </option>
-                    ) : models.length === 0 && connectionError ? (
-                      <option value="">
-                        {connectionError.substring(0, 30)}...
-                      </option>
-                    ) : models.length === 0 ? (
-                      <option value={selectedModel || ""}>
-                        {selectedModel || t("chat.noModels")}
-                      </option>
-                    ) : (
-                      models.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label || m.id}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  <div className={styles.modelSelectArrow}>
-                    <svg
-                      width="8"
-                      height="5"
-                      viewBox="0 0 10 6"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M1 1L5 5L9 1"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div className={styles.chatInputActions}>
               {isDragging && (
                 <div className={styles.dropZoneActive}>

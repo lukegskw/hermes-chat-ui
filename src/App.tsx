@@ -72,14 +72,30 @@ export const App = () => {
   } = useChatState();
 
   const {
-    models,
+    providers,
+    selectedProvider,
     selectedModel,
+    reasoningEfforts,
+    reasoningDefaults,
+    modelOptionGroups,
+    newConversationModelValue,
+    conversationModelValue,
+    hermesDefaultModel,
+    newConversationSelection,
+    isUpdatingConversationModel,
     isConnected,
     isFetchingModels,
     connectionError,
-    handleSelectModel,
     handleConversationModelChange,
-  } = useModels(HERMES_ENDPOINT, activeConversationId, setConversations);
+    handleReasoningEffortChange,
+    handleNewConversationModelChange,
+    registerNewConversationSelection,
+  } = useModels(
+    HERMES_ENDPOINT,
+    activeConversationId,
+    activeConversation?.modelId,
+    setConversations,
+  );
 
   const {
     isGenerating,
@@ -92,7 +108,6 @@ export const App = () => {
     conversations,
     setConversations,
     activeConversationId,
-    selectedModel,
     reloadConversation,
   );
 
@@ -113,9 +128,22 @@ export const App = () => {
     ? conversations.filter((c) => {
         if (c.id === activeConversationId) return true;
         const s = (c.source || "").toLowerCase();
-        return s === "hermes_browser" || s === "tui" || s === "cli";
+        return (
+          s === "hermes_browser" ||
+          s === "tui" ||
+          s === "cli" ||
+          s === "proactive"
+        );
       })
     : conversations;
+  const displayedProvider = activeConversation?.providerId || selectedProvider;
+  const displayedModel = activeConversation?.modelId || selectedModel;
+  const reasoningSupported =
+    Boolean(displayedProvider && displayedModel) &&
+    providers.find((provider) => provider.id === displayedProvider)
+      ?.capabilities?.[displayedModel]?.reasoning !== false;
+  const defaultReasoning =
+    reasoningDefaults[displayedProvider]?.[displayedModel] || "provider";
 
   if (isInitializing) {
     return (
@@ -158,18 +186,27 @@ export const App = () => {
             setIsSidebarOpen(false);
           }}
           onNewChat={() => {
-            if (isTranscribing) return;
-            handleNewChat(selectedModel);
+            if (isTranscribing || !newConversationSelection) return;
+            void handleNewChat(newConversationSelection).then((session) => {
+              if (session) {
+                registerNewConversationSelection(
+                  session.id,
+                  newConversationSelection,
+                );
+              }
+            });
             setIsSidebarOpen(false);
           }}
+          canCreateConversation={Boolean(newConversationSelection)}
           isCreatingChat={isCreatingChat}
           hasMoreConversations={hasMoreConversations}
           isLoadingMore={isLoadingMore}
           onLoadMore={handleLoadMore}
-          models={models}
-          selectedModel={selectedModel}
-          onSelectModel={(modelId) => {
-            if (!isTranscribing) handleSelectModel(modelId);
+          modelOptionGroups={modelOptionGroups}
+          newConversationModelValue={newConversationModelValue}
+          hermesDefaultModel={hermesDefaultModel}
+          onSelectNewConversationModel={(value) => {
+            if (!isTranscribing) handleNewConversationModelChange(value);
           }}
           isConnected={isConnected}
           isFetchingModels={isFetchingModels}
@@ -203,15 +240,28 @@ export const App = () => {
             if (!isTranscribing) handleStopGeneration();
           }}
           endpoint={HERMES_ENDPOINT}
-          selectedModel={activeConversation?.modelId || selectedModel}
-          models={models}
-          onSelectModel={(modelId) => {
-            if (!isTranscribing) handleConversationModelChange(modelId);
-          }}
+          selectedModel={displayedModel}
+          modelOptionGroups={modelOptionGroups}
+          conversationModelValue={conversationModelValue}
+          reasoningEffort={activeConversation?.reasoningEffort}
+          reasoningSupported={reasoningSupported}
+          reasoningEfforts={reasoningEfforts}
+          defaultReasoning={defaultReasoning}
+          onSelectModel={(modelId) =>
+            isTranscribing
+              ? Promise.resolve(false)
+              : handleConversationModelChange(modelId)
+          }
+          onSelectReasoningEffort={(effort) =>
+            isTranscribing
+              ? Promise.resolve(false)
+              : handleReasoningEffortChange(effort)
+          }
           isFetchingModels={isFetchingModels}
+          isUpdatingRuntime={isUpdatingConversationModel}
           connectionError={sessionError || connectionError}
           isLoadingMessages={isLoadingMessages}
-          interactionLocked={isTranscribing}
+          interactionLocked={isTranscribing || isUpdatingConversationModel}
           onTranscriptionStateChange={handleTranscriptionStateChange}
         />
         <SettingsSheet

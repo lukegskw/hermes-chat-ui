@@ -2,6 +2,7 @@
 Push notification API routes.
 Handles subscription management and notification sending.
 """
+import hmac
 import json
 import os
 import threading
@@ -15,7 +16,9 @@ from ..push import get_vapid_public_key, send_push_notification
 
 router = APIRouter(tags=["notifications"])
 
-SUBSCRIPTIONS_FILE = os.environ.get("SUBSCRIPTIONS_FILE", "/opt/data/push_subscriptions.json")
+SUBSCRIPTIONS_FILE = os.environ.get(
+    "SUBSCRIPTIONS_FILE", "/tmp/hermes-chat-ui/push_subscriptions.json"
+)
 PRESENCE_TTL_SECONDS = 45.0
 
 _visible_clients: dict[str, float] = {}
@@ -47,6 +50,7 @@ class NotificationPayload(BaseModel):
     icon: str | None = None
     tag: str | None = None
     notification_id: str | None = None
+    session_id: str | None = None
 
 
 class ClientPresence(BaseModel):
@@ -85,6 +89,28 @@ def _clear_client_presence() -> None:
     """Reset process-local presence state (used by tests)."""
     with _presence_lock:
         _visible_clients.clear()
+
+
+def deliver_notification(payload: "NotificationPayload") -> dict[str, int | str]:
+    """Deliver one payload and return stable aggregate counts."""
+    subscriptions = _load_subscriptions()
+    if not subscriptions:
+        return {"status": "no_subscriptions", "sent": 0, "failed": 0}
+
+    data = payload.model_dump()
+    sent = 0
+    failed = 0
+    for subscription in subscriptions:
+        if send_push_notification(subscription, data):
+            sent += 1
+        else:
+            failed += 1
+    status = "sent" if sent > 0 and failed == 0 else "partial" if sent > 0 else "failed"
+    return {
+        "status": status,
+        "sent": sent,
+        "failed": failed,
+    }
 
 
 def _load_subscriptions() -> list[dict]:
@@ -173,39 +199,10 @@ async def send_notification(payload: NotificationPayload, request: Request):
     Send a push notification to all subscribed devices.
     This endpoint is intended for internal use (e.g., from Hermes agent).
     """
-    # Simple API key check for internal use
     api_key = os.environ.get("HERMES_PUSH_API_KEY", "")
-    if api_key:
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header != f"Bearer {api_key}":
-            raise HTTPException(status_code=401, detail="Unauthorized")
-
-    subscriptions = _load_subscriptions()
-
-    if not subscriptions:
-        return {"status": "no_subscriptions", "sent": 0}
-
-    data = {
-        "title": payload.title,
-        "body": payload.body,
-        "url": payload.url,
-        "icon": payload.icon,
-        "tag": payload.tag,
-        "notification_id": payload.notification_id,
-    }
-
-    sent = 0
-    failed = 0
-
-    for sub in subscriptions:
-        success = send_push_notification(sub, data)
-        if success:
-            sent += 1
-        else:
-            failed += 1
-            # Could add logic here to remove failing subscriptions (e.g. 410 Gone)
-            # but since we are wrapping PyWebPush inside push.py and it returns a boolean,
-            # we'd need to modify push.py to return an exception to know if it's a 410.
-            # For simplicity in this iteration, we just count them.
-
-    return {"status": "sent", "sent": sent, "failed": failed}
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Push API is not configured")
+    auth_header = request.headers.get("Authorization", "")
+    if not hmac.compare_digest(auth_header, f"Bearer {api_key}"):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return deliver_notification(payload)

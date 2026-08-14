@@ -123,12 +123,6 @@ export const Activity = (props: IconProps) => (
   </SvgIcon>
 );
 
-export const Brain = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <path d="M9.5 2A2.5 2.5 0 0 0 7 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-.08 2.5 2.5 0 0 0 2.58 0 2.5 2.5 0 0 0 2.96.08 2.5 2.5 0 0 0 4.96-.44v-15a2.5 2.5 0 0 0-2.5-2.5h-13z" />
-  </SvgIcon>
-);
-
 export const ChevronRight = (props: IconProps) => (
   <SvgIcon {...props}>
     <polyline points="9 18 15 12 9 6" />

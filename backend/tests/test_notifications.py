@@ -77,3 +77,49 @@ def test_completion_push_is_sent_without_a_visible_client(monkeypatch):
 
     assert len(sent_payloads) == 1
     assert sent_payloads[0]["body"] == "Finished"
+    assert sent_payloads[0]["url"] == "/?session=session-1"
+    assert sent_payloads[0]["session_id"] == "session-1"
+
+
+def test_direct_push_endpoint_fails_closed_without_internal_key(monkeypatch):
+    monkeypatch.delenv("HERMES_PUSH_API_KEY", raising=False)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/push/send",
+            json={"title": "Report", "body": "Finished"},
+        )
+
+    assert response.status_code == 503
+
+
+def test_direct_push_endpoint_requires_matching_internal_key(monkeypatch):
+    monkeypatch.setenv("HERMES_PUSH_API_KEY", "internal-secret")
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/push/send",
+            headers={"Authorization": "Bearer incorrect"},
+            json={"title": "Report", "body": "Finished"},
+        )
+
+    assert response.status_code == 401
+
+
+def test_direct_push_endpoint_delivers_with_matching_internal_key(monkeypatch):
+    monkeypatch.setenv("HERMES_PUSH_API_KEY", "internal-secret")
+    monkeypatch.setattr(
+        notifications,
+        "deliver_notification",
+        lambda _payload: {"status": "sent", "sent": 1, "failed": 0},
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/push/send",
+            headers={"Authorization": "Bearer internal-secret"},
+            json={"title": "Report", "body": "Finished"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "sent", "sent": 1, "failed": 0}

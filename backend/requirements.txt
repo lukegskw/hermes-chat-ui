@@ -4,5 +4,5 @@ python-multipart==0.0.32
 PyYAML==6.0.3
 uvicorn[standard]==0.41.0
 pywebpush==2.1.2
-# Match the Hermes image constraint; newer versions conflict with optional providers.
-cryptography==48.0.1
+# Match the Hermes STT compatibility package (hermes-agent==0.19.0).
+cryptography==46.0.7

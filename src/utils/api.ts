@@ -1,12 +1,14 @@
 /** Hermes Sessions API client. */
 import { z } from "zod";
 import { logger } from "./logger";
+import { HermesSseParser, normalizeHermesEvent } from "./hermesSse";
 import {
   ChatMessage,
   ContentPart,
   ConversationAPI,
   ConversationsPage,
-  Model,
+  ModelProvider,
+  NewConversationModelSelection,
   SendChatMessageStreamOptions,
   ToolCall,
 } from "../types";
@@ -31,9 +33,23 @@ export const ModelSchema = z.object({
   label: z.string().nullish(),
 });
 
-const ModelsResponseSchema = z.object({
-  data: z.array(ModelSchema).optional(),
-  default_model: z.string().optional(),
+const ModelOptionsSchema = z.object({
+  model: z.string().optional(),
+  provider: z.string().optional(),
+  reasoning_efforts: z.array(z.string()).optional(),
+  reasoning_defaults: z
+    .record(z.string(), z.record(z.string(), z.string()))
+    .optional(),
+  providers: z.array(
+    z.object({
+      slug: z.string(),
+      name: z.string().optional(),
+      models: z.array(z.string()).optional(),
+      capabilities: z
+        .record(z.string(), z.object({ reasoning: z.boolean().optional() }))
+        .optional(),
+    }),
+  ),
 });
 
 const SessionSchema = z.object({
@@ -76,6 +92,8 @@ const CapabilitiesSchema = z.object({
     session_resources: z.literal(true),
     session_chat: z.literal(true),
     session_chat_streaming: z.literal(true),
+    model_options: z.literal(true),
+    session_model_lock: z.literal(true),
   }),
   endpoints: z.object({
     sessions: z.object({ path: z.string() }),
@@ -83,6 +101,8 @@ const CapabilitiesSchema = z.object({
     session_delete: z.object({ path: z.string() }),
     session_messages: z.object({ path: z.string() }),
     session_chat_stream: z.object({ path: z.string() }),
+    model_options: z.object({ path: z.string() }),
+    session_model_lock: z.object({ path: z.string() }),
   }),
 });
 
@@ -278,14 +298,28 @@ export const normalizeSessionMessages = (
 
 export const fetchModels = async (
   endpoint: string,
-): Promise<{ models: Model[]; defaultModel: string }> => {
+): Promise<{
+  providers: ModelProvider[];
+  defaultModel: string;
+  defaultProvider: string;
+  reasoningEfforts: string[];
+  reasoningDefaults: Partial<Record<string, Record<string, string>>>;
+}> => {
   const response = await assertOk(
-    await fetch(`${apiBase(endpoint)}/api/models`),
+    await fetch(`${apiBase(endpoint)}/api/model/options`),
   );
-  const parsed = ModelsResponseSchema.parse(await response.json());
+  const parsed = ModelOptionsSchema.parse(await response.json());
   return {
-    models: parsed.data ?? [],
-    defaultModel: parsed.default_model || parsed.data?.[0]?.id || "",
+    providers: parsed.providers.map((provider) => ({
+      id: provider.slug,
+      label: provider.name || provider.slug,
+      models: (provider.models || []).map((id) => ({ id, label: id })),
+      capabilities: provider.capabilities,
+    })),
+    defaultModel: parsed.model || "",
+    defaultProvider: parsed.provider || "",
+    reasoningEfforts: parsed.reasoning_efforts || [],
+    reasoningDefaults: parsed.reasoning_defaults || {},
   };
 };
 
@@ -326,6 +360,20 @@ export const fetchConversations = async (
   };
 };
 
+export const fetchConversation = async (
+  endpoint: string,
+  id: string,
+  signal?: AbortSignal,
+): Promise<ConversationAPI> => {
+  const response = await assertOk(
+    await fetch(`${apiBase(endpoint)}/api/sessions/${encodeURIComponent(id)}`, {
+      signal,
+    }),
+  );
+  const parsed = SessionEnvelopeSchema.parse(await response.json());
+  return toConversation(parsed.session);
+};
+
 export const fetchConversationMessages = async (
   endpoint: string,
   id: string,
@@ -343,20 +391,39 @@ export const fetchConversationMessages = async (
 
 export const createConversation = async (
   endpoint: string,
-  options: { modelId?: string; source?: string } = {},
+  options: {
+    selection?: NewConversationModelSelection;
+    source?: string;
+  } = {},
 ): Promise<ConversationAPI> => {
+  const selection = options.selection;
   const response = await assertOk(
     await fetch(`${apiBase(endpoint)}/api/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         source: options.source ?? "hermes_browser",
-        ...(options.modelId ? { model: options.modelId } : {}),
+        ...(selection
+          ? {
+              model: selection.modelId,
+              provider: selection.providerId,
+              require_model_lock: true,
+            }
+          : {}),
       }),
     }),
   );
   const parsed = SessionEnvelopeSchema.parse(await response.json());
-  return toConversation(parsed.session);
+  const conversation = toConversation(parsed.session);
+  // The public Hermes session representation excludes model_config/provider.
+  // Retain the exact lock acknowledged by the create request in client state.
+  return selection
+    ? {
+        ...conversation,
+        modelId: selection.modelId,
+        providerId: selection.providerId,
+      }
+    : conversation;
 };
 
 export const deleteConversation = async (
@@ -387,7 +454,7 @@ export const updateConversationTitle = async (
 export const updateConversationModel = async (
   endpoint: string,
   id: string,
-  modelId: string,
+  selection: { modelId: string; providerId?: string; reasoningEffort?: string },
 ): Promise<void> => {
   await assertOk(
     await fetch(
@@ -395,42 +462,29 @@ export const updateConversationModel = async (
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: modelId }),
+        body: JSON.stringify({
+          model: selection.modelId,
+          ...(selection.providerId ? { provider: selection.providerId } : {}),
+          model_options: selection.reasoningEffort
+            ? {
+                reasoning: { enabled: true, effort: selection.reasoningEffort },
+              }
+            : {},
+          require_model_lock: true,
+        }),
       },
     ),
   );
 };
 
-type SsePayload = Record<string, unknown>;
-
-const parseSseBlock = (
-  block: string,
-): { event: string; payload: SsePayload } | null => {
-  let event = "message";
-  const data: string[] = [];
-  for (const line of block.split("\n")) {
-    if (line.startsWith("event:")) event = line.slice(6).trim();
-    if (line.startsWith("data:")) data.push(line.slice(5).trim());
-  }
-  if (data.length === 0) return null;
-  try {
-    const payload: unknown = JSON.parse(data.join("\n"));
-    return payload && typeof payload === "object"
-      ? { event, payload: payload as SsePayload }
-      : null;
-  } catch {
-    return null;
-  }
-};
-
 export const sendChatMessageStream = async ({
   endpoint,
-  model,
   message,
   instructions,
   conversationId,
   onChunk,
   onReasoningChunk,
+  onReasoningSnapshot,
   onToolCallChunk,
   onDone,
   onError,
@@ -448,7 +502,6 @@ export const sendChatMessageStream = async ({
     index: number;
     status: "running" | "completed" | "error";
   }> = [];
-
   try {
     const response = await assertOk(
       await fetch(
@@ -461,103 +514,96 @@ export const sendChatMessageStream = async ({
           },
           body: JSON.stringify({
             message,
-            ...(model ? { model } : {}),
             ...(instructions ? { instructions } : {}),
           }),
           signal,
         },
       ),
     );
-    if (!response.body) throw new Error("Hermes returned an empty stream");
+    if (!response.body)
+      throw new Error("Hermes returned an empty event stream");
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = "";
+    const parser = new HermesSseParser();
+
+    const handleEvent = (
+      parsed: ReturnType<HermesSseParser["push"]>[number],
+    ): boolean => {
+      const normalized = normalizeHermesEvent(parsed);
+      if (normalized.kind === "assistant_delta") {
+        onChunk(normalized.text);
+      } else if (normalized.kind === "reasoning_delta") {
+        onReasoningChunk?.(normalized.text);
+      } else if (normalized.kind === "reasoning_snapshot") {
+        if (onReasoningSnapshot) onReasoningSnapshot(normalized.text);
+        else onReasoningChunk?.(normalized.text);
+      } else if (normalized.kind === "tool") {
+        let tool = normalized.id
+          ? activeTools.find((entry) => entry.id === normalized.id)
+          : [...activeTools]
+              .reverse()
+              .find(
+                (entry) =>
+                  entry.name === normalized.name && entry.status === "running",
+              );
+        if (normalized.event === "tool.started" || !tool) {
+          tool = {
+            id:
+              normalized.id ??
+              `${String(parsed.payload.message_id ?? "message")}_${activeTools.length}`,
+            name: normalized.name,
+            index: activeTools.length,
+            status: "running",
+          };
+          activeTools.push(tool);
+        }
+        tool.status =
+          normalized.event === "tool.started"
+            ? "running"
+            : normalized.event === "tool.failed"
+              ? "error"
+              : "completed";
+        onToolCallChunk?.({
+          index: tool.index,
+          id: tool.id,
+          type: "function",
+          function: {
+            name: normalized.name,
+            arguments: normalized.args ? JSON.stringify(normalized.args) : "",
+          },
+          label: normalized.preview ?? normalized.name,
+          status: tool.status,
+        });
+      } else if (normalized.kind === "error") {
+        throw new Error(normalized.message);
+      } else if (normalized.kind === "done") {
+        finish();
+        return true;
+      }
+      return false;
+    };
 
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
-      let boundary = buffer.indexOf("\n\n");
-      while (boundary >= 0) {
-        const block = buffer.slice(0, boundary);
-        buffer = buffer.slice(boundary + 2);
-        boundary = buffer.indexOf("\n\n");
-        const parsed = parseSseBlock(block);
-        if (!parsed) continue;
-        const { event, payload } = parsed;
-
-        if (event === "assistant.delta" && typeof payload.delta === "string") {
-          onChunk(payload.delta);
-        } else if (
-          event === "run.completed" &&
-          Array.isArray(payload.messages)
-        ) {
-          const reasoningParts = payload.messages
-            .filter(
-              (msg: unknown) =>
-                msg && (msg as Record<string, unknown>).role === "assistant",
-            )
-            .map(
-              (msg: unknown) =>
-                (msg as Record<string, unknown>).reasoning_content ||
-                (msg as Record<string, unknown>).reasoning,
-            )
-            .filter(Boolean);
-          if (reasoningParts.length > 0) {
-            onReasoningChunk?.(reasoningParts.join("\n\n"));
-          }
-        } else if (
-          ["tool.started", "tool.completed", "tool.failed"].includes(event)
-        ) {
-          const name =
-            typeof payload.tool_name === "string" ? payload.tool_name : "tool";
-          let tool = [...activeTools]
-            .reverse()
-            .find((entry) => entry.name === name && entry.status === "running");
-          if (event === "tool.started" || !tool) {
-            tool = {
-              id: `${String(payload.message_id ?? "message")}_${activeTools.length}`,
-              name,
-              index: activeTools.length,
-              status: "running",
-            };
-            activeTools.push(tool);
-          }
-          tool.status =
-            event === "tool.started"
-              ? "running"
-              : event === "tool.failed"
-                ? "error"
-                : "completed";
-          onToolCallChunk?.({
-            index: tool.index,
-            id: tool.id,
-            type: "function",
-            function: {
-              name,
-              arguments: payload.args ? JSON.stringify(payload.args) : "",
-            },
-            label: typeof payload.preview === "string" ? payload.preview : name,
-            status: tool.status,
-          });
-        } else if (event === "error") {
-          throw new Error(
-            typeof payload.message === "string"
-              ? payload.message
-              : "Hermes stream failed",
-          );
-        } else if (event === "done") {
-          finish();
-          return;
-        }
+      for (const parsed of parser.push(
+        decoder.decode(value, { stream: true }),
+      )) {
+        if (handleEvent(parsed)) return;
       }
+    }
+    for (const parsed of parser.push(decoder.decode(), true)) {
+      if (handleEvent(parsed)) return;
     }
     finish();
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
       finish();
-    } else if (document.visibilityState === "hidden") {
+    } else if (
+      typeof document !== "undefined" &&
+      document.visibilityState === "hidden"
+    ) {
       finish();
     } else {
       const normalized =
@@ -570,11 +616,11 @@ export const sendChatMessageStream = async ({
 
 export const cancelSessionChat = async (
   endpoint: string,
-  id: string,
+  sessionId: string,
 ): Promise<void> => {
   await assertOk(
     await fetch(
-      `${apiBase(endpoint)}/api/sessions/${encodeURIComponent(id)}/chat/cancel`,
+      `${apiBase(endpoint)}/api/sessions/${encodeURIComponent(sessionId)}/chat/cancel`,
       { method: "POST" },
     ),
   );

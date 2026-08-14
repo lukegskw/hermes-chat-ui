@@ -4,4 +4,6 @@ export * from "./transcriptDraft";
 export * from "./imageUtils";
 export * from "./logger";
 export * from "./pushNotifications";
+export * from "./sessionDeepLink";
+export * from "./pendingSessionNavigation";
 export * from "./linkify";

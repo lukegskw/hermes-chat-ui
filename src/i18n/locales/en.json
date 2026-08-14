@@ -7,6 +7,8 @@
   },
   "sidebar": {
     "activeModel": "Active Model",
+    "newConversationModel": "Start with...",
+    "hermesDefaultModel": "{{model}} (Hermes Default)",
     "fetchingModels": "Fetching Models...",
     "noModels": "No Models",
     "disconnected": "Hermes disconnected",
@@ -37,7 +39,21 @@
     "sendMessage": "Send message",
     "runningWith": "RUNNING WITH:",
     "loading": "Loading...",
-    "noModels": "No models"
+    "noModels": "No models",
+    "provider": "Provider",
+    "model": "Model",
+    "selectModelProvider": "Select model and provider",
+    "reasoningEffort": "Reasoning",
+    "hermesDefault": "Hermes default",
+    "hermesDefaultEffort": "Hermes default ({{effort}})",
+    "hermesDefaultDisabled": "Hermes default (disabled)",
+    "providerDefault": "Provider default",
+    "reasoningUnavailable": "Levels unavailable",
+    "reasoningUnsupported": "Not supported by this model",
+    "chooseModel": "Choose model",
+    "chooseReasoning": "Choose reasoning",
+    "conversationOptions": "Options for {{title}}",
+    "updatingRuntime": "Applying setting…"
   },
   "audio": {
     "startRecording": "Record voice message",
@@ -131,6 +147,7 @@
     "imageProcessingFailed": "These images could not be prepared for sending.",
     "sessionLoadFailed": "Could not load Hermes sessions.",
     "sessionCreateFailed": "Could not create a Hermes session.",
+    "sessionModelUpdateFailed": "Could not change this conversation's model. The previous selection was kept.",
     "sessionDeleteFailed": "Could not delete the Hermes session.",
     "sessionRenameFailed": "Could not rename the Hermes session."
   },

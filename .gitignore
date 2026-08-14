@@ -14,6 +14,22 @@ dist-ssr
 .env
 docker-compose.yml
 
+# Python environments, bytecode and test/tool caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local runtime/build artifacts
+*.db
+*.sqlite
+*.sqlite3
+*.tar
+.coverage
+htmlcov/
+*.egg-info/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

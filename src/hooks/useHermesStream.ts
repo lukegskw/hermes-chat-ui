@@ -15,7 +15,6 @@ export const useHermesStream = (
   conversations: Conversation[],
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
   activeConversationId: string,
-  selectedModel: string,
   reloadConversation: (id: string, signal?: AbortSignal) => Promise<void>,
 ) => {
   const [generatingStates, setGeneratingStates] = useState<
@@ -134,7 +133,6 @@ export const useHermesStream = (
 
     void sendChatMessageStream({
       endpoint,
-      model: target.modelId || selectedModel,
       message: messageContent,
       instructions,
       conversationId,
@@ -157,6 +155,13 @@ export const useHermesStream = (
             ...message,
             reasoning_content: `${message.reasoning_content || ""}${chunk}`,
           }),
+        );
+      },
+      onReasoningSnapshot: (content) => {
+        updateAssistantMessage(
+          conversationId,
+          assistantMessageId,
+          (message) => ({ ...message, reasoning_content: content }),
         );
       },
       onToolCallChunk: (value) => {
@@ -271,7 +276,7 @@ export const useHermesStream = (
     try {
       await cancelSessionChat(endpoint, conversationId);
     } catch (error) {
-      logger.error({ error }, "Failed to cancel Hermes session stream");
+      logger.error({ error }, "Failed to stop Hermes session stream");
     }
   };
 

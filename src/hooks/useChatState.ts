@@ -2,16 +2,27 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getApiUrl } from "../config/env";
-import { ChatMessage, Conversation, Settings } from "../types";
+import {
+  ChatMessage,
+  Conversation,
+  NewConversationModelSelection,
+  Settings,
+} from "../types";
 import {
   ApiError,
   assertSessionCapabilities,
+  clearPendingSessionTarget,
   createConversation,
   deleteConversation,
+  fetchConversation,
   fetchConversationMessages,
   fetchConversations,
+  readPendingSessionTarget,
+  readSessionDeepLink,
   updateConversationTitle,
+  withoutSessionDeepLink,
 } from "../utils";
+import { mergeSessions } from "./sessionListReconciliation";
 import { reconcileSessionMessages } from "./sessionMessageReconciliation";
 
 const PAGE_SIZE = 50;
@@ -25,31 +36,12 @@ const messagesEqual = (left: ChatMessage[], right: ChatMessage[]) =>
   left.length === right.length &&
   JSON.stringify(left) === JSON.stringify(right);
 
-const mergeSessions = (
-  previous: Conversation[],
-  incoming: Conversation[],
-  retainedId?: string,
-): Conversation[] => {
-  const previousById = new Map(
-    previous.map((session) => [session.id, session]),
-  );
-  const incomingIds = new Set(incoming.map((session) => session.id));
-  const merged = incoming.map((session) => {
-    const existing = previousById.get(session.id);
-    return existing
-      ? {
-          ...session,
-          messages: existing.messages,
-          modelId: session.modelId || existing.modelId,
-        }
-      : session;
-  });
-  const retained = retainedId
-    ? previous.find(
-        (session) => session.id === retainedId && !incomingIds.has(session.id),
-      )
-    : undefined;
-  return retained ? [...merged, retained] : merged;
+const consumePendingSessionTarget = async (sessionId: string) => {
+  try {
+    await clearPendingSessionTarget(sessionId);
+  } catch {
+    // A storage failure must not undo a session that was already selected.
+  }
 };
 
 export const useChatState = () => {
@@ -197,12 +189,81 @@ export const useChatState = () => {
     [endpoint, handleApiError, t],
   );
 
+  const selectConversationById = useCallback(
+    async (
+      id: string,
+      options: {
+        signal?: AbortSignal;
+        candidates?: Conversation[];
+      } = {},
+    ): Promise<"selected" | "not_found"> => {
+      try {
+        const requested =
+          options.candidates?.find((session) => session.id === id) ??
+          conversationsRef.current.find((session) => session.id === id) ??
+          ((await fetchConversation(
+            endpoint,
+            id,
+            options.signal,
+          )) as Conversation);
+        if (options.signal?.aborted) {
+          throw new DOMException("Navigation aborted", "AbortError");
+        }
+        setConversations((previous) => [
+          requested,
+          ...previous.filter((session) => session.id !== requested.id),
+        ]);
+        setActiveConversationId(requested.id);
+        setSessionError("");
+        return "selected";
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          return "not_found";
+        }
+        throw error;
+      }
+    },
+    [endpoint],
+  );
+
   useEffect(() => {
     const controller = new AbortController();
     const initialize = async () => {
+      const querySessionId = readSessionDeepLink(window.location.href);
+      let pendingSessionId = "";
+      try {
+        pendingSessionId = (await readPendingSessionTarget())?.sessionId ?? "";
+      } catch {
+        // The URL remains a fallback when private browsing or an older WebKit
+        // implementation makes IndexedDB unavailable.
+      }
+      const requestedSessionId = querySessionId || pendingSessionId;
       try {
         await assertSessionCapabilities(endpoint);
-        await loadFirstPage({ signal: controller.signal });
+        const page = await loadFirstPage({ signal: controller.signal });
+        if (requestedSessionId && !controller.signal.aborted) {
+          let targetResolved = false;
+          try {
+            await selectConversationById(requestedSessionId, {
+              signal: controller.signal,
+              candidates: page.conversations as Conversation[],
+            });
+            targetResolved = true;
+            await consumePendingSessionTarget(requestedSessionId);
+          } catch (error) {
+            if (!(error instanceof Error && error.name === "AbortError")) {
+              handleApiError(error, t("errors.sessionLoadFailed"));
+            }
+          } finally {
+            if (targetResolved) {
+              window.history.replaceState(
+                window.history.state,
+                "",
+                withoutSessionDeepLink(window.location.href),
+              );
+            }
+          }
+        }
       } catch (error) {
         handleApiError(error, t("errors.sessionLoadFailed"));
       } finally {
@@ -211,7 +272,48 @@ export const useChatState = () => {
     };
     void initialize();
     return () => controller.abort();
-  }, [endpoint, handleApiError, loadFirstPage, t]);
+  }, [endpoint, handleApiError, loadFirstPage, selectConversationById, t]);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let controller: AbortController | null = null;
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      const payload = event.data as Record<string, unknown> | null;
+      if (
+        !payload ||
+        payload.type !== "open-session" ||
+        typeof payload.sessionId !== "string" ||
+        !payload.sessionId
+      ) {
+        return;
+      }
+
+      controller?.abort();
+      controller = new AbortController();
+      const sessionId = payload.sessionId;
+      void selectConversationById(sessionId, { signal: controller.signal })
+        .then(async () => {
+          await consumePendingSessionTarget(sessionId);
+        })
+        .catch((error: unknown) => {
+          if (!(error instanceof Error && error.name === "AbortError")) {
+            handleApiError(error, t("errors.sessionLoadFailed"));
+          }
+        });
+    };
+
+    navigator.serviceWorker.addEventListener(
+      "message",
+      handleServiceWorkerMessage,
+    );
+    return () => {
+      controller?.abort();
+      navigator.serviceWorker.removeEventListener(
+        "message",
+        handleServiceWorkerMessage,
+      );
+    };
+  }, [handleApiError, selectConversationById, t]);
 
   useEffect(() => {
     if (!activeConversationId) return;
@@ -278,20 +380,25 @@ export const useChatState = () => {
   ]);
 
   const handleNewChat = useCallback(
-    async (modelId?: string) => {
+    async (selection?: NewConversationModelSelection) => {
       if (isCreatingChat) return;
       setIsCreatingChat(true);
       try {
-        const session = await createConversation(endpoint, { modelId });
+        // The caller resolves Hermes' global default (or a sidebar preference)
+        // to one concrete provider/model pair. Creation locks only this new
+        // session and never writes Hermes' global configuration.
+        const session = await createConversation(endpoint, { selection });
         setConversations((previous) => [
           session as Conversation,
           ...previous.filter((item) => item.id !== session.id),
         ]);
         setActiveConversationId(session.id);
         setSessionError("");
+        return session as Conversation;
       } catch (error) {
         handleApiError(error, t("errors.sessionCreateFailed"));
         toast.error(t("errors.sessionCreateFailed"));
+        return null;
       } finally {
         setIsCreatingChat(false);
       }

@@ -1,7 +1,10 @@
-const CACHE_NAME = 'hermes-chat-cache-v4';
+const CACHE_NAME = 'hermes-chat-cache-v6';
 const BADGE_DATABASE = 'hermes-chat-badge';
+const BADGE_DATABASE_VERSION = 2;
 const BADGE_STORE = 'state';
 const BADGE_KEY = 'unread-responses';
+const NAVIGATION_STORE = 'navigation';
+const NAVIGATION_KEY = 'pending-session';
 const MAX_SEEN_NOTIFICATION_IDS = 100;
 const ASSETS_TO_CACHE = [
   '/',
@@ -70,8 +73,15 @@ self.addEventListener('fetch', (event) => {
 });
 
 const openBadgeDatabase = () => new Promise((resolve, reject) => {
-  const request = indexedDB.open(BADGE_DATABASE, 1);
-  request.onupgradeneeded = () => request.result.createObjectStore(BADGE_STORE);
+  const request = indexedDB.open(BADGE_DATABASE, BADGE_DATABASE_VERSION);
+  request.onupgradeneeded = () => {
+    if (!request.result.objectStoreNames.contains(BADGE_STORE)) {
+      request.result.createObjectStore(BADGE_STORE);
+    }
+    if (!request.result.objectStoreNames.contains(NAVIGATION_STORE)) {
+      request.result.createObjectStore(NAVIGATION_STORE);
+    }
+  };
   request.onsuccess = () => resolve(request.result);
   request.onerror = () => reject(request.error);
 });
@@ -83,6 +93,22 @@ const readBadgeState = async () => {
       const request = database.transaction(BADGE_STORE, 'readonly').objectStore(BADGE_STORE).get(BADGE_KEY);
       request.onsuccess = () => resolve(request.result || { count: 0, seenIds: [] });
       request.onerror = () => reject(request.error);
+    });
+  } finally {
+    database.close();
+  }
+};
+
+const writePendingSessionTarget = async (sessionId, clickedAt = Date.now()) => {
+  if (!sessionId) return;
+  const database = await openBadgeDatabase();
+  try {
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(NAVIGATION_STORE, 'readwrite');
+      transaction.objectStore(NAVIGATION_STORE).put({ sessionId, clickedAt }, NAVIGATION_KEY);
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
     });
   } finally {
     database.close();
@@ -150,6 +176,7 @@ self.addEventListener('push', (event) => {
     url: '/',
     tag: 'hermes-message',
     notification_id: null,
+    session_id: null,
   };
 
   if (event.data) {
@@ -166,7 +193,7 @@ self.addEventListener('push', (event) => {
     icon: data.icon || '/icon.png',
     badge: '/icon.png',
     tag: data.tag || 'hermes-message',
-    data: { url: data.url || '/' },
+    data: { url: data.url || '/', session_id: data.session_id || null },
     vibrate: [100, 50, 100],
     requireInteraction: false,
   };
@@ -189,19 +216,37 @@ self.addEventListener('message', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url || '/';
+  const parsedTarget = new URL(url, self.location.origin);
+  const targetUrl = parsedTarget.origin === self.location.origin
+    ? parsedTarget.href
+    : new URL('/', self.location.origin).href;
+  const sessionId = event.notification.data?.session_id || parsedTarget.searchParams.get('session') || '';
+  const clickedAt = Date.now();
 
-  event.waitUntil(
-    clearAppBadge().then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true })).then((clients) => {
-      // Focus existing window if available
-      for (const client of clients) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
-        }
+  event.waitUntil((async () => {
+    try {
+      await writePendingSessionTarget(sessionId, clickedAt);
+    } catch (error) {
+      console.warn('[Service Worker] Could not persist notification target:', error);
+    }
+    await clearAppBadge();
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const appClients = clients.filter((client) => client.url.includes(self.location.origin));
+    if (sessionId) {
+      for (const client of appClients) {
+        client.postMessage({ type: 'open-session', sessionId, clickedAt });
       }
-      // Open new window
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(url);
+    }
+    const client = appClients.find((candidate) => 'focus' in candidate);
+    if (client) {
+      if (!sessionId && 'navigate' in client) {
+        const navigated = await client.navigate(targetUrl);
+        return (navigated || client).focus();
       }
-    })
-  );
+      return client.focus();
+    }
+    if (self.clients.openWindow) {
+      return self.clients.openWindow(targetUrl);
+    }
+  })());
 });

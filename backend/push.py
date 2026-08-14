@@ -4,17 +4,20 @@ Handles VAPID key management and push notification delivery.
 """
 import json
 import os
+import tempfile
 from pathlib import Path
 
 
-VAPID_KEYS_FILE = os.environ.get("VAPID_KEYS_FILE", "/opt/data/vapid_keys.json")
+VAPID_KEYS_FILE = os.environ.get(
+    "VAPID_KEYS_FILE", "/tmp/hermes-chat-ui/vapid_keys.json"
+)
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:push@example.com")
 
 
 def get_vapid_keys() -> dict:
     """Get or generate VAPID keys."""
     keys_path = Path(VAPID_KEYS_FILE).expanduser()
-    
+
     # Verifica fallback
     fallback_path = Path("~/.hermes/vapid_keys.json").expanduser()
     if not keys_path.exists() and fallback_path.exists():
@@ -31,11 +34,15 @@ def get_vapid_keys() -> dict:
 
     # Generate new keys
     try:
+        import base64
+
         from cryptography.hazmat.primitives.asymmetric import ec
         from cryptography.hazmat.primitives import serialization
-        import base64
     except ImportError:
-        print("[push] Warning: cryptography package not installed. VAPID generation failed.")
+        print(
+            "[push] Warning: cryptography package not installed. "
+            "VAPID generation failed."
+        )
         return {}
 
     private_key = ec.generate_private_key(ec.SECP256R1())
@@ -98,11 +105,11 @@ def send_push_notification(subscription_info: dict, data: dict) -> bool:
         print("[push] Warning: pywebpush package not installed. Skipping push.")
         return False
 
-    import tempfile
-    import os
     tmp_path = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".pem") as tmp:
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, suffix=".pem"
+        ) as tmp:
             tmp.write(keys["private_key"])
             tmp_path = tmp.name
 

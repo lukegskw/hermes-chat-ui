@@ -6,6 +6,24 @@ export type Model = {
   label?: string | null;
 };
 
+export type ModelProvider = {
+  id: string;
+  label: string;
+  models: Model[];
+  capabilities?: Record<string, { reasoning?: boolean }>;
+};
+
+export type RuntimeSelection = {
+  providerId?: string;
+  modelId?: string;
+  reasoningEffort?: string;
+};
+
+export type NewConversationModelSelection = {
+  providerId: string;
+  modelId: string;
+};
+
 export type ToolCall = {
   id: string;
   type: string;
@@ -35,6 +53,8 @@ export type ConversationAPI = {
   id: string;
   title: string;
   modelId?: string | null;
+  providerId?: string | null;
+  reasoningEffort?: string | null;
   source?: string | null;
   messages: ChatMessage[];
   lastActive?: number | null;
@@ -43,12 +63,12 @@ export type ConversationAPI = {
 
 export type SendChatMessageStreamOptions = {
   endpoint: string;
-  model?: string;
   message: string | ContentPart[];
   instructions?: string;
   conversationId: string;
   onChunk: (chunk: string) => void;
   onReasoningChunk?: (chunk: string) => void;
+  onReasoningSnapshot?: (content: string) => void;
   onToolCallChunk?: (toolCallDelta: unknown) => void;
   onDone: () => void;
   onError: (error: Error) => void;
@@ -60,6 +80,8 @@ export type Conversation = {
   title: string;
   messages: ChatMessage[];
   modelId?: string | null;
+  providerId?: string | null;
+  reasoningEffort?: string | null;
   source?: string | null;
   lastActive?: number | null;
   messageCount?: number;

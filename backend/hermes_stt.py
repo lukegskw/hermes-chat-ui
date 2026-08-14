@@ -2,14 +2,40 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
 from dataclasses import dataclass
+import importlib.util
+import os
+from pathlib import Path
 from typing import Any
+
+
+_STT_ENVIRONMENT_KEYS = frozenset(
+    {
+        "VOICE_TOOLS_OPENAI_KEY",
+        "OPENAI_API_KEY",
+        "STT_OPENAI_BASE_URL",
+        "STT_OPENAI_MODEL",
+        "GROQ_API_KEY",
+        "GROQ_BASE_URL",
+        "MISTRAL_API_KEY",
+        "XAI_API_KEY",
+        "XAI_STT_BASE_URL",
+        "ELEVENLABS_API_KEY",
+        "ELEVENLABS_STT_BASE_URL",
+        "DEEPINFRA_API_KEY",
+        "HERMES_LOCAL_STT_COMMAND",
+        "HERMES_LOCAL_STT_LANGUAGE",
+    }
+)
 
 
 class HermesSttUnavailable(RuntimeError):
     """The installed Hermes image does not expose its voice transcription API."""
+
+
+class HermesSttConfigurationError(RuntimeError):
+    """Hermes STT configuration exists but the UI service cannot load it."""
 
 
 class HermesSttFailed(RuntimeError):
@@ -46,13 +72,115 @@ def _load_transcriber() -> Callable[[str], dict[str, Any]]:
 
 def is_available() -> bool:
     try:
-        _load_transcriber()
-    except HermesSttUnavailable:
+        ensure_available()
+    except (HermesSttUnavailable, HermesSttConfigurationError):
         return False
     return True
 
 
+def _hermes_env_path() -> Path:
+    return Path(os.environ.get("HERMES_HOME", "/hermes-config")) / ".env"
+
+
+def _validate_environment_access() -> None:
+    """Validate the config file that Hermes' own STT loader will inspect.
+
+    An absent file is valid when credentials are supplied directly through the
+    process environment. An existing but unreadable file is not: Hermes'
+    loader probes it before selecting the provider and would otherwise leak a
+    raw ``PermissionError`` through the audio endpoint.
+    """
+
+    env_path = _hermes_env_path()
+    try:
+        if not env_path.exists():
+            return
+        if not env_path.is_file():
+            raise HermesSttConfigurationError(
+                f"Hermes environment path is not a file: {env_path}"
+            )
+        with env_path.open("rb"):
+            pass
+    except HermesSttConfigurationError:
+        raise
+    except OSError as exc:
+        raise HermesSttConfigurationError(
+            f"Hermes STT environment is not readable: {env_path}"
+        ) from exc
+
+
+def _read_hermes_environment() -> dict[str, str]:
+    try:
+        from hermes_cli.config import load_env
+    except ImportError:  # Local tests can provide a standalone transcriber.
+        return {}
+
+    try:
+        values = load_env()
+    except OSError as exc:
+        raise HermesSttConfigurationError(
+            f"Hermes STT environment is not readable: {_hermes_env_path()}"
+        ) from exc
+    return values if isinstance(values, dict) else {}
+
+
+def _hydrate_stt_environment() -> None:
+    """Expose only STT-relevant `.env` values to Hermes' compatibility code.
+
+    Hermes 0.19's OpenAI audio resolver reads ``os.environ`` directly instead
+    of using ``get_env_value``. Loading an allowlist here preserves the same
+    Hermes configuration without importing unrelated integration secrets into
+    the UI process environment.
+    """
+
+    values = _read_hermes_environment()
+    for key in _STT_ENVIRONMENT_KEYS:
+        value = values.get(key)
+        if key not in os.environ and isinstance(value, str) and value.strip():
+            os.environ[key] = value.strip()
+
+
+def _validate_provider_dependencies() -> None:
+    provider = get_configuration().provider
+    if provider == "local" and importlib.util.find_spec("faster_whisper") is None:
+        raise HermesSttUnavailable(
+            "Hermes local STT requires the faster-whisper dependency"
+        )
+
+
+def ensure_available() -> Callable[[str], dict[str, Any]]:
+    """Raise a typed error unless the Hermes STT runtime can be loaded safely."""
+
+    transcriber = _load_transcriber()
+    # Local faster-whisper STT has no credentials. Avoid touching Hermes'
+    # environment/auth files for that provider; remote providers still receive
+    # only the allowlisted STT values from the shared read-only `.env`.
+    if get_configuration().provider != "local":
+        _validate_environment_access()
+        _hydrate_stt_environment()
+    _validate_provider_dependencies()
+    return transcriber
+
+
 def _load_stt_config() -> dict[str, Any]:
+    config_path = Path(
+        os.environ.get("HERMES_UI_HERMES_CONFIG", "/hermes-config/config.yaml")
+    )
+    try:
+        config_is_readable_file = config_path.is_file()
+    except OSError:
+        # A read-only bind mount can intentionally be inaccessible to the UI
+        # user.  Capabilities must degrade cleanly instead of returning 500.
+        config_is_readable_file = False
+    if config_is_readable_file:
+        try:
+            import yaml
+
+            parsed = yaml.safe_load(config_path.read_text()) or {}
+            return parsed.get("stt") if isinstance(parsed.get("stt"), dict) else {}
+        except Exception:
+            # Fall through to the package loader for local development only.
+            pass
     try:
         from hermes_cli.config import load_config
 
@@ -92,7 +220,12 @@ def get_configuration() -> SttConfiguration:
 
 
 def transcribe(path: str) -> Transcription:
-    result = _load_transcriber()(path)
+    try:
+        result = ensure_available()(path)
+    except PermissionError as exc:
+        raise HermesSttConfigurationError(
+            "Hermes STT could not read its configuration"
+        ) from exc
     if not isinstance(result, dict):
         raise HermesSttFailed("Hermes returned an invalid transcription result")
 

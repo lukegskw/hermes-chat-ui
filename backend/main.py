@@ -4,9 +4,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .routers import audio, config, notifications, sessions
+from .routers import audio, config, notifications, proactive, sessions
 
-app = FastAPI(title="Hermes Chat UI Proxy")
+
+app = FastAPI(title="Hermes Chat UI")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,6 +22,17 @@ app.include_router(config.router)
 app.include_router(sessions.router)
 app.include_router(audio.router)
 app.include_router(notifications.router, prefix="/api/push")
+app.include_router(proactive.router)
+
+
+@app.get("/api/health")
+async def health():
+    """Liveness only; Hermes readiness remains independently observable."""
+    return {
+        "status": "ok",
+        "service": "hermes-chat-ui",
+        "hermes_api_configured": bool(os.environ.get("HERMES_API_URL")),
+    }
 
 # Mount SPA
 static_dir = os.environ.get("HERMES_STATIC_DIR", "/app/static")

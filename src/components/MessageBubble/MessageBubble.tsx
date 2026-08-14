@@ -96,7 +96,8 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
         {/* Reasoning and Tools rendering */}
         {!isUser &&
           (message.reasoning_content ||
-            (message.tool_calls && message.tool_calls.length > 0)) && (
+            (message.tool_calls && message.tool_calls.length > 0) ||
+            message.isGenerating) && (
             <div className={styles.reasoningContainer}>
               <AgentActivityLog
                 toolCalls={message.tool_calls || []}
@@ -105,7 +106,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
 
               <ReasoningLog
                 reasoningContent={message.reasoning_content}
-                initiallyExpanded={message.isGenerating}
+                isGenerating={message.isGenerating}
               />
             </div>
           )}

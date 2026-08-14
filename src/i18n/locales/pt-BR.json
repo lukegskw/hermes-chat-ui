@@ -7,6 +7,8 @@
   },
   "sidebar": {
     "activeModel": "Modelo Ativo",
+    "newConversationModel": "Iniciar com...",
+    "hermesDefaultModel": "{{model}} (Padrão do Hermes)",
     "fetchingModels": "Buscando Modelos...",
     "noModels": "Sem Modelos",
     "disconnected": "Hermes desconectado",
@@ -37,7 +39,21 @@
     "sendMessage": "Enviar mensagem",
     "runningWith": "RODANDO COM:",
     "loading": "Carregando...",
-    "noModels": "Sem modelos"
+    "noModels": "Sem modelos",
+    "provider": "Provedor",
+    "model": "Modelo",
+    "selectModelProvider": "Selecione o modelo e provider",
+    "reasoningEffort": "Raciocínio",
+    "hermesDefault": "Padrão do Hermes",
+    "hermesDefaultEffort": "Padrão do Hermes ({{effort}})",
+    "hermesDefaultDisabled": "Padrão do Hermes (desativado)",
+    "providerDefault": "Padrão do provider",
+    "reasoningUnavailable": "Níveis indisponíveis",
+    "reasoningUnsupported": "Não compatível com este modelo",
+    "chooseModel": "Escolher modelo",
+    "chooseReasoning": "Escolher raciocínio",
+    "conversationOptions": "Opções de {{title}}",
+    "updatingRuntime": "Aplicando configuração…"
   },
   "audio": {
     "startRecording": "Gravar mensagem de voz",
@@ -131,6 +147,7 @@
     "imageProcessingFailed": "Não foi possível preparar essas imagens para envio.",
     "sessionLoadFailed": "Não foi possível carregar as sessões do Hermes.",
     "sessionCreateFailed": "Não foi possível criar uma sessão no Hermes.",
+    "sessionModelUpdateFailed": "Não foi possível alterar o modelo desta conversa. A seleção anterior foi mantida.",
     "sessionDeleteFailed": "Não foi possível apagar a sessão do Hermes.",
     "sessionRenameFailed": "Não foi possível renomear a sessão do Hermes."
   },
