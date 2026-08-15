@@ -29,6 +29,7 @@ The original deployment runs on a UGREEN NAS and is accessed through [Tailscale]
 - Model selection and per-session model persistence.
 - English and Brazilian Portuguese interfaces.
 - Canonical Hermes history: sessions created by this UI, the CLI, dashboard, cron, and other integrations appear together.
+- Multiple pinned chats with desktop and touch-friendly rename/delete actions.
 - Paginated session list suitable for long-lived installations.
 - Background completion and Web Push support.
 

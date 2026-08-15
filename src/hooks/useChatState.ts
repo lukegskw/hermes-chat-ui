@@ -20,9 +20,10 @@ import {
   readPendingSessionTarget,
   readSessionDeepLink,
   updateConversationTitle,
+  updateConversationPinned,
   withoutSessionDeepLink,
 } from "../utils";
-import { mergeSessions } from "./sessionListReconciliation";
+import { mergeSessions, sortSessions } from "./sessionListReconciliation";
 import { reconcileSessionMessages } from "./sessionMessageReconciliation";
 
 const PAGE_SIZE = 50;
@@ -209,10 +210,12 @@ export const useChatState = () => {
         if (options.signal?.aborted) {
           throw new DOMException("Navigation aborted", "AbortError");
         }
-        setConversations((previous) => [
-          requested,
-          ...previous.filter((session) => session.id !== requested.id),
-        ]);
+        setConversations((previous) =>
+          sortSessions([
+            requested,
+            ...previous.filter((session) => session.id !== requested.id),
+          ]),
+        );
         setActiveConversationId(requested.id);
         setSessionError("");
         return "selected";
@@ -356,12 +359,12 @@ export const useChatState = () => {
       });
       setConversations((previous) => {
         const existingIds = new Set(previous.map((session) => session.id));
-        return [
+        return sortSessions([
           ...previous,
           ...(page.conversations as Conversation[]).filter(
             (session) => !existingIds.has(session.id),
           ),
-        ];
+        ]);
       });
       setHasMoreConversations(page.hasMore);
     } catch (error) {
@@ -388,10 +391,12 @@ export const useChatState = () => {
         // to one concrete provider/model pair. Creation locks only this new
         // session and never writes Hermes' global configuration.
         const session = await createConversation(endpoint, { selection });
-        setConversations((previous) => [
-          session as Conversation,
-          ...previous.filter((item) => item.id !== session.id),
-        ]);
+        setConversations((previous) =>
+          sortSessions([
+            session as Conversation,
+            ...previous.filter((item) => item.id !== session.id),
+          ]),
+        );
         setActiveConversationId(session.id);
         setSessionError("");
         return session as Conversation;
@@ -439,9 +444,9 @@ export const useChatState = () => {
   );
 
   const handleRenameConversation = useCallback(
-    async (id: string, newTitle: string) => {
+    async (id: string, newTitle: string): Promise<boolean> => {
       const title = newTitle.trim();
-      if (!title) return;
+      if (!title) return false;
       const previousTitle =
         conversations.find((item) => item.id === id)?.title ?? "";
       setConversations((previous) =>
@@ -451,6 +456,7 @@ export const useChatState = () => {
       );
       try {
         await updateConversationTitle(endpoint, id, title);
+        return true;
       } catch (error) {
         setConversations((previous) =>
           previous.map((session) =>
@@ -459,9 +465,43 @@ export const useChatState = () => {
         );
         handleApiError(error, t("errors.sessionRenameFailed"));
         toast.error(t("errors.sessionRenameFailed"));
+        return false;
       }
     },
     [conversations, endpoint, handleApiError, t],
+  );
+
+  const handlePinConversation = useCallback(
+    async (id: string, pinned: boolean): Promise<boolean> => {
+      const previousPinned =
+        conversationsRef.current.find((item) => item.id === id)?.pinned ??
+        false;
+      setConversations((previous) =>
+        sortSessions(
+          previous.map((session) =>
+            session.id === id ? { ...session, pinned } : session,
+          ),
+        ),
+      );
+      try {
+        await updateConversationPinned(endpoint, id, pinned);
+        return true;
+      } catch (error) {
+        setConversations((previous) =>
+          sortSessions(
+            previous.map((session) =>
+              session.id === id
+                ? { ...session, pinned: previousPinned }
+                : session,
+            ),
+          ),
+        );
+        handleApiError(error, t("errors.sessionPinFailed"));
+        toast.error(t("errors.sessionPinFailed"));
+        return false;
+      }
+    },
+    [endpoint, handleApiError, t],
   );
 
   const handleSaveSettings = (newSettings: Settings) =>
@@ -494,6 +534,7 @@ export const useChatState = () => {
     handleSelectConversation: setActiveConversationId,
     handleDeleteConversation,
     handleRenameConversation,
+    handlePinConversation,
     handleLoadMore,
     reloadConversation,
   };

@@ -62,6 +62,7 @@ export const App = () => {
     handleSelectConversation,
     handleDeleteConversation,
     handleRenameConversation,
+    handlePinConversation,
     handleLoadMore,
     reloadConversation,
   } = useChatState();
@@ -159,6 +160,15 @@ export const App = () => {
             handleSelectConversation(id);
             setIsSidebarOpen(false);
           }}
+          onPinConversation={handlePinConversation}
+          onRenameConversation={handleRenameConversation}
+          onDeleteConversation={(id) =>
+            handleDeleteConversation(id, () => {
+              if (id === activeConversationId && isGenerating) {
+                return handleStopGeneration();
+              }
+            })
+          }
           onNewChat={() => {
             if (!newConversationSelection) return;
             void handleNewChat(newConversationSelection).then((session) => {

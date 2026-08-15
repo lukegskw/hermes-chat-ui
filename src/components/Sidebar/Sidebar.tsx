@@ -1,17 +1,11 @@
 import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Conversation } from "../../types";
-import {
-  Bot,
-  MessageSquare,
-  Plus,
-  Settings as SettingsIcon,
-  Sparkles,
-  X,
-} from "../Icons";
+import { Bot, Plus, Settings as SettingsIcon, Sparkles, X } from "../Icons";
 import { SelectField } from "../SelectField";
 import type { SelectFieldItem } from "../SelectField";
 import styles from "./Sidebar.module.scss";
+import { ConversationListItem } from "./ConversationListItem";
 
 export type Settings = {
   systemPrompt?: string;
@@ -24,6 +18,9 @@ export type SidebarProps = {
   conversations: Conversation[];
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
+  onPinConversation: (id: string, pinned: boolean) => Promise<boolean>;
+  onRenameConversation: (id: string, title: string) => Promise<boolean>;
+  onDeleteConversation: (id: string) => Promise<boolean>;
   onNewChat: () => void;
   canCreateConversation?: boolean;
   isCreatingChat?: boolean;
@@ -49,6 +46,9 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
       conversations,
       activeConversationId,
       onSelectConversation,
+      onPinConversation,
+      onRenameConversation,
+      onDeleteConversation,
       onNewChat,
       canCreateConversation = false,
       isCreatingChat,
@@ -169,40 +169,16 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             conversations.map((conv) => {
               const isActive = conv.id === activeConversationId;
               return (
-                <div
+                <ConversationListItem
                   key={conv.id}
-                  onClick={() => {
-                    if (!disabled) onSelectConversation(conv.id);
-                  }}
-                  className={`${styles.conversationItem} ${isActive ? styles.active : ""}`}
-                  aria-disabled={disabled}
-                >
-                  <div className={styles.conversationItemContent}>
-                    <MessageSquare
-                      size={15}
-                      className={styles.conversationIcon}
-                    />
-
-                    <div className={styles.conversationText}>
-                      <span className={styles.conversationTitle}>
-                        {conv.title || t("common.newChat")}
-                      </span>
-                      <span className={styles.conversationSource}>
-                        {(() => {
-                          const s = (conv.source || "").toLowerCase();
-                          if (
-                            s === "hermes_browser" ||
-                            s === "tui" ||
-                            s === "cli"
-                          ) {
-                            return t("sidebar.userSource");
-                          }
-                          return conv.source || "Hermes";
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  conversation={conv}
+                  active={isActive}
+                  disabled={disabled}
+                  onSelect={() => onSelectConversation(conv.id)}
+                  onPin={(pinned) => onPinConversation(conv.id, pinned)}
+                  onRename={(title) => onRenameConversation(conv.id, title)}
+                  onDelete={() => onDeleteConversation(conv.id)}
+                />
               );
             })
           ) : (

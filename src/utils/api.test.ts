@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createConversation,
+  fetchConversations,
   fetchModels,
   normalizeSessionMessages,
   sendChatMessageStream,
   updateConversationModel,
+  updateConversationPinned,
 } from "./api";
 
 afterEach(() => {
@@ -387,6 +389,36 @@ describe("model catalog", () => {
         reasoning: { enabled: true, effort: "high" },
       },
       require_model_lock: true,
+    });
+  });
+});
+
+describe("pinned sessions", () => {
+  it("reads native Hermes pin state and patches it without a local store", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          data: [
+            {
+              id: "session-1",
+              title: "Pinned",
+              pinned: true,
+              message_count: 0,
+            },
+          ],
+          has_more: false,
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const page = await fetchConversations("http://hermes.test");
+    expect(page.conversations[0].pinned).toBe(true);
+    await updateConversationPinned("http://hermes.test", "session-1", false);
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+      method: "PATCH",
+      body: JSON.stringify({ pinned: false }),
     });
   });
 });

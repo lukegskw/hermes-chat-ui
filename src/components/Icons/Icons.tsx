@@ -58,6 +58,21 @@ export const MoreVertical = (props: IconProps) => (
   </SvgIcon>
 );
 
+export const Pin = (props: IconProps) => (
+  <SvgIcon {...props}>
+    <path d="M12 17v5" />
+    <path d="M5 17h14" />
+    <path d="M7 3h10l-2 5v4l2 5H7l2-5V8z" />
+  </SvgIcon>
+);
+
+export const Pencil = (props: IconProps) => (
+  <SvgIcon {...props}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4z" />
+  </SvgIcon>
+);
+
 export const Trash2 = (props: IconProps) => (
   <SvgIcon {...props}>
     <polyline points="3 6 5 6 21 6" />

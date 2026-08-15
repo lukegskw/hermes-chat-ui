@@ -62,6 +62,7 @@ const SessionSchema = z.object({
   last_active: z.number().nullish(),
   message_count: z.number().optional(),
   parent_session_id: z.string().nullish(),
+  pinned: z.boolean().optional(),
 });
 
 const SessionsResponseSchema = z.object({
@@ -146,6 +147,7 @@ const toConversation = (
   source: session.source,
   lastActive: session.last_active ?? session.started_at,
   messageCount: session.message_count ?? 0,
+  pinned: session.pinned ?? false,
   messages: [],
 });
 
@@ -450,6 +452,20 @@ export const updateConversationTitle = async (
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
+    }),
+  );
+};
+
+export const updateConversationPinned = async (
+  endpoint: string,
+  id: string,
+  pinned: boolean,
+): Promise<void> => {
+  await assertOk(
+    await fetch(`${apiBase(endpoint)}/api/sessions/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pinned }),
     }),
   );
 };

@@ -59,6 +59,7 @@ export type ConversationAPI = {
   messages: ChatMessage[];
   lastActive?: number | null;
   messageCount?: number;
+  pinned?: boolean;
 };
 
 export type SendChatMessageStreamOptions = {
@@ -85,6 +86,7 @@ export type Conversation = {
   source?: string | null;
   lastActive?: number | null;
   messageCount?: number;
+  pinned?: boolean;
 };
 
 export type ConversationsPage = {

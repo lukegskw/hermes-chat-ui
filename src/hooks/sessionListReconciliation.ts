@@ -1,5 +1,16 @@
 import type { Conversation } from "../types";
 
+const recentActivity = (conversation: Conversation) =>
+  conversation.lastActive ?? 0;
+
+export const sortSessions = (sessions: Conversation[]): Conversation[] =>
+  [...sessions].sort((left, right) => {
+    if (Boolean(left.pinned) !== Boolean(right.pinned)) {
+      return left.pinned ? -1 : 1;
+    }
+    return recentActivity(right) - recentActivity(left);
+  });
+
 export const mergeSessions = (
   previous: Conversation[],
   incoming: Conversation[],
@@ -37,5 +48,5 @@ export const mergeSessions = (
         (session) => session.id === retainedId && !incomingIds.has(session.id),
       )
     : undefined;
-  return retained ? [...merged, retained] : merged;
+  return sortSessions(retained ? [...merged, retained] : merged);
 };
