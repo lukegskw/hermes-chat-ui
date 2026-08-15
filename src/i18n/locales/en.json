@@ -50,29 +50,11 @@
     "providerDefault": "Provider default",
     "reasoningUnavailable": "Levels unavailable",
     "reasoningUnsupported": "Not supported by this model",
+    "reasoningCompatibilityDependent": "{{effort}} (depends on Hermes)",
     "chooseModel": "Choose model",
     "chooseReasoning": "Choose reasoning",
     "conversationOptions": "Options for {{title}}",
     "updatingRuntime": "Applying setting…"
-  },
-  "audio": {
-    "startRecording": "Record voice message",
-    "stopRecording": "Stop recording",
-    "cancelRecording": "Cancel recording",
-    "cancelTranscription": "Cancel transcription",
-    "retry": "Try again",
-    "recording": "Recording…",
-    "transcribing": "Transcribing voice message…",
-    "unsupported": "Voice messages are not supported by this browser.",
-    "secureContextRequired": "Voice messages require HTTPS. Open this app through a secure HTTPS address and try again.",
-    "unavailable": "Voice transcription is unavailable on this Hermes installation.",
-    "permissionDenied": "Microphone permission was denied.",
-    "tooLarge": "The recording is too large. Record a smaller message.",
-    "busy": "Another recording is being transcribed. Try again shortly.",
-    "noSpeech": "No speech was detected.",
-    "transcriptionFailed": "The voice message could not be transcribed. You can try again.",
-    "sendFailed": "The transcript could not be sent. You can try again.",
-    "reviewTranscript": "Transcription added. Review it before sending."
   },
   "messages": {
     "you": "You",
@@ -148,6 +130,7 @@
     "sessionLoadFailed": "Could not load Hermes sessions.",
     "sessionCreateFailed": "Could not create a Hermes session.",
     "sessionModelUpdateFailed": "Could not change this conversation's model. The previous selection was kept.",
+    "reasoningUpdateFailed": "Hermes did not accept reasoning level ‘{{effort}}’ for {{model}}. The previous selection was kept.",
     "sessionDeleteFailed": "Could not delete the Hermes session.",
     "sessionRenameFailed": "Could not rename the Hermes session."
   },

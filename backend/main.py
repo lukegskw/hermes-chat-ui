@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .routers import audio, config, notifications, proactive, sessions
+from .routers import config, notifications, proactive, sessions
 
 
 app = FastAPI(title="Hermes Chat UI")
@@ -20,7 +20,6 @@ app.add_middleware(
 # Include routers
 app.include_router(config.router)
 app.include_router(sessions.router)
-app.include_router(audio.router)
 app.include_router(notifications.router, prefix="/api/push")
 app.include_router(proactive.router)
 

@@ -5,16 +5,7 @@ import React, {
   useLayoutEffect,
   useMemo,
 } from "react";
-import { createPortal } from "react-dom";
-import {
-  Send,
-  Mic,
-  Square,
-  Sparkles,
-  Menu,
-  Paperclip,
-  X as XIcon,
-} from "../Icons";
+import { Send, Square, Sparkles, Menu, Paperclip, X as XIcon } from "../Icons";
 import { MessageBubble } from "..";
 import { ConversationActionMenu } from "../ConversationActionMenu";
 import type {
@@ -24,12 +15,10 @@ import type {
 } from "../SelectField";
 import { ChatMessage, ConversationAPI } from "../../types";
 import {
-  appendTranscriptToDraft,
   ImagePreparationError,
   validateImageFile,
   fileToBase64,
 } from "../../utils";
-import { useVoiceRecorder } from "../../hooks/useVoiceRecorder";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import styles from "./ChatWindow.module.scss";
@@ -49,13 +38,13 @@ export type ChatWindowProps = {
   isGenerating: boolean;
   onSendMessage: (text: string, attachments?: File[]) => Promise<boolean>;
   onStopGeneration: () => void;
-  endpoint: string;
   selectedModel: string;
   modelOptionGroups: SelectFieldGroup[];
   conversationModelValue: string;
   reasoningEffort?: string | null;
   reasoningSupported?: boolean;
   reasoningEfforts: string[];
+  unconfirmedReasoningEfforts?: string[];
   defaultReasoning: string;
   onSelectModel: (modelId: string) => Promise<boolean>;
   onSelectReasoningEffort?: (reasoningEffort: string) => Promise<boolean>;
@@ -64,7 +53,6 @@ export type ChatWindowProps = {
   connectionError?: string;
   isLoadingMessages?: boolean;
   interactionLocked?: boolean;
-  onTranscriptionStateChange?: (isTranscribing: boolean) => void;
 };
 
 export const ChatWindow = ({
@@ -76,13 +64,13 @@ export const ChatWindow = ({
   isGenerating,
   onSendMessage,
   onStopGeneration,
-  endpoint,
   selectedModel,
   modelOptionGroups,
   conversationModelValue,
   reasoningEffort,
   reasoningSupported = true,
   reasoningEfforts,
+  unconfirmedReasoningEfforts = [],
   defaultReasoning,
   onSelectModel,
   onSelectReasoningEffort,
@@ -91,7 +79,6 @@ export const ChatWindow = ({
   connectionError,
   isLoadingMessages = false,
   interactionLocked = false,
-  onTranscriptionStateChange,
 }: ChatWindowProps) => {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
@@ -109,25 +96,7 @@ export const ChatWindow = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const transcriptionSessionRef = useRef<string | null>(null);
-  const focusTranscriptRef = useRef(false);
-  const voice = useVoiceRecorder({
-    endpoint,
-    disabled: isGenerating || !activeConversation || interactionLocked,
-    onTranscript: (text) => {
-      if (transcriptionSessionRef.current !== activeConversation?.id) {
-        return false;
-      }
-      setInput((current) => appendTranscriptToDraft(current, text));
-      focusTranscriptRef.current = true;
-      return true;
-    },
-  });
-  const isInteractionLocked = interactionLocked || voice.isTranscribing;
-  const voiceStatusKey =
-    (voice.isTranscribing ? null : voice.messageKey) ||
-    (voice.isRecording ? "audio.recording" : null) ||
-    null;
+  const isInteractionLocked = interactionLocked;
   const reasoningAvailable = reasoningSupported && reasoningEfforts.length > 0;
   const defaultReasoningLabel =
     defaultReasoning === "provider"
@@ -138,7 +107,12 @@ export const ChatWindow = ({
   const reasoningOptions: SelectFieldOption[] = reasoningAvailable
     ? [
         { value: "", label: defaultReasoningLabel },
-        ...reasoningEfforts.map((effort) => ({ value: effort, label: effort })),
+        ...reasoningEfforts.map((effort) => ({
+          value: effort,
+          label: unconfirmedReasoningEfforts.includes(effort)
+            ? t("chat.reasoningCompatibilityDependent", { effort })
+            : effort,
+        })),
       ]
     : [
         {
@@ -176,22 +150,6 @@ export const ChatWindow = ({
       titleInputRef.current.focus();
     }
   }, [isEditingTitle]);
-
-  useEffect(() => {
-    onTranscriptionStateChange?.(voice.isTranscribing);
-    return () => onTranscriptionStateChange?.(false);
-  }, [onTranscriptionStateChange, voice.isTranscribing]);
-
-  useEffect(() => {
-    if (
-      !isInteractionLocked &&
-      focusTranscriptRef.current &&
-      textareaRef.current
-    ) {
-      focusTranscriptRef.current = false;
-      textareaRef.current.focus();
-    }
-  }, [isInteractionLocked]);
 
   const handleSaveTitle = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -374,26 +332,10 @@ export const ChatWindow = ({
     }
   };
 
-  const handleStartRecording = () => {
-    if (isInteractionLocked) return;
-    transcriptionSessionRef.current = activeConversation?.id ?? null;
-    setIsEditingTitle(false);
-    setIsDragging(false);
-    void voice.start();
-  };
-
-  const handleRetryTranscription = () => {
-    if (isInteractionLocked) return;
-    setIsEditingTitle(false);
-    setIsDragging(false);
-    voice.retry();
-  };
-
   return (
     <>
       <main
         className={styles.main}
-        aria-busy={voice.isTranscribing}
         onDragOver={(e) => {
           e.preventDefault();
           if (isInteractionLocked) return;
@@ -584,22 +526,6 @@ export const ChatWindow = ({
             </div>
           )}
 
-          {voiceStatusKey && (
-            <div className={styles.voiceStatus} role="status">
-              <span>
-                {t(voiceStatusKey, {
-                  size: Math.ceil(voice.recordedBytes / (1024 * 1024)),
-                  maxSize: Math.floor(voice.maxBytes / (1024 * 1024)),
-                })}
-              </span>
-              {voice.canRetry && (
-                <button type="button" onClick={handleRetryTranscription}>
-                  {t("audio.retry")}
-                </button>
-              )}
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className={styles.chatInputForm}>
             <div className={styles.chatInputActions}>
               {isDragging && (
@@ -644,44 +570,6 @@ export const ChatWindow = ({
                   <Paperclip size={18} />
                 </button>
 
-                {voice.isAvailable &&
-                  (voice.isRecording ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={voice.stop}
-                        className={styles.btnVoiceStop}
-                        title={t("audio.stopRecording")}
-                        disabled={isInteractionLocked}
-                      >
-                        <Square size={15} fill="currentColor" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={voice.cancel}
-                        className={styles.btnVoiceCancel}
-                        title={t("audio.cancelRecording")}
-                        disabled={isInteractionLocked}
-                      >
-                        <XIcon size={16} />
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleStartRecording}
-                      className={styles.btnVoice}
-                      disabled={
-                        isGenerating ||
-                        !activeConversation ||
-                        isInteractionLocked
-                      }
-                      title={t("audio.startRecording")}
-                    >
-                      <Mic size={18} />
-                    </button>
-                  ))}
-
                 {isGenerating ? (
                   <button
                     type="button"
@@ -710,30 +598,6 @@ export const ChatWindow = ({
           </form>
         </div>
       </main>
-      {voice.isTranscribing &&
-        createPortal(
-          <div
-            className={styles.transcriptionOverlay}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="transcription-status"
-          >
-            <div className={styles.transcriptionDialog}>
-              <div id="transcription-status" role="status" aria-live="polite">
-                {t("audio.transcribing")}
-              </div>
-              <button
-                type="button"
-                className={styles.transcriptionCancel}
-                onClick={voice.cancel}
-                autoFocus
-              >
-                {t("audio.cancelTranscription")}
-              </button>
-            </div>
-          </div>,
-          document.body,
-        )}
     </>
   );
 };

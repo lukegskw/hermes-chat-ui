@@ -1,5 +1,4 @@
 import json
-from types import SimpleNamespace
 
 from fastapi.responses import Response
 from fastapi.testclient import TestClient
@@ -8,44 +7,20 @@ from backend.main import app
 from backend.routers import config
 
 
-def test_reasoning_efforts_intersect_hermes_constants_with_session_parser(monkeypatch):
-    def fake_import(module_name: str):
-        if module_name == "hermes_constants":
-            return SimpleNamespace(
-                VALID_REASONING_EFFORTS=(
-                    "minimal",
-                    "low",
-                    "medium",
-                    "high",
-                    "xhigh",
-                    "max",
-                    "ultra",
-                )
-            )
-        if module_name == "gateway.platforms.api_server":
-            return SimpleNamespace(_REASONING_EFFORTS={"minimal", "medium", "xhigh"})
-        raise ImportError(module_name)
+def test_reasoning_defaults_match_global_and_spelling_tolerant_overrides():
+    config_data = {
+        "agent": {
+            "reasoning_effort": "medium",
+            "reasoning_overrides": {
+                "claude-opus-4.5": "ultra",
+                "disabled-model": False,
+            },
+        }
+    }
 
-    monkeypatch.setattr(config.importlib, "import_module", fake_import)
-
-    assert config._session_api_reasoning_efforts() == ["minimal", "medium", "xhigh"]
-
-
-def test_reasoning_efforts_use_the_conservative_session_contract_for_hermes_019(
-    monkeypatch,
-):
-    def fake_import(module_name: str):
-        if module_name == "hermes_constants":
-            return SimpleNamespace(
-                VALID_REASONING_EFFORTS=("minimal", "xhigh", "max", "ultra")
-            )
-        if module_name == "gateway.platforms.api_server":
-            return SimpleNamespace()
-        raise ImportError(module_name)
-
-    monkeypatch.setattr(config.importlib, "import_module", fake_import)
-
-    assert config._session_api_reasoning_efforts() == ["minimal", "xhigh"]
+    assert config._effective_reasoning_default(config_data, "claude-opus-4-5") == "ultra"
+    assert config._effective_reasoning_default(config_data, "disabled-model") == "none"
+    assert config._effective_reasoning_default(config_data, "other-model") == "medium"
 
 
 def test_reasoning_defaults_are_resolved_per_catalog_model(monkeypatch):
@@ -81,9 +56,6 @@ def test_model_options_adds_compatibility_reasoning_efforts(monkeypatch):
 
     monkeypatch.setattr(config, "proxy_json_request", fake_proxy)
     monkeypatch.setattr(
-        config, "_session_api_reasoning_efforts", lambda: ["minimal", "xhigh"]
-    )
-    monkeypatch.setattr(
         config,
         "_catalog_reasoning_defaults",
         lambda _payload: {"p": {"test": "high"}},
@@ -93,5 +65,34 @@ def test_model_options_adds_compatibility_reasoning_efforts(monkeypatch):
         response = client.get("/api/model/options")
 
     assert response.status_code == 200
-    assert response.json()["reasoning_efforts"] == ["minimal", "xhigh"]
+    assert response.json()["reasoning_efforts"] == list(config.KNOWN_REASONING_EFFORTS)
+    assert response.json()["reasoning_unconfirmed_efforts"] == ["max", "ultra"]
     assert response.json()["reasoning_defaults"] == {"p": {"test": "high"}}
+
+
+def test_model_options_prefers_known_efforts_advertised_by_hermes(monkeypatch):
+    async def fake_proxy(*_args, **_kwargs):
+        return Response(
+            content=json.dumps(
+                {
+                    "providers": [],
+                    "reasoning_efforts": ["none", "high", "future-level"],
+                }
+            ),
+            status_code=200,
+            media_type="application/json",
+        )
+
+    monkeypatch.setattr(config, "proxy_json_request", fake_proxy)
+    with TestClient(app) as client:
+        response = client.get("/api/model/options")
+
+    assert response.json()["reasoning_efforts"] == list(config.KNOWN_REASONING_EFFORTS)
+    assert response.json()["reasoning_unconfirmed_efforts"] == [
+        "minimal",
+        "low",
+        "medium",
+        "xhigh",
+        "max",
+        "ultra",
+    ]

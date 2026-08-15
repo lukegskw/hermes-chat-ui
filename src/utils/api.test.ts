@@ -280,6 +280,7 @@ describe("model catalog", () => {
             model: "global-model",
             provider: "openai",
             reasoning_efforts: ["minimal", "medium", "xhigh"],
+            reasoning_unconfirmed_efforts: ["xhigh"],
             reasoning_defaults: { openai: { "global-model": "high" } },
             providers: [
               {
@@ -299,6 +300,7 @@ describe("model catalog", () => {
       defaultModel: "global-model",
       defaultProvider: "openai",
       reasoningEfforts: ["minimal", "medium", "xhigh"],
+      unconfirmedReasoningEfforts: ["xhigh"],
       reasoningDefaults: { openai: { "global-model": "high" } },
     });
   });

@@ -50,29 +50,11 @@
     "providerDefault": "Padrão do provider",
     "reasoningUnavailable": "Níveis indisponíveis",
     "reasoningUnsupported": "Não compatível com este modelo",
+    "reasoningCompatibilityDependent": "{{effort}} (depende do Hermes)",
     "chooseModel": "Escolher modelo",
     "chooseReasoning": "Escolher raciocínio",
     "conversationOptions": "Opções de {{title}}",
     "updatingRuntime": "Aplicando configuração…"
-  },
-  "audio": {
-    "startRecording": "Gravar mensagem de voz",
-    "stopRecording": "Parar gravação",
-    "cancelRecording": "Cancelar gravação",
-    "cancelTranscription": "Cancelar transcrição",
-    "retry": "Tentar novamente",
-    "recording": "Gravando…",
-    "transcribing": "Transcrevendo mensagem de voz…",
-    "unsupported": "Mensagens de voz não são compatíveis com este navegador.",
-    "secureContextRequired": "Mensagens de voz exigem HTTPS. Abra este app por um endereço HTTPS seguro e tente novamente.",
-    "unavailable": "A transcrição de voz não está disponível nesta instalação do Hermes.",
-    "permissionDenied": "A permissão para usar o microfone foi negada.",
-    "tooLarge": "A gravação ficou grande demais. Grave uma mensagem menor.",
-    "busy": "Outra gravação está sendo transcrita. Tente novamente em instantes.",
-    "noSpeech": "Nenhuma fala foi detectada.",
-    "transcriptionFailed": "Não foi possível transcrever a mensagem de voz. Você pode tentar novamente.",
-    "sendFailed": "Não foi possível enviar a transcrição. Você pode tentar novamente.",
-    "reviewTranscript": "Transcrição adicionada. Revise antes de enviar."
   },
   "messages": {
     "you": "Você",
@@ -148,6 +130,7 @@
     "sessionLoadFailed": "Não foi possível carregar as sessões do Hermes.",
     "sessionCreateFailed": "Não foi possível criar uma sessão no Hermes.",
     "sessionModelUpdateFailed": "Não foi possível alterar o modelo desta conversa. A seleção anterior foi mantida.",
+    "reasoningUpdateFailed": "O Hermes não aceitou o nível de raciocínio ‘{{effort}}’ para {{model}}. A seleção anterior foi mantida.",
     "sessionDeleteFailed": "Não foi possível apagar a sessão do Hermes.",
     "sessionRenameFailed": "Não foi possível renomear a sessão do Hermes."
   },

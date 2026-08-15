@@ -1,7 +1,11 @@
 # Hermes Chat UI as a Client of Hermes Agent
 
-Status: validated design  
+Status: superseded on 2026-08-15
+
 Date: 2026-08-09
+
+> This document records the original Python/STT boundary. The active design is
+> [TypeScript BFF Migration](typescript-bff-migration.md).
 
 ## Purpose
 

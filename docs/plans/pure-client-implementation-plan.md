@@ -1,8 +1,13 @@
 # Pure-client implementation plan
 
-Status: ready for implementation  
-Depends on: [validated architecture](../design/pure-client-architecture.md)  
+Status: superseded on 2026-08-15
+
+Depends on: [validated architecture](../design/pure-client-architecture.md)
+
 Date: 2026-08-09
+
+> This historical plan describes the original Python/STT migration. The active
+> delivery plan is [TypeScript BFF implementation plan](typescript-bff-implementation-plan.md).
 
 > Implementation note: the UI/container split, restricted catalog proxy,
 > provider/model/reasoning controls, STT compatibility boundary, Push storage,

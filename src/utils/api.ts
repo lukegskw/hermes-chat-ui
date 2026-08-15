@@ -37,6 +37,7 @@ const ModelOptionsSchema = z.object({
   model: z.string().optional(),
   provider: z.string().optional(),
   reasoning_efforts: z.array(z.string()).optional(),
+  reasoning_unconfirmed_efforts: z.array(z.string()).optional(),
   reasoning_defaults: z
     .record(z.string(), z.record(z.string(), z.string()))
     .optional(),
@@ -303,6 +304,7 @@ export const fetchModels = async (
   defaultModel: string;
   defaultProvider: string;
   reasoningEfforts: string[];
+  unconfirmedReasoningEfforts: string[];
   reasoningDefaults: Partial<Record<string, Record<string, string>>>;
 }> => {
   const response = await assertOk(
@@ -319,6 +321,7 @@ export const fetchModels = async (
     defaultModel: parsed.model || "",
     defaultProvider: parsed.provider || "",
     reasoningEfforts: parsed.reasoning_efforts || [],
+    unconfirmedReasoningEfforts: parsed.reasoning_unconfirmed_efforts || [],
     reasoningDefaults: parsed.reasoning_defaults || {},
   };
 };

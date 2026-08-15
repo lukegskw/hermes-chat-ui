@@ -2,9 +2,6 @@ services:
   hermes-chat-ui:
     build:
       context: .
-      args:
-        # Keep the STT compatibility package aligned with the tested Hermes release.
-        HERMES_STT_PACKAGE: ${HERMES_STT_PACKAGE:-hermes-agent[voice]==0.19.0}
     image: hermes-chat-ui:local
     container_name: hermes-chat-ui
     restart: unless-stopped
@@ -26,12 +23,10 @@ services:
       - HERMES_DASHBOARD_BASIC_AUTH_USERNAME=${HERMES_DASHBOARD_BASIC_AUTH_USERNAME}
       - HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=${HERMES_DASHBOARD_BASIC_AUTH_PASSWORD}
     volumes:
-      # config.yaml is always read; .env is used only by credentialed STT providers.
-      # Neither file is exposed to the browser.
+      # Only the non-secret model/reasoning projection is read from config.yaml.
+      # The file is never exposed directly to the browser.
       - /volume2/docker_ssd/hermes/config/config.yaml:/hermes-config/config.yaml:ro
-      - /volume2/docker_ssd/hermes/config/.env:/hermes-config/.env:ro
       - /volume2/docker_ssd/hermes-chat-ui/data:/app/data
-      - /volume2/docker_ssd/hermes-chat-ui/cache:/app/cache
     read_only: true
     tmpfs:
       - /tmp:uid=10001,gid=10001,mode=1777

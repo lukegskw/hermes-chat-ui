@@ -138,6 +138,8 @@ export const useModels = (
   const [selectedProvider, setSelectedProvider] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [reasoningEfforts, setReasoningEfforts] = useState<string[]>([]);
+  const [unconfirmedReasoningEfforts, setUnconfirmedReasoningEfforts] =
+    useState<string[]>([]);
   const [reasoningDefaults, setReasoningDefaults] = useState<
     Partial<Record<string, Record<string, string>>>
   >({});
@@ -200,6 +202,7 @@ export const useModels = (
 
       setProviders(fetchedProviders);
       setReasoningEfforts(fetched.reasoningEfforts);
+      setUnconfirmedReasoningEfforts(fetched.unconfirmedReasoningEfforts);
       setReasoningDefaults(fetched.reasoningDefaults);
       setIsConnected(true);
       setConnectionError("");
@@ -301,6 +304,7 @@ export const useModels = (
       setProviders([]);
       setModels([]);
       setReasoningEfforts([]);
+      setUnconfirmedReasoningEfforts([]);
       setReasoningDefaults({});
       setModelOptionGroups([]);
       setHermesDefaultSelection(null);
@@ -322,6 +326,7 @@ export const useModels = (
     modelId: string,
     providerId: string,
     reasoningEffort?: string,
+    failureMessage = t("errors.sessionModelUpdateFailed"),
   ): Promise<boolean> => {
     if (!modelId || !providerId || !activeConversationId) return false;
     setIsUpdatingConversationModel(true);
@@ -358,7 +363,7 @@ export const useModels = (
       return true;
     } catch (error: unknown) {
       logger.error({ error }, "Failed to update Hermes session model");
-      toast.error(t("errors.sessionModelUpdateFailed"));
+      toast.error(failureMessage);
       return false;
     } finally {
       setIsUpdatingConversationModel(false);
@@ -377,6 +382,10 @@ export const useModels = (
       selectedModel,
       selectedProvider,
       reasoningEffort || undefined,
+      t("errors.reasoningUpdateFailed", {
+        effort: reasoningEffort || t("chat.hermesDefault"),
+        model: selectedModel,
+      }),
     );
   };
 
@@ -445,6 +454,7 @@ export const useModels = (
     selectedProvider,
     selectedModel,
     reasoningEfforts,
+    unconfirmedReasoningEfforts,
     reasoningDefaults,
     modelOptionGroups,
     newConversationModelValue,
