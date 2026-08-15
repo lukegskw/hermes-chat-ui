@@ -69,7 +69,10 @@
     "reasoningProcess": "Reasoning Process",
     "reasoning": "Reasoning...",
     "copyMessage": "Copy message",
-    "attachment": "attachment"
+    "attachment": "attachment",
+    "openImage": "Open image {{index}}",
+    "imagePreview": "Enlarged image",
+    "closeImage": "Close image"
   },
   "approval": {
     "title": "Action Requires Approval",

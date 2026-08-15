@@ -8,6 +8,7 @@ import {
   unavailableResponse,
 } from "./hermes-client.js";
 import { deliverNotification, isAnyClientVisible } from "./notifications.js";
+import type { AttachmentStore } from "./attachments.js";
 
 export const REASONING_INITIAL_DELAY_MS = 500;
 export const REASONING_POLL_INTERVAL_MS = 750;
@@ -180,6 +181,7 @@ export const streamSessionChat = async (
   config: ServerConfig,
   sessionId: string,
   request: Request,
+  attachments?: AttachmentStore,
 ): Promise<Response> => {
   if (activeStreams.has(sessionId)) {
     return Response.json(
@@ -194,6 +196,22 @@ export const streamSessionChat = async (
   const payload = await safeJsonBody(request);
   const baselineMessages = await fetchMessageRows(config, sessionId);
   const reasoningBoundary = baselineMessages?.length;
+  let pendingAttachmentGroup: string | undefined;
+  try {
+    pendingAttachmentGroup = await attachments?.createPending(
+      sessionId,
+      payload,
+      baselineMessages ?? [],
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        detail: "Image attachments are invalid or too large",
+        code: error instanceof Error ? error.message : "invalid_attachment",
+      },
+      { status: 422 },
+    );
+  }
   const abortController = new AbortController();
   let upstream: Response;
   try {
@@ -210,9 +228,15 @@ export const streamSessionChat = async (
       },
     );
   } catch (error) {
+    if (pendingAttachmentGroup) {
+      await attachments?.discardPending(pendingAttachmentGroup);
+    }
     return unavailableResponse(error);
   }
   if (upstream.status !== 200 || !upstream.body) {
+    if (pendingAttachmentGroup) {
+      await attachments?.discardPending(pendingAttachmentGroup);
+    }
     return new Response(upstream.body, {
       status: upstream.status,
       headers: {
@@ -222,6 +246,22 @@ export const streamSessionChat = async (
     });
   }
   const upstreamBody = upstream.body;
+
+  if (attachments && pendingAttachmentGroup) {
+    const groupId = pendingAttachmentGroup;
+    void (async () => {
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        const rows = await fetchMessageRows(config, sessionId);
+        if (rows) {
+          const bound = await attachments.reconcileSession(sessionId, rows);
+          if (bound.includes(groupId)) return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    })().catch((error) =>
+      console.error("[attachments] Failed to bind pending images:", error),
+    );
+  }
 
   let controller!: ReadableStreamDefaultController<Uint8Array>;
   const active: ActiveSessionStream = {
@@ -332,3 +372,57 @@ export const proxySessionRequest = (
     query: new URL(request.url).searchParams.toString(),
     payload,
   });
+
+export const getSessionMessages = async (
+  config: ServerConfig,
+  sessionId: string,
+  request: Request,
+  attachments: AttachmentStore,
+): Promise<Response> => {
+  const upstream = await proxySessionRequest(
+    config,
+    "GET",
+    sessionPath(sessionId, "/messages"),
+    request,
+  );
+  if (upstream.status !== 200) return upstream;
+  const contentType =
+    upstream.headers.get("Content-Type") || "application/json";
+  const text = await upstream.text();
+  try {
+    const enriched = await attachments.enrichMessages(
+      sessionId,
+      JSON.parse(text),
+    );
+    return Response.json(enriched, { status: upstream.status });
+  } catch (error) {
+    console.error("[attachments] Failed to enrich message history:", error);
+    return new Response(text, {
+      status: upstream.status,
+      headers: { "Content-Type": contentType },
+    });
+  }
+};
+
+export const deleteSession = async (
+  config: ServerConfig,
+  sessionId: string,
+  request: Request,
+  attachments: AttachmentStore,
+): Promise<Response> => {
+  await cancelActiveStream(sessionId);
+  const response = await proxySessionRequest(
+    config,
+    "DELETE",
+    sessionPath(sessionId),
+    request,
+  );
+  if (response.ok) {
+    await attachments
+      .deleteSession(sessionId)
+      .catch((error) =>
+        console.error("[attachments] Failed to remove session images:", error),
+      );
+  }
+  return response;
+};

@@ -25,7 +25,7 @@ The original deployment runs on a UGREEN NAS and is accessed through [Tailscale]
 - Installable Progressive Web App for desktop and mobile.
 - Responsive, mobile-first interface.
 - Real-time answer, reasoning, and tool-activity streaming.
-- Multiple inline images, automatically resized and compressed before they are sent through the Hermes Sessions API.
+- Multiple inline images, automatically resized before submission, preserved across refreshes/restarts, and expandable in a responsive lightbox.
 - Model selection and per-session model persistence.
 - English and Brazilian Portuguese interfaces.
 - Canonical Hermes history: sessions created by this UI, the CLI, dashboard, cron, and other integrations appear together.
@@ -36,19 +36,19 @@ The original deployment runs on a UGREEN NAS and is accessed through [Tailscale]
 
 ## Session data and deletion
 
-Hermes Agent is the only source of truth for sessions and messages. The UI uses the official Hermes Sessions API and does not maintain a second chat database or access Hermes SQLite tables directly.
+Hermes Agent is the only source of truth for sessions and messages. The UI uses the official Hermes Sessions API and does not maintain a second chat database or access Hermes SQLite tables directly. Because Hermes may omit submitted image data from persisted history, the UI keeps only its own image blobs and a message-ID association index under `/app/data/attachments`.
 
 This has two important consequences:
 
 1. A session created outside this UI is visible here.
-2. Deleting a session here permanently deletes the canonical Hermes session, so it disappears from the CLI, dashboard, cron, and every other Hermes interface.
+2. Deleting a session here permanently deletes the canonical Hermes session, so it disappears from the CLI, dashboard, cron, and every other Hermes interface. After Hermes confirms the deletion, the UI also removes that session's locally retained images.
 
 Bulk deletion is intentionally unavailable.
 
 Versions of Hermes Chat UI before this architecture stored UI conversations in `/opt/data/hermes_chats.db`. That file is no longer opened and is not migrated automatically. An upgrade leaves the file untouched for manual recovery or rollback.
 
 > [!IMPORTANT]
-> Back up the `/opt/data` volume before upgrading. Hermes owns its current session database and schema migrations.
+> Back up the Hermes `/opt/data` volume and the UI `/app/data` volume before upgrading. Hermes owns its current session database and schema migrations; the UI volume owns push state and retained image files.
 
 ## Architecture
 
@@ -57,6 +57,7 @@ graph LR
     Browser[Browser / PWA] -->|HTTP :8643| Proxy[Chat UI BFF]
     Proxy -->|Bearer token, internal HTTP :8642| API[Official Hermes API]
     Proxy -->|read-only model defaults| Config[Hermes config.yaml]
+    Proxy -->|image blobs and safe ID index| UIData[UI /app/data]
     API --> DB[(Hermes state database)]
     API <--> Agent[Hermes Agent]
     Agent <--> LLM[Local or remote LLM]
@@ -67,7 +68,7 @@ The browser communicates only with the proxy on the UI origin. The proxy injects
 
 ### Media limits
 
-Images are compressed as a group. The final request is kept below the Hermes API's approximately 10 MB request limit. If all selected images cannot fit after compression, the UI sends none of them and keeps the draft intact.
+Images are compressed as a group. The final request is kept below the Hermes API's approximately 10 MB request limit. If all selected images cannot fit after compression, the UI sends none of them and keeps the draft intact. Images sent after this feature is deployed are copied into the mounted UI `/app/data` volume; already-lost historical images cannot be recovered.
 
 #### NAS permissions for the read-only Hermes configuration
 

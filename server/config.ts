@@ -16,6 +16,8 @@ export type ServerConfig = {
   dashboardAuthProvider: string;
   dashboardUsername: string;
   dashboardPassword: string;
+  attachmentsDir: string;
+  attachmentsIndexFile: string;
 };
 
 const value = (environment: NodeJS.ProcessEnv, name: string): string =>
@@ -66,5 +68,11 @@ export const loadServerConfig = (
       environment,
       "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD",
     ),
+    attachmentsDir:
+      value(environment, "ATTACHMENTS_DIR") ||
+      path.join(dataDir, "attachments", "blobs"),
+    attachmentsIndexFile:
+      value(environment, "ATTACHMENTS_INDEX_FILE") ||
+      path.join(dataDir, "attachments", "index.json"),
   };
 };

@@ -153,21 +153,68 @@
   }
 }
 
-.contentParts {
+.messageImages {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
+  margin-top: 10px;
 }
 
 .imageWrapper {
-  max-width: 100%;
+  width: min(100%, 320px);
+  max-height: 280px;
+  padding: 0;
+  border: 0;
   @include s.neo-card;
   overflow: hidden;
-  margin-top: 4px;
+  background: s.$color-bg;
+  cursor: zoom-in;
 }
 
 .image {
+  width: 100%;
   max-width: 100%;
+  max-height: 280px;
   display: block;
   object-fit: contain;
+}
+
+.lightboxBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(24px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+  background: rgb(0 0 0 / 88%);
+  cursor: zoom-out;
+
+  > img {
+    max-width: min(100%, 1400px);
+    max-height: 100%;
+    object-fit: contain;
+    border: s.$border-width solid s.$color-black;
+    box-shadow: s.$shadow-hard;
+    cursor: default;
+  }
+}
+
+.lightboxClose {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 1;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: s.$border-width solid s.$color-black;
+  background: s.$color-white;
+  color: s.$color-black;
+  box-shadow: s.$shadow-hard;
+  cursor: pointer;
 }

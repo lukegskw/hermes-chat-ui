@@ -10,6 +10,7 @@ import { useClipboard } from "../../hooks";
 import { Bot, Check, Copy, Sparkles, User } from "../Icons";
 import styles from "./MessageBubble.module.scss";
 import { ThinkingIndicator } from "../ThinkingIndicator/ThinkingIndicador";
+import { ImageLightbox } from "./ImageLightbox";
 
 export type MessageBubbleProps = {
   message: ChatWindowMessage;
@@ -20,6 +21,12 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const { role, content, timestamp } = message;
   const isUser = role === "user";
   const { copied, copyToClipboard } = useClipboard();
+  const imageUrls =
+    typeof content === "string"
+      ? []
+      : content.flatMap((part) =>
+          part.type === "image_url" ? [part.image_url.url] : [],
+        );
 
   const handleCopy = () => {
     let textContent =
@@ -118,23 +125,11 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               {typeof content === "string" ? (
                 <span>{linkifyParts([content])}</span>
               ) : (
-                <div className={styles.contentParts}>
-                  {content.map((part, idx) => {
-                    if (part.type === "text") {
-                      return <p key={idx}>{linkifyParts([part.text])}</p>;
-                    } else {
-                      return (
-                        <div key={idx} className={styles.imageWrapper}>
-                          <img
-                            src={part.image_url.url}
-                            alt={t("messages.attachment")}
-                            className={styles.image}
-                          />
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
+                content
+                  .filter((part) => part.type === "text")
+                  .map((part, index) => (
+                    <p key={index}>{linkifyParts([part.text])}</p>
+                  ))
               )}
             </div>
           ) : (
@@ -148,6 +143,8 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
               ).trim()}
             />
           )}
+
+          <ImageLightbox images={imageUrls} />
 
           <ThinkingIndicator
             label={t("messages.generating")}

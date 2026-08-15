@@ -4,12 +4,15 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ServerConfig } from "./config.js";
+import { AttachmentStore } from "./attachments.js";
 import { proxyHermes, safeJsonBody } from "./hermes-client.js";
 import { modelOptionsResponse } from "./model-options.js";
 import { notificationRoutes } from "./notifications.js";
 import { createProactiveMessage } from "./proactive.js";
 import {
   cancelActiveStream,
+  deleteSession,
+  getSessionMessages,
   proxySessionRequest,
   sessionPath,
   streamSessionChat,
@@ -20,6 +23,12 @@ const apiNotFound = (): Response =>
 
 export const createApp = (config: ServerConfig): Hono => {
   const app = new Hono();
+  const attachments = new AttachmentStore(config);
+  void attachments
+    .cleanupAbandonedPending()
+    .catch((error) =>
+      console.error("[attachments] Startup cleanup failed:", error),
+    );
   app.use(
     "*",
     cors({
@@ -73,20 +82,14 @@ export const createApp = (config: ServerConfig): Hono => {
   );
   app.delete("/api/sessions/:sessionId", async (context) => {
     const sessionId = context.req.param("sessionId");
-    await cancelActiveStream(sessionId);
-    return proxySessionRequest(
-      config,
-      "DELETE",
-      sessionPath(sessionId),
-      context.req.raw,
-    );
+    return deleteSession(config, sessionId, context.req.raw, attachments);
   });
   app.get("/api/sessions/:sessionId/messages", (context) =>
-    proxySessionRequest(
+    getSessionMessages(
       config,
-      "GET",
-      sessionPath(context.req.param("sessionId"), "/messages"),
+      context.req.param("sessionId"),
       context.req.raw,
+      attachments,
     ),
   );
   app.post("/api/sessions/:sessionId/model", async (context) =>
@@ -99,7 +102,12 @@ export const createApp = (config: ServerConfig): Hono => {
     ),
   );
   app.post("/api/sessions/:sessionId/chat/stream", (context) =>
-    streamSessionChat(config, context.req.param("sessionId"), context.req.raw),
+    streamSessionChat(
+      config,
+      context.req.param("sessionId"),
+      context.req.raw,
+      attachments,
+    ),
   );
   app.post("/api/sessions/:sessionId/chat/cancel", async (context) =>
     context.json({
@@ -135,6 +143,19 @@ export const createApp = (config: ServerConfig): Hono => {
       await safeJsonBody(context.req.raw),
     ),
   );
+
+  app.get("/api/attachments/:blobId", async (context) => {
+    const blob = await attachments.readBlob(context.req.param("blobId"));
+    if (!blob) return context.json({ detail: "Not Found" }, 404);
+    return new Response(new Uint8Array(blob.bytes), {
+      headers: {
+        "Content-Type": blob.mimeType,
+        "Content-Length": String(blob.bytes.length),
+        "Cache-Control": "private, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  });
 
   app.all("/api/*", apiNotFound);
   app.all("/v1/*", apiNotFound);

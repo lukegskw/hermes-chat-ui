@@ -2,13 +2,13 @@
 
 Date: 2026-08-15
 
-Status: ready for implementation
+Status: implemented
 
 Depends on: [TypeScript BFF migration design](../design/typescript-bff-migration.md)
 
 ## Delivery sequence
 
-The work is delivered as five ordered commits. Every commit must pass its gate before the next begins. Deployment to the NAS remains manual and is not part of this plan.
+The work was delivered as five ordered commits. Every commit passed its gate before the next began. Deployment to the NAS remains manual and is not part of this implementation.
 
 ## Commit 1 — Remove speech-to-text
 
