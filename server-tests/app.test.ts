@@ -44,4 +44,22 @@ describe("Hono BFF contract", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("Content-Type")).toContain("application/json");
   });
+
+  it("forwards latest-message pagination unchanged", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ session_id: "one", data: [], pagination: {} }),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    const app = createApp(
+      testConfig({ hermesApiUrl: "http://hermes-agent:8642" }),
+    );
+    await app.request(
+      "/api/sessions/one/messages?limit=30&offset=60&order=latest",
+    );
+    expect(fetcher.mock.calls[0][0]).toBe(
+      "http://hermes-agent:8642/api/sessions/one/messages?limit=30&offset=60&order=latest",
+    );
+  });
 });

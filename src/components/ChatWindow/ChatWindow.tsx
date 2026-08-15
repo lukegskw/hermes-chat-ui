@@ -22,7 +22,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import styles from "./ChatWindow.module.scss";
-import { decideChatScroll } from "./scrollPolicy";
+import { decideChatScroll, restorePrependScrollTop } from "./scrollPolicy";
 
 export type ChatWindowMessage = ChatMessage & {
   id: string;
@@ -52,6 +52,11 @@ export type ChatWindowProps = {
   isUpdatingRuntime?: boolean;
   connectionError?: string;
   isLoadingMessages?: boolean;
+  isLoadingOlderMessages?: boolean;
+  hasOlderMessages?: boolean;
+  messageLoadError?: string;
+  onLoadOlderMessages?: () => Promise<void>;
+  onRetryMessages?: () => void;
   interactionLocked?: boolean;
 };
 
@@ -78,6 +83,11 @@ export const ChatWindow = ({
   isUpdatingRuntime = false,
   connectionError,
   isLoadingMessages = false,
+  isLoadingOlderMessages = false,
+  hasOlderMessages = false,
+  messageLoadError = "",
+  onLoadOlderMessages,
+  onRetryMessages,
   interactionLocked = false,
 }: ChatWindowProps) => {
   const { t } = useTranslation();
@@ -93,6 +103,10 @@ export const ChatWindow = ({
   const pendingInitialScrollRef = useRef(false);
   const isNearBottomRef = useRef(true);
   const wasGeneratingRef = useRef(false);
+  const prependAnchorRef = useRef<{
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -173,10 +187,40 @@ export const ChatWindow = ({
       const distanceFromBottom =
         viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
       isNearBottomRef.current = distanceFromBottom <= 64;
+      if (
+        viewport.scrollTop <= 80 &&
+        hasOlderMessages &&
+        !isLoadingOlderMessages &&
+        !isGenerating &&
+        onLoadOlderMessages
+      ) {
+        prependAnchorRef.current = {
+          scrollHeight: viewport.scrollHeight,
+          scrollTop: viewport.scrollTop,
+        };
+        void onLoadOlderMessages();
+      }
     };
     viewport.addEventListener("scroll", handleScroll, { passive: true });
     return () => viewport.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [
+    hasOlderMessages,
+    isGenerating,
+    isLoadingOlderMessages,
+    onLoadOlderMessages,
+  ]);
+
+  useLayoutEffect(() => {
+    const viewport = messagesViewRef.current;
+    const anchor = prependAnchorRef.current;
+    if (!viewport || !anchor || isLoadingOlderMessages) return;
+    viewport.scrollTop = restorePrependScrollTop(
+      anchor.scrollTop,
+      anchor.scrollHeight,
+      viewport.scrollHeight,
+    );
+    prependAnchorRef.current = null;
+  }, [isLoadingOlderMessages, messages]);
 
   useLayoutEffect(() => {
     const viewport = messagesViewRef.current;
@@ -448,10 +492,35 @@ export const ChatWindow = ({
           </div>
         )}
         <div ref={messagesViewRef} className={styles.messagesViewArea}>
-          {isLoadingMessages && messages.length === 0 ? (
-            <div className={styles.messagesLoading}>{t("chat.loading")}</div>
+          {isLoadingMessages ? (
+            <div className={styles.messagesSkeleton} role="status">
+              <span className={styles.visuallyHidden}>{t("chat.loading")}</span>
+              {Array.from({ length: 6 }, (_, index) => (
+                <div
+                  key={index}
+                  className={`${styles.skeletonMessage} ${index % 2 === 0 ? styles.skeletonUser : ""}`}
+                >
+                  <span />
+                  <span />
+                </div>
+              ))}
+            </div>
+          ) : messageLoadError && messages.length === 0 ? (
+            <div className={styles.historyError} role="alert">
+              <span>{messageLoadError}</span>
+              <button type="button" onClick={onRetryMessages}>
+                {t("chat.retryHistory")}
+              </button>
+            </div>
           ) : messages.length > 0 ? (
             <div className={styles.messagesContainer}>
+              {(hasOlderMessages || isLoadingOlderMessages) && (
+                <div className={styles.olderMessagesStatus} role="status">
+                  {isLoadingOlderMessages
+                    ? t("chat.loadingOlder")
+                    : t("chat.scrollForOlder")}
+                </div>
+              )}
               {messages
                 .filter(
                   (msg) =>
@@ -461,7 +530,7 @@ export const ChatWindow = ({
                     (msg.tool_calls && msg.tool_calls.length > 0) ||
                     msg.isGenerating,
                 )
-                .map((msg, index) => {
+                .map((msg) => {
                   let filteredMsg = msg;
                   if (
                     msg.role === "assistant" &&
@@ -487,7 +556,7 @@ export const ChatWindow = ({
                       content: cleanContent.trim(),
                     };
                   }
-                  return <MessageBubble key={index} message={filteredMsg} />;
+                  return <MessageBubble key={msg.id} message={filteredMsg} />;
                 })}
             </div>
           ) : (

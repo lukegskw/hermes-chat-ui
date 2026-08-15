@@ -54,6 +54,9 @@ export const App = () => {
     activeMessages,
     isInitializing,
     isLoadingMessages,
+    isLoadingOlderMessages,
+    hasOlderMessages,
+    messageLoadError,
     isCreatingChat,
     isLoadingMore,
     hasMoreConversations,
@@ -64,6 +67,8 @@ export const App = () => {
     handleRenameConversation,
     handlePinConversation,
     handleLoadMore,
+    handleLoadOlderMessages,
+    retryConversationMessages,
     reloadConversation,
   } = useChatState();
 
@@ -233,7 +238,12 @@ export const App = () => {
           isUpdatingRuntime={isUpdatingConversationModel}
           connectionError={sessionError || connectionError}
           isLoadingMessages={isLoadingMessages}
-          interactionLocked={isUpdatingConversationModel}
+          isLoadingOlderMessages={isLoadingOlderMessages}
+          hasOlderMessages={hasOlderMessages}
+          messageLoadError={messageLoadError}
+          onLoadOlderMessages={handleLoadOlderMessages}
+          onRetryMessages={retryConversationMessages}
+          interactionLocked={isUpdatingConversationModel || isLoadingMessages}
         />
         <SettingsSheet
           isOpen={isSettingsSheetOpen}

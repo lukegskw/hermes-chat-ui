@@ -34,6 +34,11 @@ export const mergeSessions = (
     return {
       ...session,
       messages: existing.messages,
+      rawMessages: existing.rawMessages,
+      historyOffset: existing.historyOffset,
+      hasOlderMessages: existing.hasOlderMessages,
+      visibleMessageCount: existing.visibleMessageCount,
+      historyLoaded: existing.historyLoaded,
       modelId: hasConfirmedClientRuntime
         ? existing.modelId
         : session.modelId || existing.modelId,

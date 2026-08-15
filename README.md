@@ -31,6 +31,7 @@ The original deployment runs on a UGREEN NAS and is accessed through [Tailscale]
 - Canonical Hermes history: sessions created by this UI, the CLI, dashboard, cron, and other integrations appear together.
 - Multiple pinned chats with desktop and touch-friendly rename/delete actions.
 - Paginated session list suitable for long-lived installations.
+- Lazy conversation history in 30-message visual pages with anchored upward scrolling.
 - Background completion and Web Push support.
 
 ## Session data and deletion

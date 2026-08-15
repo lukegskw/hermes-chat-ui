@@ -1,6 +1,8 @@
 @use '@styles' as s;
 
 .wrapper {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 180px;
   display: flex;
   gap: 16px;
   max-width: 100%;

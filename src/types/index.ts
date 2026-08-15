@@ -49,6 +49,16 @@ export type ChatMessage = {
   timestamp?: string;
 };
 
+export type SessionMessageRow = {
+  id?: number | string;
+  role: "user" | "assistant" | "system" | "tool";
+  content?: unknown;
+  reasoning?: string | null;
+  reasoning_content?: string | null;
+  tool_calls?: unknown;
+  timestamp?: number | null;
+};
+
 export type ConversationAPI = {
   id: string;
   title: string;
@@ -60,6 +70,11 @@ export type ConversationAPI = {
   lastActive?: number | null;
   messageCount?: number;
   pinned?: boolean;
+  rawMessages?: SessionMessageRow[];
+  historyOffset?: number;
+  hasOlderMessages?: boolean;
+  visibleMessageCount?: number;
+  historyLoaded?: boolean;
 };
 
 export type SendChatMessageStreamOptions = {
@@ -87,11 +102,22 @@ export type Conversation = {
   lastActive?: number | null;
   messageCount?: number;
   pinned?: boolean;
+  rawMessages?: SessionMessageRow[];
+  historyOffset?: number;
+  hasOlderMessages?: boolean;
+  visibleMessageCount?: number;
+  historyLoaded?: boolean;
 };
 
 export type ConversationsPage = {
   conversations: ConversationAPI[];
   hasMore: boolean;
+};
+
+export type ConversationMessagesPage = {
+  sessionId: string;
+  rows: SessionMessageRow[];
+  returned: number;
 };
 
 export type Settings = {

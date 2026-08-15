@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createConversation,
   fetchConversations,
+  fetchConversationMessagesPage,
   fetchModels,
   normalizeSessionMessages,
   sendChatMessageStream,
@@ -420,5 +421,28 @@ describe("pinned sessions", () => {
       method: "PATCH",
       body: JSON.stringify({ pinned: false }),
     });
+  });
+});
+
+describe("paginated session messages", () => {
+  it("requests the latest raw page and preserves Hermes pagination metadata", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({
+        session_id: "session-1",
+        data: [{ id: 31, role: "assistant", content: "latest" }],
+        pagination: { limit: 30, offset: 30, order: "latest", returned: 1 },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchConversationMessagesPage("http://hermes.test", "session-1", {
+        limit: 30,
+        offset: 30,
+      }),
+    ).resolves.toMatchObject({ returned: 1, rows: [{ id: 31 }] });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "http://hermes.test/api/sessions/session-1/messages?limit=30&offset=30&order=latest",
+    );
   });
 });

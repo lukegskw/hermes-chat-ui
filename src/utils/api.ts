@@ -7,9 +7,11 @@ import {
   ContentPart,
   ConversationAPI,
   ConversationsPage,
+  ConversationMessagesPage,
   ModelProvider,
   NewConversationModelSelection,
   SendChatMessageStreamOptions,
+  SessionMessageRow,
   ToolCall,
 } from "../types";
 
@@ -87,6 +89,14 @@ const SessionMessageSchema = z.object({
 const SessionMessagesSchema = z.object({
   session_id: z.string(),
   data: z.array(SessionMessageSchema),
+  pagination: z
+    .object({
+      limit: z.number(),
+      offset: z.number(),
+      order: z.string(),
+      returned: z.number(),
+    })
+    .optional(),
 });
 
 const CapabilitiesSchema = z.object({
@@ -214,11 +224,9 @@ const normalizeToolCalls = (toolCalls: unknown): ToolCall[] | undefined => {
   return normalized.length > 0 ? normalized : undefined;
 };
 
-type SessionMessage = z.infer<typeof SessionMessageSchema>;
-
 const toChatMessage = (
   sessionId: string,
-  message: SessionMessage,
+  message: SessionMessageRow,
   index: number,
 ): ChatMessage => ({
   id: `${sessionId}_${message.id ?? index}`,
@@ -263,7 +271,7 @@ const mergeAssistantMessages = (
  */
 export const normalizeSessionMessages = (
   sessionId: string,
-  messages: SessionMessage[],
+  messages: SessionMessageRow[],
 ): ChatMessage[] => {
   const normalized: ChatMessage[] = [];
   let pendingAssistant: ChatMessage | null = null;
@@ -392,6 +400,34 @@ export const fetchConversationMessages = async (
   );
   const parsed = SessionMessagesSchema.parse(await response.json());
   return normalizeSessionMessages(parsed.session_id, parsed.data);
+};
+
+export const fetchConversationMessagesPage = async (
+  endpoint: string,
+  id: string,
+  options: {
+    limit: number;
+    offset: number;
+    signal?: AbortSignal;
+  },
+): Promise<ConversationMessagesPage> => {
+  const params = new URLSearchParams({
+    limit: String(options.limit),
+    offset: String(options.offset),
+    order: "latest",
+  });
+  const response = await assertOk(
+    await fetch(
+      `${apiBase(endpoint)}/api/sessions/${encodeURIComponent(id)}/messages?${params.toString()}`,
+      { signal: options.signal },
+    ),
+  );
+  const parsed = SessionMessagesSchema.parse(await response.json());
+  return {
+    sessionId: parsed.session_id,
+    rows: parsed.data,
+    returned: parsed.pagination?.returned ?? parsed.data.length,
+  };
 };
 
 export const createConversation = async (

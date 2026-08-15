@@ -15,7 +15,7 @@ import {
   createConversation,
   deleteConversation,
   fetchConversation,
-  fetchConversationMessages,
+  fetchConversationMessagesPage,
   fetchConversations,
   readPendingSessionTarget,
   readSessionDeepLink,
@@ -25,6 +25,13 @@ import {
 } from "../utils";
 import { mergeSessions, sortSessions } from "./sessionListReconciliation";
 import { reconcileSessionMessages } from "./sessionMessageReconciliation";
+import {
+  buildHistoryWindow,
+  hasMoreRawHistory,
+  HISTORY_PAGE_SIZE,
+  HISTORY_RAW_PAGE_SIZE,
+  prependHistoryRows,
+} from "./conversationHistory";
 
 const PAGE_SIZE = 50;
 
@@ -64,12 +71,19 @@ export const useChatState = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreConversations, setHasMoreConversations] = useState(false);
   const [sessionError, setSessionError] = useState("");
+  const [loadingMessagesFor, setLoadingMessagesFor] = useState("");
+  const [loadingOlderMessagesFor, setLoadingOlderMessagesFor] = useState("");
+  const [messageLoadError, setMessageLoadError] = useState("");
   const activeIdRef = useRef(activeConversationId);
   const sessionCountRef = useRef(0);
   const conversationsRef = useRef<Conversation[]>([]);
+  const loadingOlderRef = useRef(false);
+  const olderMessagesAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     activeIdRef.current = activeConversationId;
+    olderMessagesAbortRef.current?.abort();
+    loadingOlderRef.current = false;
   }, [activeConversationId]);
 
   useEffect(() => {
@@ -145,34 +159,103 @@ export const useChatState = () => {
     [endpoint],
   );
 
+  const fetchHistoryWindow = useCallback(
+    async (
+      id: string,
+      requestedVisualCount: number,
+      options: {
+        rows?: Conversation["rawMessages"];
+        offset?: number;
+        totalRows?: number;
+        hasOlder?: boolean;
+        signal?: AbortSignal;
+      } = {},
+    ) => {
+      let rows = options.rows ?? [];
+      let offset = options.offset ?? 0;
+      let hasOlder = options.hasOlder ?? true;
+      let historyWindow = buildHistoryWindow(id, rows, requestedVisualCount);
+
+      while (historyWindow.normalizedCount < requestedVisualCount && hasOlder) {
+        const page = await fetchConversationMessagesPage(endpoint, id, {
+          limit: HISTORY_RAW_PAGE_SIZE,
+          offset,
+          signal: options.signal,
+        });
+        if (options.signal?.aborted) {
+          throw new DOMException("History loading aborted", "AbortError");
+        }
+        rows = prependHistoryRows(rows, page.rows);
+        offset += page.returned;
+        hasOlder =
+          page.returned > 0 &&
+          hasMoreRawHistory(
+            offset,
+            page.returned,
+            HISTORY_RAW_PAGE_SIZE,
+            options.totalRows,
+          );
+        historyWindow = buildHistoryWindow(id, rows, requestedVisualCount);
+      }
+
+      return { ...historyWindow, rows, offset, hasOlder };
+    },
+    [endpoint],
+  );
+
   const reloadConversation = useCallback(
-    async (id: string, signal?: AbortSignal) => {
+    async (id: string, signal?: AbortSignal, showSkeleton = false) => {
+      const knownMessageCount = conversationsRef.current.find(
+        (session) => session.id === id,
+      )?.messageCount;
+      if (showSkeleton) {
+        setLoadingMessagesFor(id);
+        setMessageLoadError("");
+        setConversations((previous) =>
+          previous.map((session) =>
+            session.id === id &&
+            !session.messages.some((message) => message.isGenerating)
+              ? {
+                  ...session,
+                  messages: [],
+                  rawMessages: [],
+                  historyOffset: 0,
+                  visibleMessageCount: 0,
+                  historyLoaded: false,
+                }
+              : session,
+          ),
+        );
+      }
       try {
-        const messages = await fetchConversationMessages(endpoint, id, signal);
+        const history = await fetchHistoryWindow(id, HISTORY_PAGE_SIZE, {
+          totalRows: knownMessageCount ?? undefined,
+          signal,
+        });
         setConversations((previous) =>
           previous.map((session) => {
-            if (session.id !== id) {
-              return session;
-            }
+            if (session.id !== id) return session;
             const reconciledMessages = reconcileSessionMessages(
               session.messages,
-              messages,
+              history.messages,
             );
-            if (
-              reconciledMessages === session.messages ||
-              messagesEqual(session.messages, reconciledMessages)
-            ) {
-              return session;
-            }
             return {
               ...session,
-              messages: reconciledMessages,
-              messageCount: reconciledMessages.length,
+              messages: messagesEqual(session.messages, reconciledMessages)
+                ? session.messages
+                : reconciledMessages,
+              rawMessages: history.rows,
+              historyOffset: history.offset,
+              hasOlderMessages: history.hasOlder,
+              visibleMessageCount: history.visibleCount,
+              historyLoaded: true,
             };
           }),
         );
         setSessionError("");
+        if (activeIdRef.current === id) setMessageLoadError("");
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
         if (error instanceof ApiError && error.status === 404) {
           const remaining = conversationsRef.current.filter(
             (session) => session.id !== id,
@@ -185,9 +268,14 @@ export const useChatState = () => {
           return;
         }
         handleApiError(error, t("errors.sessionLoadFailed"));
+        if (activeIdRef.current === id) {
+          setMessageLoadError(t("errors.sessionLoadFailed"));
+        }
+      } finally {
+        setLoadingMessagesFor((current) => (current === id ? "" : current));
       }
     },
-    [endpoint, handleApiError, t],
+    [fetchHistoryWindow, handleApiError, t],
   );
 
   const selectConversationById = useCallback(
@@ -323,7 +411,7 @@ export const useChatState = () => {
     const controller = new AbortController();
     // The state update happens after the external history request resolves.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void reloadConversation(activeConversationId, controller.signal);
+    void reloadConversation(activeConversationId, controller.signal, true);
     return () => controller.abort();
   }, [activeConversationId, reloadConversation]);
 
@@ -504,16 +592,65 @@ export const useChatState = () => {
     [endpoint, handleApiError, t],
   );
 
+  const handleLoadOlderMessages = useCallback(async (): Promise<void> => {
+    if (loadingOlderRef.current) return;
+    const id = activeIdRef.current;
+    const session = conversationsRef.current.find((item) => item.id === id);
+    if (!session?.hasOlderMessages) return;
+
+    loadingOlderRef.current = true;
+    const controller = new AbortController();
+    olderMessagesAbortRef.current = controller;
+    setLoadingOlderMessagesFor(id);
+    try {
+      const requestedVisualCount =
+        (session.visibleMessageCount ?? session.messages.length) +
+        HISTORY_PAGE_SIZE;
+      const history = await fetchHistoryWindow(id, requestedVisualCount, {
+        rows: session.rawMessages,
+        offset: session.historyOffset,
+        totalRows: session.messageCount ?? undefined,
+        hasOlder: session.hasOlderMessages,
+        signal: controller.signal,
+      });
+      setConversations((previous) =>
+        previous.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                messages: history.messages,
+                rawMessages: history.rows,
+                historyOffset: history.offset,
+                hasOlderMessages: history.hasOlder,
+                visibleMessageCount: history.visibleCount,
+                historyLoaded: true,
+              }
+            : item,
+        ),
+      );
+      setMessageLoadError("");
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      handleApiError(error, t("errors.sessionLoadFailed"));
+      setMessageLoadError(t("errors.sessionLoadFailed"));
+      toast.error(t("errors.sessionLoadFailed"));
+    } finally {
+      if (olderMessagesAbortRef.current === controller) {
+        olderMessagesAbortRef.current = null;
+        loadingOlderRef.current = false;
+        setLoadingOlderMessagesFor((current) =>
+          current === id ? "" : current,
+        );
+      }
+    }
+  }, [fetchHistoryWindow, handleApiError, t]);
+
   const handleSaveSettings = (newSettings: Settings) =>
     setSettings(newSettings);
   const activeConversation =
     conversations.find((session) => session.id === activeConversationId) ||
     null;
-  const isLoadingMessages = Boolean(
-    activeConversation &&
-    activeConversation.messages.length === 0 &&
-    (activeConversation.messageCount ?? 0) > 0,
-  );
+  const isLoadingMessages = loadingMessagesFor === activeConversationId;
 
   return {
     settings,
@@ -526,6 +663,9 @@ export const useChatState = () => {
     activeMessages: activeConversation?.messages ?? [],
     isInitializing,
     isLoadingMessages,
+    isLoadingOlderMessages: loadingOlderMessagesFor === activeConversationId,
+    hasOlderMessages: activeConversation?.hasOlderMessages ?? false,
+    messageLoadError,
     isCreatingChat,
     isLoadingMore,
     hasMoreConversations,
@@ -536,6 +676,12 @@ export const useChatState = () => {
     handleRenameConversation,
     handlePinConversation,
     handleLoadMore,
+    handleLoadOlderMessages,
+    retryConversationMessages: () => {
+      if (activeIdRef.current) {
+        void reloadConversation(activeIdRef.current, undefined, true);
+      }
+    },
     reloadConversation,
   };
 };
