@@ -1,6 +1,4 @@
-// Runtime configuration template.
-// In production Docker container, this file will be dynamically overwritten 
-// by the entrypoint.sh script with actual environment variables from Portainer.
+// Runtime configuration template. Production uses the same-origin TypeScript BFF.
 window.APP_CONFIG = {
   HERMES_API_URL: ""
 };

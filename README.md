@@ -128,7 +128,7 @@ docker compose -f docker-compose.hermes-agent.yml up -d
 docker compose -f docker-compose.ui.yml up -d --build
 ```
 
-5. Open `http://localhost:8643`. The native Hermes dashboard is available at `http://localhost:9119` when enabled.
+6. Open `http://localhost:8643`. The native Hermes dashboard is available at `http://localhost:9119` when enabled.
 
 The two Compose files start independent containers joined only by the private
 `hermes-internal` network. No file, plugin, startup hook, or project component
@@ -139,35 +139,35 @@ canonical state.
 
 ### Ports and API
 
-| Variable                | Description                                                         | Default   |
-| ----------------------- | ------------------------------------------------------------------- | --------- |
-| `PROXY_PORT`            | Host port for the UI and FastAPI proxy                              | `8643`    |
-| `BACKEND_PORT`          | Host port for the native Hermes API                                 | `8642`    |
-| `DASHBOARD_PORT`        | Host and container port for the Hermes dashboard                    | `9119`    |
-| `API_SERVER_ENABLED`    | Enable the Hermes native API; must remain enabled                   | `true`    |
+| Variable                | Description                                                            | Default   |
+| ----------------------- | ---------------------------------------------------------------------- | --------- |
+| `PROXY_PORT`            | Host port for the UI and TypeScript BFF                                | `8643`    |
+| `BACKEND_PORT`          | Host port for the native Hermes API                                    | `8642`    |
+| `DASHBOARD_PORT`        | Host and container port for the Hermes dashboard                       | `9119`    |
+| `API_SERVER_ENABLED`    | Enable the Hermes native API; must remain enabled                      | `true`    |
 | `API_SERVER_KEY`        | Required bearer key shared by Hermes and the UI BFF, never the browser | none      |
-| `API_SERVER_HOST`       | Hermes API bind address inside the container                        | `0.0.0.0` |
-| `API_SERVER_PORT`       | Hermes API port inside the container                                | `8642`    |
-| `API_SERVER_MODEL_NAME` | Optional model name reported by the API                             | none      |
+| `API_SERVER_HOST`       | Hermes API bind address inside the container                           | `0.0.0.0` |
+| `API_SERVER_PORT`       | Hermes API port inside the container                                   | `8642`    |
+| `API_SERVER_MODEL_NAME` | Optional model name reported by the API                                | none      |
 
 ### Dashboard
 
-| Variable                    | Description                         | Default |
-| --------------------------- | ----------------------------------- | ------- |
-| `HERMES_DASHBOARD`          | Enable the official Hermes dashboard | `1`     |
-| `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` | Dashboard username | none |
-| `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` | Dashboard password | none |
-| `HERMES_DASHBOARD_BASIC_AUTH_SECRET` | Stable dashboard auth secret | none |
+| Variable                               | Description                          | Default |
+| -------------------------------------- | ------------------------------------ | ------- |
+| `HERMES_DASHBOARD`                     | Enable the official Hermes dashboard | `1`     |
+| `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` | Dashboard username                   | none    |
+| `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` | Dashboard password                   | none    |
+| `HERMES_DASHBOARD_BASIC_AUTH_SECRET`   | Stable dashboard auth secret         | none    |
 
 ### Optional integrations
 
-| Variable              | Description                                             | Default                   |
-| --------------------- | ------------------------------------------------------- | ------------------------- |
-| `HASS_URL`            | Home Assistant URL                                      | none                      |
-| `HASS_TOKEN`          | Home Assistant long-lived access token                  | none                      |
-| `GITHUB_TOKEN`        | GitHub personal access token used by Hermes tools       | none                      |
-| `VAPID_SUBJECT`       | Contact URI used for Web Push                           | `mailto:push@example.com` |
-| `HERMES_PUSH_API_KEY` | Required dedicated bearer key for proactive-message endpoints | none                  |
+| Variable              | Description                                                   | Default                   |
+| --------------------- | ------------------------------------------------------------- | ------------------------- |
+| `HASS_URL`            | Home Assistant URL                                            | none                      |
+| `HASS_TOKEN`          | Home Assistant long-lived access token                        | none                      |
+| `GITHUB_TOKEN`        | GitHub personal access token used by Hermes tools             | none                      |
+| `VAPID_SUBJECT`       | Contact URI used for Web Push                                 | `mailto:push@example.com` |
+| `HERMES_PUSH_API_KEY` | Required dedicated bearer key for proactive-message endpoints | none                      |
 
 ### Proactive messages from Hermes
 
@@ -263,29 +263,28 @@ Install the app on the Home Screen, allow notifications, and verify the iOS vers
 Prerequisites:
 
 - Node.js 24
-- Python 3.11 or newer
-- [uv](https://github.com/astral-sh/uv)
 - A current Hermes Agent API exposing the Sessions API
 
-Install and start the frontend:
+Install dependencies and start the frontend:
 
 ```bash
 npm ci
 npm run dev
 ```
 
-In another terminal, create a Python environment and start the proxy:
+In another terminal, start the TypeScript BFF:
 
 ```bash
-uv venv .venv
-uv pip install --python .venv/bin/python -r backend/requirements.txt
 API_SERVER_KEY=your-key \
 HERMES_API_URL=http://127.0.0.1:8642 \
 HERMES_PROXY_PORT=8643 \
-.venv/bin/python -m backend.main
+npm run dev:server
 ```
 
-The Vite app connects to the proxy on port `8643` during development. For backend tests, install `backend/requirements-dev.txt` in the same environment and run `.venv/bin/python -m pytest backend/tests`. Run `npm run test`, `npm run type-check`, `npm run lint`, and `npm run build` before submitting a change.
+The Vite app connects to the BFF on port `8643` during development. Run
+`npm test`, `npm run type-check`, `npm run lint`, and `npm run build` before
+submitting a change. The production image contains only Node.js, the compiled
+TypeScript server, and the built SPA; Python is not installed.
 
 ## Contributing
 
