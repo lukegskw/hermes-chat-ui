@@ -234,13 +234,37 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 2px solid s.$color-black;
-  background: s.$color-bg;
+  border: 2px solid transparent;
+  background: transparent;
   color: s.$color-white;
+  box-shadow: none;
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.1s;
+  transition:
+    opacity 0.1s,
+    border-color 0.1s;
+
+  &:focus,
+  &:focus-visible {
+    border-color: transparent;
+    outline: 0;
+    background: transparent;
+    color: s.$color-white;
+    box-shadow: none;
+  }
+
+  &:hover {
+    border-color: s.$color-white;
+    background: transparent;
+    color: s.$color-white;
+    box-shadow: none;
+  }
+
+  &:active {
+    background: transparent;
+    box-shadow: none;
+  }
 
   .conversationItem:hover &,
   .conversationItem:focus-within & {
@@ -249,8 +273,13 @@
   }
 
   .active & {
-    background: s.$color-white;
+    background: transparent;
     color: s.$color-black;
+
+    &:hover {
+      border-color: s.$color-black;
+      color: s.$color-black;
+    }
   }
 
   @media (max-width: s.$breakpoint-mobile), (pointer: coarse) {
