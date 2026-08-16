@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
 import {
@@ -23,7 +23,6 @@ export const App = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isSettingsSheetOpen, setIsSettingsSheetOpen] =
     useState<boolean>(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -41,12 +40,8 @@ export const App = () => {
 
   useSwipeDrawer(sidebarRef, backdropRef, {
     isOpen: isSidebarOpen,
-    onOpen: () => {
-      if (!isTranscribing) setIsSidebarOpen(true);
-    },
-    onClose: () => {
-      if (!isTranscribing) setIsSidebarOpen(false);
-    },
+    onOpen: () => setIsSidebarOpen(true),
+    onClose: () => setIsSidebarOpen(false),
   });
 
   const {
@@ -59,6 +54,9 @@ export const App = () => {
     activeMessages,
     isInitializing,
     isLoadingMessages,
+    isLoadingOlderMessages,
+    hasOlderMessages,
+    messageLoadError,
     isCreatingChat,
     isLoadingMore,
     hasMoreConversations,
@@ -67,19 +65,39 @@ export const App = () => {
     handleSelectConversation,
     handleDeleteConversation,
     handleRenameConversation,
+    handlePinConversation,
     handleLoadMore,
+    handleLoadOlderMessages,
+    retryConversationMessages,
     reloadConversation,
   } = useChatState();
 
   const {
-    models,
+    providers,
+    selectedProvider,
     selectedModel,
+    reasoningEfforts,
+    unconfirmedReasoningEfforts,
+    reasoningDefaults,
+    modelOptionGroups,
+    newConversationModelValue,
+    conversationModelValue,
+    hermesDefaultModel,
+    newConversationSelection,
+    isUpdatingConversationModel,
     isConnected,
     isFetchingModels,
     connectionError,
-    handleSelectModel,
     handleConversationModelChange,
-  } = useModels(HERMES_ENDPOINT, activeConversationId, setConversations);
+    handleReasoningEffortChange,
+    handleNewConversationModelChange,
+    registerNewConversationSelection,
+  } = useModels(
+    HERMES_ENDPOINT,
+    activeConversationId,
+    activeConversation?.modelId,
+    setConversations,
+  );
 
   const {
     isGenerating,
@@ -92,30 +110,31 @@ export const App = () => {
     conversations,
     setConversations,
     activeConversationId,
-    selectedModel,
     reloadConversation,
   );
 
   const { t } = useTranslation();
 
-  const handleTranscriptionStateChange = useCallback(
-    (nextIsTranscribing: boolean) => {
-      setIsTranscribing(nextIsTranscribing);
-      if (nextIsTranscribing) {
-        setIsSidebarOpen(false);
-        setIsSettingsSheetOpen(false);
-      }
-    },
-    [],
-  );
-
   const filteredConversations = settings.showOnlyUserChats
     ? conversations.filter((c) => {
         if (c.id === activeConversationId) return true;
         const s = (c.source || "").toLowerCase();
-        return s === "hermes_browser" || s === "tui" || s === "cli";
+        return (
+          s === "hermes_browser" ||
+          s === "tui" ||
+          s === "cli" ||
+          s === "proactive"
+        );
       })
     : conversations;
+  const displayedProvider = activeConversation?.providerId || selectedProvider;
+  const displayedModel = activeConversation?.modelId || selectedModel;
+  const reasoningSupported =
+    Boolean(displayedProvider && displayedModel) &&
+    providers.find((provider) => provider.id === displayedProvider)
+      ?.capabilities?.[displayedModel]?.reasoning !== false;
+  const defaultReasoning =
+    reasoningDefaults[displayedProvider]?.[displayedModel] || "provider";
 
   if (isInitializing) {
     return (
@@ -128,67 +147,70 @@ export const App = () => {
   return (
     <ErrorBoundary>
       <Toaster position="top-center" richColors theme="dark" />
-      <div
-        id="root"
-        className="layout"
-        inert={isTranscribing}
-        aria-busy={isTranscribing}
-      >
+      <div id="root" className="layout">
         <div
           ref={backdropRef}
           className="sidebar-backdrop"
           style={{ display: isSidebarOpen ? "block" : "none" }}
-          onClick={() => {
-            if (!isTranscribing) setIsSidebarOpen(false);
-          }}
+          onClick={() => setIsSidebarOpen(false)}
         />
 
         <Sidebar
           ref={sidebarRef}
-          disabled={isTranscribing}
           isSidebarOpen={isSidebarOpen}
-          onToggleSidebar={() => {
-            if (!isTranscribing) setIsSidebarOpen((prev) => !prev);
-          }}
+          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           conversations={filteredConversations}
           activeConversationId={activeConversationId}
           onSelectConversation={(id) => {
-            if (isTranscribing) return;
             handleSelectConversation(id);
             setIsSidebarOpen(false);
           }}
+          onPinConversation={handlePinConversation}
+          onRenameConversation={handleRenameConversation}
+          onDeleteConversation={(id) =>
+            handleDeleteConversation(id, () => {
+              if (id === activeConversationId && isGenerating) {
+                return handleStopGeneration();
+              }
+            })
+          }
           onNewChat={() => {
-            if (isTranscribing) return;
-            handleNewChat(selectedModel);
+            if (!newConversationSelection) return;
+            void handleNewChat(newConversationSelection).then((session) => {
+              if (session) {
+                registerNewConversationSelection(
+                  session.id,
+                  newConversationSelection,
+                );
+              }
+            });
             setIsSidebarOpen(false);
           }}
+          canCreateConversation={Boolean(newConversationSelection)}
           isCreatingChat={isCreatingChat}
           hasMoreConversations={hasMoreConversations}
           isLoadingMore={isLoadingMore}
           onLoadMore={handleLoadMore}
-          models={models}
-          selectedModel={selectedModel}
-          onSelectModel={(modelId) => {
-            if (!isTranscribing) handleSelectModel(modelId);
+          modelOptionGroups={modelOptionGroups}
+          newConversationModelValue={newConversationModelValue}
+          hermesDefaultModel={hermesDefaultModel}
+          onSelectNewConversationModel={(value) => {
+            handleNewConversationModelChange(value);
           }}
           isConnected={isConnected}
           isFetchingModels={isFetchingModels}
           connectionError={connectionError}
           onOpenSettings={() => {
-            if (isTranscribing) return;
             setIsSettingsSheetOpen(true);
             setIsSidebarOpen(false);
           }}
         />
         <ChatWindow
-          onToggleSidebar={() => {
-            if (!isTranscribing) setIsSidebarOpen((prev) => !prev);
-          }}
+          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           messages={activeMessages}
           activeConversation={activeConversation}
           onRenameConversation={handleRenameConversation}
           onDeleteConversation={(id) => {
-            if (isTranscribing) return;
             void handleDeleteConversation(id, () => {
               if (id === activeConversationId && isGenerating) {
                 return handleStopGeneration();
@@ -200,25 +222,32 @@ export const App = () => {
           isGenerating={isGenerating}
           onSendMessage={handleSendMessage}
           onStopGeneration={() => {
-            if (!isTranscribing) handleStopGeneration();
+            handleStopGeneration();
           }}
-          endpoint={HERMES_ENDPOINT}
-          selectedModel={activeConversation?.modelId || selectedModel}
-          models={models}
-          onSelectModel={(modelId) => {
-            if (!isTranscribing) handleConversationModelChange(modelId);
-          }}
+          selectedModel={displayedModel}
+          modelOptionGroups={modelOptionGroups}
+          conversationModelValue={conversationModelValue}
+          reasoningEffort={activeConversation?.reasoningEffort}
+          reasoningSupported={reasoningSupported}
+          reasoningEfforts={reasoningEfforts}
+          unconfirmedReasoningEfforts={unconfirmedReasoningEfforts}
+          defaultReasoning={defaultReasoning}
+          onSelectModel={handleConversationModelChange}
+          onSelectReasoningEffort={handleReasoningEffortChange}
           isFetchingModels={isFetchingModels}
+          isUpdatingRuntime={isUpdatingConversationModel}
           connectionError={sessionError || connectionError}
           isLoadingMessages={isLoadingMessages}
-          interactionLocked={isTranscribing}
-          onTranscriptionStateChange={handleTranscriptionStateChange}
+          isLoadingOlderMessages={isLoadingOlderMessages}
+          hasOlderMessages={hasOlderMessages}
+          messageLoadError={messageLoadError}
+          onLoadOlderMessages={handleLoadOlderMessages}
+          onRetryMessages={retryConversationMessages}
+          interactionLocked={isUpdatingConversationModel || isLoadingMessages}
         />
         <SettingsSheet
           isOpen={isSettingsSheetOpen}
-          onClose={() => {
-            if (!isTranscribing) setIsSettingsSheetOpen(false);
-          }}
+          onClose={() => setIsSettingsSheetOpen(false)}
           settings={settings}
           onSaveSettings={handleSaveSettings}
         />

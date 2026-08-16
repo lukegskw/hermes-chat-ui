@@ -14,6 +14,13 @@ export type ChatScrollDecision = {
   isNearBottom: boolean;
 };
 
+export const restorePrependScrollTop = (
+  previousScrollTop: number,
+  previousScrollHeight: number,
+  nextScrollHeight: number,
+): number =>
+  Math.max(0, previousScrollTop + (nextScrollHeight - previousScrollHeight));
+
 export const decideChatScroll = ({
   sessionChanged,
   hasActiveSession,

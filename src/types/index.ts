@@ -6,6 +6,24 @@ export type Model = {
   label?: string | null;
 };
 
+export type ModelProvider = {
+  id: string;
+  label: string;
+  models: Model[];
+  capabilities?: Record<string, { reasoning?: boolean }>;
+};
+
+export type RuntimeSelection = {
+  providerId?: string;
+  modelId?: string;
+  reasoningEffort?: string;
+};
+
+export type NewConversationModelSelection = {
+  providerId: string;
+  modelId: string;
+};
+
 export type ToolCall = {
   id: string;
   type: string;
@@ -31,24 +49,42 @@ export type ChatMessage = {
   timestamp?: string;
 };
 
+export type SessionMessageRow = {
+  id?: number | string;
+  role: "user" | "assistant" | "system" | "tool";
+  content?: unknown;
+  reasoning?: string | null;
+  reasoning_content?: string | null;
+  tool_calls?: unknown;
+  timestamp?: number | null;
+};
+
 export type ConversationAPI = {
   id: string;
   title: string;
   modelId?: string | null;
+  providerId?: string | null;
+  reasoningEffort?: string | null;
   source?: string | null;
   messages: ChatMessage[];
   lastActive?: number | null;
   messageCount?: number;
+  pinned?: boolean;
+  rawMessages?: SessionMessageRow[];
+  historyOffset?: number;
+  hasOlderMessages?: boolean;
+  visibleMessageCount?: number;
+  historyLoaded?: boolean;
 };
 
 export type SendChatMessageStreamOptions = {
   endpoint: string;
-  model?: string;
   message: string | ContentPart[];
   instructions?: string;
   conversationId: string;
   onChunk: (chunk: string) => void;
   onReasoningChunk?: (chunk: string) => void;
+  onReasoningSnapshot?: (content: string) => void;
   onToolCallChunk?: (toolCallDelta: unknown) => void;
   onDone: () => void;
   onError: (error: Error) => void;
@@ -60,14 +96,28 @@ export type Conversation = {
   title: string;
   messages: ChatMessage[];
   modelId?: string | null;
+  providerId?: string | null;
+  reasoningEffort?: string | null;
   source?: string | null;
   lastActive?: number | null;
   messageCount?: number;
+  pinned?: boolean;
+  rawMessages?: SessionMessageRow[];
+  historyOffset?: number;
+  hasOlderMessages?: boolean;
+  visibleMessageCount?: number;
+  historyLoaded?: boolean;
 };
 
 export type ConversationsPage = {
   conversations: ConversationAPI[];
   hasMore: boolean;
+};
+
+export type ConversationMessagesPage = {
+  sessionId: string;
+  rows: SessionMessageRow[];
+  returned: number;
 };
 
 export type Settings = {

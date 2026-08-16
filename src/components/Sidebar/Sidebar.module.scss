@@ -143,53 +143,8 @@
   background-color: s.$color-bg;
 }
 
-.modelSelectionBox {
-  @include s.neo-card;
-  background-color: s.$color-surface;
-  padding: 0.5rem 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  position: relative;
-}
-
-.modelLabel {
-  @include s.label-style;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: s.$color-white;
-}
-
 .sparklesIconSmall {
   color: s.$color-primary;
-}
-
-.modelSelect {
-  width: 100%;
-  background: transparent;
-  border: none;
-  color: s.$color-white;
-  font-size: 0.82rem;
-  font-weight: 700;
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  padding-right: 12px;
-
-  &:disabled {
-    opacity: 0.7;
-    color: s.$color-white;
-    cursor: not-allowed;
-  }
-}
-
-.selectArrowContainer {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  pointer-events: none;
-  color: s.$color-white;
 }
 
 .conversationsList {
@@ -226,6 +181,8 @@
   padding: 10px 12px;
   transition: all 0.1s;
   user-select: none;
+  position: relative;
+  touch-action: pan-y;
 
   &:hover {
     transform: translate(-1px, -1px);
@@ -266,6 +223,184 @@
 
 .conversationIcon {
   opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.conversationActionsTrigger {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid transparent;
+  background: transparent;
+  color: s.$color-white;
+  box-shadow: none;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.1s,
+    border-color 0.1s;
+
+  &:focus,
+  &:focus-visible {
+    border-color: transparent;
+    outline: 0;
+    background: transparent;
+    color: s.$color-white;
+    box-shadow: none;
+  }
+
+  &:hover {
+    border-color: s.$color-white;
+    background: transparent;
+    color: s.$color-white;
+    box-shadow: none;
+  }
+
+  &:active {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .conversationItem:hover &,
+  .conversationItem:focus-within & {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .active & {
+    background: transparent;
+    color: s.$color-black;
+
+    &:hover {
+      border-color: s.$color-black;
+      color: s.$color-black;
+    }
+  }
+
+  @media (max-width: s.$breakpoint-mobile), (pointer: coarse) {
+    display: none;
+  }
+}
+
+.actionPopover,
+.actionSheet {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: s.$border-width solid s.$color-black;
+  background: s.$color-surface;
+  color: s.$color-white;
+  box-shadow: s.$shadow-hard;
+
+  > button,
+  .renameForm > button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: s.$color-action;
+      color: s.$color-black;
+      outline: none;
+    }
+  }
+
+  .dangerAction:hover,
+  .dangerAction:focus-visible {
+    background: s.$color-danger;
+    color: s.$color-white;
+  }
+}
+
+.actionPopover {
+  position: fixed;
+  z-index: 3000;
+  width: 170px;
+}
+
+.renameForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+
+  input {
+    width: 100%;
+    min-width: 0;
+    padding: 9px;
+    border: 2px solid s.$color-black;
+    background: s.$color-white;
+    color: s.$color-black;
+    font: inherit;
+    font-weight: 700;
+  }
+
+  > button {
+    justify-content: center;
+    background: s.$color-secondary;
+    color: s.$color-black;
+  }
+}
+
+.actionSheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: flex-end;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  background: rgb(0 0 0 / 60%);
+
+  > div {
+    width: 100%;
+  }
+}
+
+.actionSheet {
+  width: min(100%, 520px);
+  max-height: min(70dvh, 520px);
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+.actionSheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px 12px;
+  border-bottom: 2px solid s.$color-black;
+
+  strong {
+    min-width: 0;
+    @include s.text-truncate;
+  }
+
+  button {
+    display: flex;
+    flex-shrink: 0;
+    padding: 6px;
+    border: 2px solid s.$color-black;
+    background: s.$color-bg;
+    color: s.$color-white;
+  }
 }
 
 .conversationTitle {

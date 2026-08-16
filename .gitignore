@@ -1,7 +1,7 @@
 # Logs
 logs
 *.log
-npm-debug.log*
+pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
@@ -10,9 +10,26 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-server
 *.local
 .env
 docker-compose.yml
+
+# Python environments, bytecode and test/tool caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local runtime/build artifacts
+*.db
+*.sqlite
+*.sqlite3
+*.tar
+.coverage
+htmlcov/
+*.egg-info/
 
 # Editor directories and files
 .vscode/*

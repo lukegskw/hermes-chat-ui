@@ -5,33 +5,24 @@ import React, {
   useLayoutEffect,
   useMemo,
 } from "react";
-import { createPortal } from "react-dom";
-import {
-  Send,
-  Mic,
-  Square,
-  Sparkles,
-  Terminal,
-  Menu,
-  Paperclip,
-  X as XIcon,
-  MoreHorizontal,
-  Edit2,
-  Trash2,
-} from "../Icons";
+import { Send, Square, Sparkles, Menu, Paperclip, X as XIcon } from "../Icons";
 import { MessageBubble } from "..";
-import { ChatMessage, Model, ConversationAPI } from "../../types";
+import { ConversationActionMenu } from "../ConversationActionMenu";
+import type {
+  SelectFieldGroup,
+  SelectFieldItem,
+  SelectFieldOption,
+} from "../SelectField";
+import { ChatMessage, ConversationAPI } from "../../types";
 import {
-  appendTranscriptToDraft,
   ImagePreparationError,
   validateImageFile,
   fileToBase64,
 } from "../../utils";
-import { useVoiceRecorder } from "../../hooks/useVoiceRecorder";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import styles from "./ChatWindow.module.scss";
-import { decideChatScroll } from "./scrollPolicy";
+import { decideChatScroll, restorePrependScrollTop } from "./scrollPolicy";
 
 export type ChatWindowMessage = ChatMessage & {
   id: string;
@@ -47,15 +38,26 @@ export type ChatWindowProps = {
   isGenerating: boolean;
   onSendMessage: (text: string, attachments?: File[]) => Promise<boolean>;
   onStopGeneration: () => void;
-  endpoint: string;
   selectedModel: string;
-  models: Model[];
-  onSelectModel: (modelId: string) => void;
+  modelOptionGroups: SelectFieldGroup[];
+  conversationModelValue: string;
+  reasoningEffort?: string | null;
+  reasoningSupported?: boolean;
+  reasoningEfforts: string[];
+  unconfirmedReasoningEfforts?: string[];
+  defaultReasoning: string;
+  onSelectModel: (modelId: string) => Promise<boolean>;
+  onSelectReasoningEffort?: (reasoningEffort: string) => Promise<boolean>;
   isFetchingModels?: boolean;
+  isUpdatingRuntime?: boolean;
   connectionError?: string;
   isLoadingMessages?: boolean;
+  isLoadingOlderMessages?: boolean;
+  hasOlderMessages?: boolean;
+  messageLoadError?: string;
+  onLoadOlderMessages?: () => Promise<void>;
+  onRetryMessages?: () => void;
   interactionLocked?: boolean;
-  onTranscriptionStateChange?: (isTranscribing: boolean) => void;
 };
 
 export const ChatWindow = ({
@@ -67,19 +69,29 @@ export const ChatWindow = ({
   isGenerating,
   onSendMessage,
   onStopGeneration,
-  endpoint,
   selectedModel,
-  models,
+  modelOptionGroups,
+  conversationModelValue,
+  reasoningEffort,
+  reasoningSupported = true,
+  reasoningEfforts,
+  unconfirmedReasoningEfforts = [],
+  defaultReasoning,
   onSelectModel,
+  onSelectReasoningEffort,
   isFetchingModels,
+  isUpdatingRuntime = false,
   connectionError,
   isLoadingMessages = false,
+  isLoadingOlderMessages = false,
+  hasOlderMessages = false,
+  messageLoadError = "",
+  onLoadOlderMessages,
+  onRetryMessages,
   interactionLocked = false,
-  onTranscriptionStateChange,
 }: ChatWindowProps) => {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleText, setEditTitleText] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
@@ -91,28 +103,56 @@ export const ChatWindow = ({
   const pendingInitialScrollRef = useRef(false);
   const isNearBottomRef = useRef(true);
   const wasGeneratingRef = useRef(false);
+  const prependAnchorRef = useRef<{
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const transcriptionSessionRef = useRef<string | null>(null);
-  const focusTranscriptRef = useRef(false);
-  const voice = useVoiceRecorder({
-    endpoint,
-    disabled: isGenerating || !activeConversation || interactionLocked,
-    onTranscript: (text) => {
-      if (transcriptionSessionRef.current !== activeConversation?.id) {
-        return false;
-      }
-      setInput((current) => appendTranscriptToDraft(current, text));
-      focusTranscriptRef.current = true;
-      return true;
-    },
-  });
-  const isInteractionLocked = interactionLocked || voice.isTranscribing;
-  const voiceStatusKey =
-    (voice.isTranscribing ? null : voice.messageKey) ||
-    (voice.isRecording ? "audio.recording" : null) ||
-    null;
+  const isInteractionLocked = interactionLocked;
+  const reasoningAvailable = reasoningSupported && reasoningEfforts.length > 0;
+  const defaultReasoningLabel =
+    defaultReasoning === "provider"
+      ? t("chat.providerDefault")
+      : defaultReasoning === "none"
+        ? t("chat.hermesDefaultDisabled")
+        : t("chat.hermesDefaultEffort", { effort: defaultReasoning });
+  const reasoningOptions: SelectFieldOption[] = reasoningAvailable
+    ? [
+        { value: "", label: defaultReasoningLabel },
+        ...reasoningEfforts.map((effort) => ({
+          value: effort,
+          label: unconfirmedReasoningEfforts.includes(effort)
+            ? t("chat.reasoningCompatibilityDependent", { effort })
+            : effort,
+        })),
+      ]
+    : [
+        {
+          value: "",
+          label: reasoningSupported
+            ? t("chat.reasoningUnavailable")
+            : t("chat.reasoningUnsupported"),
+        },
+      ];
+  const conversationModelOptions: SelectFieldItem[] =
+    modelOptionGroups.length > 0
+      ? conversationModelValue
+        ? modelOptionGroups
+        : [
+            {
+              value: "",
+              label: t("chat.selectModelProvider"),
+              disabled: true,
+            },
+            ...modelOptionGroups,
+          ]
+      : isFetchingModels
+        ? [{ value: conversationModelValue, label: t("chat.loading") }]
+        : connectionError
+          ? [{ value: "", label: `${connectionError.substring(0, 30)}...` }]
+          : [{ value: conversationModelValue, label: t("chat.noModels") }];
 
   const isTouchDevice = useMemo(
     () => window.matchMedia("(pointer: coarse)").matches,
@@ -124,22 +164,6 @@ export const ChatWindow = ({
       titleInputRef.current.focus();
     }
   }, [isEditingTitle]);
-
-  useEffect(() => {
-    onTranscriptionStateChange?.(voice.isTranscribing);
-    return () => onTranscriptionStateChange?.(false);
-  }, [onTranscriptionStateChange, voice.isTranscribing]);
-
-  useEffect(() => {
-    if (
-      !isInteractionLocked &&
-      focusTranscriptRef.current &&
-      textareaRef.current
-    ) {
-      focusTranscriptRef.current = false;
-      textareaRef.current.focus();
-    }
-  }, [isInteractionLocked]);
 
   const handleSaveTitle = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -163,10 +187,40 @@ export const ChatWindow = ({
       const distanceFromBottom =
         viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
       isNearBottomRef.current = distanceFromBottom <= 64;
+      if (
+        viewport.scrollTop <= 80 &&
+        hasOlderMessages &&
+        !isLoadingOlderMessages &&
+        !isGenerating &&
+        onLoadOlderMessages
+      ) {
+        prependAnchorRef.current = {
+          scrollHeight: viewport.scrollHeight,
+          scrollTop: viewport.scrollTop,
+        };
+        void onLoadOlderMessages();
+      }
     };
     viewport.addEventListener("scroll", handleScroll, { passive: true });
     return () => viewport.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [
+    hasOlderMessages,
+    isGenerating,
+    isLoadingOlderMessages,
+    onLoadOlderMessages,
+  ]);
+
+  useLayoutEffect(() => {
+    const viewport = messagesViewRef.current;
+    const anchor = prependAnchorRef.current;
+    if (!viewport || !anchor || isLoadingOlderMessages) return;
+    viewport.scrollTop = restorePrependScrollTop(
+      anchor.scrollTop,
+      anchor.scrollHeight,
+      viewport.scrollHeight,
+    );
+    prependAnchorRef.current = null;
+  }, [isLoadingOlderMessages, messages]);
 
   useLayoutEffect(() => {
     const viewport = messagesViewRef.current;
@@ -322,28 +376,10 @@ export const ChatWindow = ({
     }
   };
 
-  const handleStartRecording = () => {
-    if (isInteractionLocked) return;
-    transcriptionSessionRef.current = activeConversation?.id ?? null;
-    setIsMenuOpen(false);
-    setIsEditingTitle(false);
-    setIsDragging(false);
-    void voice.start();
-  };
-
-  const handleRetryTranscription = () => {
-    if (isInteractionLocked) return;
-    setIsMenuOpen(false);
-    setIsEditingTitle(false);
-    setIsDragging(false);
-    voice.retry();
-  };
-
   return (
     <>
       <main
         className={styles.main}
-        aria-busy={voice.isTranscribing}
         onDragOver={(e) => {
           e.preventDefault();
           if (isInteractionLocked) return;
@@ -412,97 +448,39 @@ export const ChatWindow = ({
 
           <div className={styles.headerRight}>
             {activeConversation && (
-              <div style={{ position: "relative" }}>
-                <button
-                  onClick={() => {
-                    if (!isInteractionLocked) setIsMenuOpen(!isMenuOpen);
-                  }}
-                  className={styles.headerMoreBtn}
-                  title={t("chat.moreOptions")}
-                  disabled={isInteractionLocked}
-                >
-                  <MoreHorizontal size={20} />
-                </button>
-
-                {isMenuOpen && (
-                  <>
-                    {/* Desktop Action Menu (Inline) */}
-                    <div
-                      className={`${styles.actionMenuDropdown} ${styles.desktopMenu}`}
-                    >
-                      <button
-                        onClick={() => {
-                          if (isInteractionLocked) return;
-                          setIsMenuOpen(false);
-                          setEditTitleText(activeConversation.title || "");
-                          setIsEditingTitle(true);
-                        }}
-                        className={styles.actionMenuItem}
-                        disabled={isInteractionLocked}
-                      >
-                        <Edit2 size={16} /> {t("chat.rename")}
-                      </button>
-                      <div className={styles.actionMenuDivider} />
-                      <button
-                        onClick={() => {
-                          if (isInteractionLocked) return;
-                          setIsMenuOpen(false);
-                          if (onDeleteConversation) {
-                            onDeleteConversation(activeConversation.id);
-                          }
-                        }}
-                        className={`${styles.actionMenuItem} ${styles.deleteItem}`}
-                        disabled={isInteractionLocked}
-                      >
-                        <Trash2 size={16} /> {t("chat.delete")}
-                      </button>
-                    </div>
-
-                    {/* Mobile Action Menu (Portal Bottom Sheet) */}
-                    {createPortal(
-                      <>
-                        <div
-                          className={styles.actionMenuBackdrop}
-                          onClick={() => {
-                            if (!isInteractionLocked) setIsMenuOpen(false);
-                          }}
-                        />
-                        <div
-                          className={`${styles.actionMenuDropdown} ${styles.mobileMenu}`}
-                        >
-                          <button
-                            onClick={() => {
-                              if (isInteractionLocked) return;
-                              setIsMenuOpen(false);
-                              setEditTitleText(activeConversation.title || "");
-                              setIsEditingTitle(true);
-                            }}
-                            className={styles.actionMenuItem}
-                            disabled={isInteractionLocked}
-                          >
-                            <Edit2 size={16} /> {t("chat.rename")}
-                          </button>
-                          <div className={styles.actionMenuDivider} />
-                          <button
-                            onClick={() => {
-                              if (isInteractionLocked) return;
-                              setIsMenuOpen(false);
-                              if (onDeleteConversation) {
-                                onDeleteConversation(activeConversation.id);
-                              }
-                            }}
-                            className={`${styles.actionMenuItem} ${styles.deleteItem}`}
-                            disabled={isInteractionLocked}
-                          >
-                            <Trash2 size={16} /> {t("chat.delete")}
-                          </button>
-                        </div>
-                      </>,
-                      document.body,
-                    )}
-                  </>
-                )}
-              </div>
+              <ConversationActionMenu
+                key={activeConversation.id}
+                conversationTitle={
+                  activeConversation.title || t("common.newChat")
+                }
+                modelLabel={selectedModel || t("chat.noModels")}
+                modelValue={conversationModelValue}
+                modelOptions={conversationModelOptions}
+                modelDisabled={modelOptionGroups.length === 0}
+                reasoningLabel={
+                  reasoningAvailable
+                    ? reasoningEffort || defaultReasoningLabel
+                    : reasoningOptions[0].label
+                }
+                reasoningValue={reasoningAvailable ? reasoningEffort || "" : ""}
+                reasoningOptions={reasoningOptions}
+                reasoningDisabled={!selectedModel || !reasoningAvailable}
+                busy={isUpdatingRuntime}
+                disabled={isInteractionLocked}
+                onSelectModel={onSelectModel}
+                onSelectReasoning={async (value) =>
+                  (await onSelectReasoningEffort?.(value)) ?? false
+                }
+                onRename={() => {
+                  if (isInteractionLocked) return;
+                  setEditTitleText(activeConversation.title || "");
+                  setIsEditingTitle(true);
+                }}
+                onDelete={() => {
+                  if (isInteractionLocked) return;
+                  onDeleteConversation?.(activeConversation.id);
+                }}
+              />
             )}
           </div>
         </div>
@@ -514,10 +492,35 @@ export const ChatWindow = ({
           </div>
         )}
         <div ref={messagesViewRef} className={styles.messagesViewArea}>
-          {isLoadingMessages && messages.length === 0 ? (
-            <div className={styles.messagesLoading}>{t("chat.loading")}</div>
+          {isLoadingMessages ? (
+            <div className={styles.messagesSkeleton} role="status">
+              <span className={styles.visuallyHidden}>{t("chat.loading")}</span>
+              {Array.from({ length: 6 }, (_, index) => (
+                <div
+                  key={index}
+                  className={`${styles.skeletonMessage} ${index % 2 === 0 ? styles.skeletonUser : ""}`}
+                >
+                  <span />
+                  <span />
+                </div>
+              ))}
+            </div>
+          ) : messageLoadError && messages.length === 0 ? (
+            <div className={styles.historyError} role="alert">
+              <span>{messageLoadError}</span>
+              <button type="button" onClick={onRetryMessages}>
+                {t("chat.retryHistory")}
+              </button>
+            </div>
           ) : messages.length > 0 ? (
             <div className={styles.messagesContainer}>
+              {(hasOlderMessages || isLoadingOlderMessages) && (
+                <div className={styles.olderMessagesStatus} role="status">
+                  {isLoadingOlderMessages
+                    ? t("chat.loadingOlder")
+                    : t("chat.scrollForOlder")}
+                </div>
+              )}
               {messages
                 .filter(
                   (msg) =>
@@ -527,7 +530,7 @@ export const ChatWindow = ({
                     (msg.tool_calls && msg.tool_calls.length > 0) ||
                     msg.isGenerating,
                 )
-                .map((msg, index) => {
+                .map((msg) => {
                   let filteredMsg = msg;
                   if (
                     msg.role === "assistant" &&
@@ -553,7 +556,7 @@ export const ChatWindow = ({
                       content: cleanContent.trim(),
                     };
                   }
-                  return <MessageBubble key={index} message={filteredMsg} />;
+                  return <MessageBubble key={msg.id} message={filteredMsg} />;
                 })}
             </div>
           ) : (
@@ -592,76 +595,7 @@ export const ChatWindow = ({
             </div>
           )}
 
-          {voiceStatusKey && (
-            <div className={styles.voiceStatus} role="status">
-              <span>
-                {t(voiceStatusKey, {
-                  size: Math.ceil(voice.recordedBytes / (1024 * 1024)),
-                  maxSize: Math.floor(voice.maxBytes / (1024 * 1024)),
-                })}
-              </span>
-              {voice.canRetry && (
-                <button type="button" onClick={handleRetryTranscription}>
-                  {t("audio.retry")}
-                </button>
-              )}
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className={styles.chatInputForm}>
-            {/* Active Model Indicator inside Input Bar */}
-            <div className={styles.modelIndicatorBar}>
-              <div className={styles.modelIndicatorContent}>
-                <Terminal size={11} className={styles.terminalIcon} />
-                {t("chat.runningWith")}
-                <div className={styles.modelSelectWrapper}>
-                  <select
-                    value={selectedModel}
-                    onChange={(e) => onSelectModel(e.target.value)}
-                    className={styles.modelSelectInput}
-                    disabled={isInteractionLocked || models.length === 0}
-                  >
-                    {models.length === 0 && isFetchingModels ? (
-                      <option value={selectedModel || ""}>
-                        {selectedModel || t("chat.loading")}
-                      </option>
-                    ) : models.length === 0 && connectionError ? (
-                      <option value="">
-                        {connectionError.substring(0, 30)}...
-                      </option>
-                    ) : models.length === 0 ? (
-                      <option value={selectedModel || ""}>
-                        {selectedModel || t("chat.noModels")}
-                      </option>
-                    ) : (
-                      models.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label || m.id}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  <div className={styles.modelSelectArrow}>
-                    <svg
-                      width="8"
-                      height="5"
-                      viewBox="0 0 10 6"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M1 1L5 5L9 1"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div className={styles.chatInputActions}>
               {isDragging && (
                 <div className={styles.dropZoneActive}>
@@ -705,44 +639,6 @@ export const ChatWindow = ({
                   <Paperclip size={18} />
                 </button>
 
-                {voice.isAvailable &&
-                  (voice.isRecording ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={voice.stop}
-                        className={styles.btnVoiceStop}
-                        title={t("audio.stopRecording")}
-                        disabled={isInteractionLocked}
-                      >
-                        <Square size={15} fill="currentColor" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={voice.cancel}
-                        className={styles.btnVoiceCancel}
-                        title={t("audio.cancelRecording")}
-                        disabled={isInteractionLocked}
-                      >
-                        <XIcon size={16} />
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleStartRecording}
-                      className={styles.btnVoice}
-                      disabled={
-                        isGenerating ||
-                        !activeConversation ||
-                        isInteractionLocked
-                      }
-                      title={t("audio.startRecording")}
-                    >
-                      <Mic size={18} />
-                    </button>
-                  ))}
-
                 {isGenerating ? (
                   <button
                     type="button"
@@ -771,30 +667,6 @@ export const ChatWindow = ({
           </form>
         </div>
       </main>
-      {voice.isTranscribing &&
-        createPortal(
-          <div
-            className={styles.transcriptionOverlay}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="transcription-status"
-          >
-            <div className={styles.transcriptionDialog}>
-              <div id="transcription-status" role="status" aria-live="polite">
-                {t("audio.transcribing")}
-              </div>
-              <button
-                type="button"
-                className={styles.transcriptionCancel}
-                onClick={voice.cancel}
-                autoFocus
-              >
-                {t("audio.cancelTranscription")}
-              </button>
-            </div>
-          </div>,
-          document.body,
-        )}
     </>
   );
 };

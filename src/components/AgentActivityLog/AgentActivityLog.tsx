@@ -119,18 +119,10 @@ const AgentLog = ({
   expandedElement?: React.ReactNode;
   isStreaming?: boolean;
 }) => {
-  const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
+  const [isManuallyExpanded, setIsManuallyExpanded] =
+    useState(initiallyExpanded);
   const timelineRef = useRef<HTMLDivElement>(null);
-  const [prevIsStreaming, setPrevIsStreaming] = useState(isStreaming);
-
-  if (isStreaming !== prevIsStreaming) {
-    setPrevIsStreaming(isStreaming);
-    if (isStreaming) {
-      setIsExpanded(true);
-    } else {
-      setIsExpanded(false);
-    }
-  }
+  const isExpanded = Boolean(isManuallyExpanded);
 
   useEffect(() => {
     // Auto scroll to bottom during streaming
@@ -149,7 +141,7 @@ const AgentLog = ({
     <div className={styles.log}>
       <div
         className={styles.summary}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setIsManuallyExpanded(!isExpanded)}
       >
         <div className={styles.summaryText}>
           {icon}
@@ -223,26 +215,26 @@ export const AgentActivityLog = ({
 
 export const ReasoningLog = ({
   reasoningContent,
-  initiallyExpanded,
+  isGenerating = false,
 }: {
   reasoningContent?: string;
-  initiallyExpanded?: boolean;
+  isGenerating?: boolean;
 }) => {
   const { t } = useTranslation();
 
-  if (!reasoningContent) return null;
+  if (!reasoningContent && !isGenerating) return null;
 
   return (
     <AgentLog
       icon={<BrainCircuit size={14} />}
       title={t("messages.reasoningProcess")}
-      initiallyExpanded={initiallyExpanded}
-      isStreaming={initiallyExpanded}
+      initiallyExpanded={false}
+      isStreaming={isGenerating}
       expandedElement={
         <>
           <MarkdownRenderer content={reasoningContent} />
           <ThinkingIndicator
-            visible={initiallyExpanded}
+            visible={isGenerating}
             label={t("messages.reasoning")}
           />
         </>

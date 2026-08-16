@@ -58,6 +58,21 @@ export const MoreVertical = (props: IconProps) => (
   </SvgIcon>
 );
 
+export const Pin = (props: IconProps) => (
+  <SvgIcon {...props}>
+    <path d="M12 17v5" />
+    <path d="M5 17h14" />
+    <path d="M7 3h10l-2 5v4l2 5H7l2-5V8z" />
+  </SvgIcon>
+);
+
+export const Pencil = (props: IconProps) => (
+  <SvgIcon {...props}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4z" />
+  </SvgIcon>
+);
+
 export const Trash2 = (props: IconProps) => (
   <SvgIcon {...props}>
     <polyline points="3 6 5 6 21 6" />
@@ -120,12 +135,6 @@ export const Paperclip = (props: IconProps) => (
 export const Activity = (props: IconProps) => (
   <SvgIcon {...props}>
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-  </SvgIcon>
-);
-
-export const Brain = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <path d="M9.5 2A2.5 2.5 0 0 0 7 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-.08 2.5 2.5 0 0 0 2.58 0 2.5 2.5 0 0 0 2.96.08 2.5 2.5 0 0 0 4.96-.44v-15a2.5 2.5 0 0 0-2.5-2.5h-13z" />
   </SvgIcon>
 );
 
@@ -289,15 +298,6 @@ export const Send = (props: IconProps) => (
   <SvgIcon {...props}>
     <path d="m22 2-7 20-4-9-9-4Z" />
     <path d="M22 2 11 13" />
-  </SvgIcon>
-);
-
-export const Mic = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <rect x="9" y="2" width="6" height="12" rx="3" />
-    <path d="M5 10a7 7 0 0 0 14 0" />
-    <line x1="12" y1="17" x2="12" y2="22" />
-    <line x1="8" y1="22" x2="16" y2="22" />
   </SvgIcon>
 );
 

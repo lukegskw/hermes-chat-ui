@@ -1,0 +1,129 @@
+@use "@styles" as s;
+
+.root {
+  position: relative;
+}
+
+.trigger {
+  @include s.neo-button(s.$color-surface);
+  color: s.$color-white;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay {
+  @include s.neo-card;
+  background-color: s.$color-surface;
+  color: s.$color-white;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1001;
+}
+
+.desktopPopover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, calc(100vw - 32px));
+  animation: fadeIn 0.15s ease-out;
+}
+
+.mobileSheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: min(75dvh, 620px);
+  overflow-y: auto;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 0;
+  padding: 20px 16px max(20px, env(safe-area-inset-bottom));
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.backdrop {
+  @include s.overlay-backdrop(1000);
+  animation: fadeIn 0.15s ease-out;
+}
+
+.actionItem {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: s.$color-white;
+  font-family: s.$font-primary;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid s.$color-secondary;
+    outline-offset: -2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.runtimeFields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deleteItem {
+  color: s.$color-danger;
+}
+
+.divider {
+  height: 1px;
+  margin: 4px 0;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.busyStatus {
+  padding: 6px 2px 2px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

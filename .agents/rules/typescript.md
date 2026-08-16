@@ -37,5 +37,5 @@ When encountering a TypeScript error:
 
 ## Code verification
 
-- Always run TypeScript (`npx tsc --noEmit`) and lint checks (`npm run lint`) after you finish a feature. DO NOT EVER TELL THE USER YOU FINISHED A TASK BEFORE DOING THAT.
+- Always run TypeScript (`pnpm run type-check`) and lint checks (`pnpm run lint`) after you finish a feature. DO NOT EVER TELL THE USER YOU FINISHED A TASK BEFORE DOING THAT.
 - Fix all TypeScript and lint issues that arise

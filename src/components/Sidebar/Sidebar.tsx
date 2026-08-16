@@ -1,15 +1,11 @@
 import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Conversation, Model } from "../../types";
-import {
-  Bot,
-  MessageSquare,
-  Plus,
-  Settings as SettingsIcon,
-  Sparkles,
-  X,
-} from "../Icons";
+import { Conversation } from "../../types";
+import { Bot, Plus, Settings as SettingsIcon, Sparkles, X } from "../Icons";
+import { SelectField } from "../SelectField";
+import type { SelectFieldItem } from "../SelectField";
 import styles from "./Sidebar.module.scss";
+import { ConversationListItem } from "./ConversationListItem";
 
 export type Settings = {
   systemPrompt?: string;
@@ -22,14 +18,19 @@ export type SidebarProps = {
   conversations: Conversation[];
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
+  onPinConversation: (id: string, pinned: boolean) => Promise<boolean>;
+  onRenameConversation: (id: string, title: string) => Promise<boolean>;
+  onDeleteConversation: (id: string) => Promise<boolean>;
   onNewChat: () => void;
+  canCreateConversation?: boolean;
   isCreatingChat?: boolean;
   hasMoreConversations?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
-  models: Model[];
-  selectedModel: string;
-  onSelectModel: (modelId: string) => void;
+  modelOptionGroups: SelectFieldItem[];
+  newConversationModelValue: string;
+  hermesDefaultModel: string;
+  onSelectNewConversationModel: (value: string) => void;
   isConnected: boolean;
   isFetchingModels?: boolean;
   connectionError?: string;
@@ -45,14 +46,19 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
       conversations,
       activeConversationId,
       onSelectConversation,
+      onPinConversation,
+      onRenameConversation,
+      onDeleteConversation,
       onNewChat,
+      canCreateConversation = false,
       isCreatingChat,
       hasMoreConversations,
       isLoadingMore,
       onLoadMore,
-      models,
-      selectedModel,
-      onSelectModel,
+      modelOptionGroups,
+      newConversationModelValue,
+      hermesDefaultModel,
+      onSelectNewConversationModel,
       isConnected,
       isFetchingModels,
       connectionError,
@@ -61,6 +67,24 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
     ref,
   ) => {
     const { t } = useTranslation();
+    const modelOptions: SelectFieldItem[] =
+      modelOptionGroups.length === 0 && isFetchingModels
+        ? [{ value: "", label: t("sidebar.fetchingModels") }]
+        : modelOptionGroups.length === 0 && connectionError
+          ? [{ value: "", label: `${connectionError.substring(0, 30)}...` }]
+          : modelOptionGroups.length === 0 && !isConnected
+            ? [{ value: "", label: t("sidebar.disconnected") }]
+            : [
+                {
+                  value: "",
+                  label: hermesDefaultModel
+                    ? t("sidebar.hermesDefaultModel", {
+                        model: hermesDefaultModel,
+                      })
+                    : t("sidebar.activeModel"),
+                },
+                ...modelOptionGroups,
+              ];
 
     return (
       <aside
@@ -109,7 +133,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
           <button
             onClick={onNewChat}
             className={styles.btnPrimary}
-            disabled={disabled || isCreatingChat}
+            disabled={disabled || isCreatingChat || !canCreateConversation}
           >
             <Plus size={16} />
             {isCreatingChat ? t("sidebar.creatingChat") : t("common.newChat")}
@@ -118,60 +142,21 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
 
         {/* Model Selection */}
         <div className={styles.modelSelectionContainer}>
-          <div className={styles.modelSelectionBox}>
-            <label className={styles.modelLabel}>
-              <Sparkles size={11} className={styles.sparklesIconSmall} />
-              {t("sidebar.activeModel")}
-            </label>
-            <select
-              value={selectedModel}
-              onChange={(e) => onSelectModel(e.target.value)}
-              className={styles.modelSelect}
-              disabled={
-                disabled ||
-                (!isConnected && !isFetchingModels) ||
-                models.length === 0
-              }
-            >
-              {models.length === 0 && isFetchingModels ? (
-                <option value={selectedModel}>
-                  {selectedModel || t("sidebar.fetchingModels")}
-                </option>
-              ) : models.length === 0 && connectionError ? (
-                <option value="">{connectionError.substring(0, 30)}...</option>
-              ) : models.length === 0 && isConnected ? (
-                <option value={selectedModel}>
-                  {selectedModel || t("sidebar.noModels")}
-                </option>
-              ) : models.length === 0 && !isConnected ? (
-                <option value="">{t("sidebar.disconnected")}</option>
-              ) : (
-                models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label || m.id}
-                  </option>
-                ))
-              )}
-            </select>
-            {/* Custom dropdown arrow */}
-            <div className={styles.selectArrowContainer}>
-              <svg
-                width="10"
-                height="6"
-                viewBox="0 0 10 6"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M1 1L5 5L9 1"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-          </div>
+          <SelectField
+            label={
+              <>
+                <Sparkles size={11} className={styles.sparklesIconSmall} />
+                {t("sidebar.newConversationModel")}
+              </>
+            }
+            value={newConversationModelValue}
+            onChange={(event) =>
+              onSelectNewConversationModel(event.target.value)
+            }
+            options={modelOptions}
+            ariaLabel={t("sidebar.newConversationModel")}
+            disabled={disabled || modelOptionGroups.length === 0}
+          />
         </div>
 
         {/* Conversations List */}
@@ -184,40 +169,16 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             conversations.map((conv) => {
               const isActive = conv.id === activeConversationId;
               return (
-                <div
+                <ConversationListItem
                   key={conv.id}
-                  onClick={() => {
-                    if (!disabled) onSelectConversation(conv.id);
-                  }}
-                  className={`${styles.conversationItem} ${isActive ? styles.active : ""}`}
-                  aria-disabled={disabled}
-                >
-                  <div className={styles.conversationItemContent}>
-                    <MessageSquare
-                      size={15}
-                      className={styles.conversationIcon}
-                    />
-
-                    <div className={styles.conversationText}>
-                      <span className={styles.conversationTitle}>
-                        {conv.title || t("common.newChat")}
-                      </span>
-                      <span className={styles.conversationSource}>
-                        {(() => {
-                          const s = (conv.source || "").toLowerCase();
-                          if (
-                            s === "hermes_browser" ||
-                            s === "tui" ||
-                            s === "cli"
-                          ) {
-                            return t("sidebar.userSource");
-                          }
-                          return conv.source || "Hermes";
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  conversation={conv}
+                  active={isActive}
+                  disabled={disabled}
+                  onSelect={() => onSelectConversation(conv.id)}
+                  onPin={(pinned) => onPinConversation(conv.id, pinned)}
+                  onRename={(title) => onRenameConversation(conv.id, title)}
+                  onDelete={() => onDeleteConversation(conv.id)}
+                />
               );
             })
           ) : (

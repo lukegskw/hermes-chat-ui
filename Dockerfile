@@ -1,35 +1,37 @@
-# Define arguments before any FROM statement so they can be used in FROM directives
-ARG HERMES_AGENT_VERSION=latest@sha256:a0e0bb479ad038782614bf57651c0f250aaecd93bc345114a52704adce517ede
-
-# Stage 1: Build the SPA
-FROM node:24-alpine@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3 AS build
+# The UI is intentionally not derived from the Hermes image.  Hermes runs in
+# its own official container; this image contains only the SPA, BFF, and Push.
+FROM node:24-alpine@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3 AS base
+ENV PNPM_HOME=/pnpm \
+    PATH=/pnpm:$PATH
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --ignore-scripts
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable
+
+FROM base AS prod-deps
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --prod --frozen-lockfile --ignore-scripts
+
+FROM base AS build
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
-# Stage 2: Unified image based on hermes-agent
-FROM nousresearch/hermes-agent:${HERMES_AGENT_VERSION}
+FROM node:24-alpine@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3
+ENV NODE_ENV=production \
+    HERMES_STATIC_DIR=/app/static \
+    HERMES_UI_DATA_DIR=/app/data \
+    HERMES_UI_HERMES_CONFIG=/hermes-config/config.yaml \
+    HERMES_PROXY_PORT=8643
+WORKDIR /app
 
-# Set PATH to use the agent's virtual environment
-ENV PATH="/opt/hermes/.venv/bin:$PATH"
+COPY package.json ./
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./static
+COPY --from=build /app/dist-server ./dist-server
+RUN mkdir -p /app/data \
+    && chown -R 10001:10001 /app
 
-# Copy built SPA
-COPY --from=build /app/dist /app/static/
-
-# Install python backend dependencies
-COPY backend/requirements.txt ./backend/
-RUN uv pip install -r backend/requirements.txt
-
-COPY backend /app/backend
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
-# Config injection script — runs BEFORE s6 services (dashboard, gateway) start
-COPY scripts/00-inject-config /etc/cont-init.d/00-inject-config
-RUN chmod +x /etc/cont-init.d/00-inject-config
-
-EXPOSE 8643 9119
-
-CMD ["/app/entrypoint.sh"]
+USER 10001:10001
+EXPOSE 8643
+CMD ["node", "/app/dist-server/index.js"]

@@ -1,0 +1,58 @@
+services:
+  hermes-agent:
+    # Pin a tested official image digest before deploying. See the contract
+    # smoke test in docs/plans/pure-client-implementation-plan.md.
+    image: nousresearch/hermes-agent:latest@sha256:85e114f9edca6fd3b9b377a624ab0d0fa4919a0ac86b5e4e4144b43eb7355f00
+    container_name: hermes-agent
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    ports:
+      - "${BACKEND_PORT:-8642}:${API_SERVER_PORT:-8642}"
+      - "${DASHBOARD_PORT:-9119}:${HERMES_DASHBOARD_PORT:-9119}"
+    volumes:
+      - /volume2/docker_ssd/hermes/config:/opt/data
+      - /volume2/docker_ssd/hermes/workspace:/opt/data/workspace
+      - /volume2/docker_ssd/hermes/scripts/01a-nextcloud-group:/etc/cont-init.d/01a-nextcloud-group:ro
+      - /volume1/docker/nextcloud/data/lucas/files/Obsidian/knowledge-base:/knowledge-base-ro:ro
+      - /volume1/docker/nextcloud/data/lucas/files/Obsidian/knowledge-base/.git:/knowledge-base-git:rw
+    group_add:
+      - "33"
+    environment:
+      - HERMES_UID=${HERMES_UID}
+      - HERMES_GID=${HERMES_GID}
+      - UV_CACHE_DIR=${UV_CACHE_DIR}
+      - HERMES_HOME=/opt/data
+      - HERMES_ACCEPT_HOOKS=1
+      - API_SERVER_ENABLED=${API_SERVER_ENABLED:-true}
+      - API_SERVER_KEY=${API_SERVER_KEY}
+      - API_SERVER_HOST=0.0.0.0
+      - API_SERVER_PORT=${API_SERVER_PORT:-8642}
+      # The browser always talks to the BFF, so permissive CORS is unnecessary.
+      - API_SERVER_CORS_ORIGINS=${API_SERVER_CORS_ORIGINS:-}
+      - API_SERVER_MODEL_NAME=${API_SERVER_MODEL_NAME}
+      - HERMES_DASHBOARD=${HERMES_DASHBOARD:-1}
+      - HERMES_DASHBOARD_HOST=${HERMES_DASHBOARD_HOST:-0.0.0.0}
+      - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
+      - HERMES_DASHBOARD_BASIC_AUTH_USERNAME=${HERMES_DASHBOARD_BASIC_AUTH_USERNAME}
+      - HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=${HERMES_DASHBOARD_BASIC_AUTH_PASSWORD}
+      - HERMES_DASHBOARD_BASIC_AUTH_SECRET=${HERMES_DASHBOARD_BASIC_AUTH_SECRET}
+      # Used only by operator-managed proactive-message scripts in /opt/data.
+      - HERMES_CHAT_UI_URL=http://hermes-chat-ui:8643
+      - HERMES_PUSH_API_KEY=${HERMES_PUSH_API_KEY}
+      # Optional Home Assistant integration. Leave both variables blank when unused.
+      - HASS_URL=${HASS_URL}
+      - HASS_TOKEN=${HASS_TOKEN}
+      - PORTAINER_TOKEN=${PORTAINER_TOKEN}
+      - KITCHENOWL_URL=${KITCHENOWL_URL}
+      - KITCHENOWL_TOKEN=${KITCHENOWL_TOKEN}
+      - KITCHENOWL_INSIGHTS_URL=${KITCHENOWL_INSIGHTS_URL}
+      - CALDAV_MCP_URL=${CALDAV_MCP_URL}
+      - NEXTCLOUD_MCP_URL=${NEXTCLOUD_MCP_URL}
+    networks: [hermes-internal]
+
+# This Compose creates a stable network. Start it before the UI Compose.
+networks:
+  hermes-internal:
+    name: hermes-internal
+    driver: bridge
