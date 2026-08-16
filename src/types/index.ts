@@ -49,6 +49,14 @@ export type ChatMessage = {
   timestamp?: string;
 };
 
+export type GenerationSnapshot = {
+  sessionId: string;
+  messageId: string;
+  content: string;
+  reasoningContent: string;
+  toolCalls: ToolCall[];
+};
+
 export type SessionMessageRow = {
   id?: number | string;
   role: "user" | "assistant" | "system" | "tool";
@@ -86,6 +94,7 @@ export type SendChatMessageStreamOptions = {
   onReasoningChunk?: (chunk: string) => void;
   onReasoningSnapshot?: (content: string) => void;
   onToolCallChunk?: (toolCallDelta: unknown) => void;
+  onGenerationSnapshot?: (snapshot: GenerationSnapshot) => void;
   onDone: () => void;
   onError: (error: Error) => void;
   signal?: AbortSignal;

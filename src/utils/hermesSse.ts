@@ -1,3 +1,5 @@
+import type { GenerationSnapshot, ToolCall } from "../types";
+
 export type SsePayload = Record<string, unknown>;
 
 export type ParsedSseEvent = {
@@ -9,6 +11,7 @@ export type NormalizedHermesEvent =
   | { kind: "assistant_delta"; text: string }
   | { kind: "reasoning_delta"; text: string }
   | { kind: "reasoning_snapshot"; text: string }
+  | { kind: "generation_snapshot"; snapshot: GenerationSnapshot }
   | {
       kind: "tool";
       event: "tool.started" | "tool.completed" | "tool.failed";
@@ -87,10 +90,59 @@ const terminalReasoning = (payload: SsePayload): string => {
     .join("\n\n");
 };
 
+const snapshotToolCalls = (value: unknown): ToolCall[] =>
+  Array.isArray(value)
+    ? value.flatMap((item) => {
+        if (!item || typeof item !== "object") return [];
+        const record = item as Record<string, unknown>;
+        const fn =
+          record.function && typeof record.function === "object"
+            ? (record.function as Record<string, unknown>)
+            : {};
+        const id = stringValue(record.id);
+        const name = stringValue(fn.name);
+        if (!id || !name) return [];
+        const rawStatus = stringValue(record.status);
+        const status = ["running", "completed", "error"].includes(
+          rawStatus ?? "",
+        )
+          ? (rawStatus as ToolCall["status"])
+          : "running";
+        return [
+          {
+            id,
+            type: stringValue(record.type) ?? "function",
+            function: {
+              name,
+              arguments: stringValue(fn.arguments) ?? "",
+            },
+            status,
+            label: stringValue(record.label) ?? name,
+          },
+        ];
+      })
+    : [];
+
 export const normalizeHermesEvent = ({
   event,
   payload,
 }: ParsedSseEvent): NormalizedHermesEvent => {
+  if (event === "generation.snapshot") {
+    const sessionId = stringValue(payload.session_id);
+    const messageId = stringValue(payload.message_id);
+    if (!sessionId || !messageId) return { kind: "ignored" };
+    return {
+      kind: "generation_snapshot",
+      snapshot: {
+        sessionId,
+        messageId,
+        content: stringValue(payload.content) ?? "",
+        reasoningContent: stringValue(payload.reasoning_content) ?? "",
+        toolCalls: snapshotToolCalls(payload.tool_calls),
+      },
+    };
+  }
+
   if (
     (event === "message.delta" || event === "assistant.delta") &&
     typeof payload.delta === "string"

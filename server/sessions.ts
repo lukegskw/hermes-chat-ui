@@ -15,14 +15,248 @@ export const REASONING_POLL_INTERVAL_MS = 750;
 const encoder = new TextEncoder();
 
 type MessageRow = Record<string, unknown>;
+type GenerationToolSnapshot = {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+  status: "running" | "completed" | "error";
+  label: string;
+};
+type GenerationSnapshot = {
+  session_id: string;
+  message_id: string;
+  content: string;
+  reasoning_content: string;
+  tool_calls: GenerationToolSnapshot[];
+};
+type StreamSubscriber = {
+  controller: ReadableStreamDefaultController<Uint8Array>;
+};
 type ActiveSessionStream = {
   abortController: AbortController;
-  connected: boolean;
+  subscribers: Set<StreamSubscriber>;
   task: Promise<void>;
   lastReasoningSnapshot: string;
+  snapshot: GenerationSnapshot;
+  completedContent: string;
 };
 
+type ParsedSseFrame = {
+  event: string;
+  payload?: Record<string, unknown>;
+  bytes: Uint8Array;
+};
+
+class SessionSseParser {
+  private readonly decoder = new TextDecoder();
+  private buffer = "";
+
+  push(chunk?: Uint8Array, final = false): ParsedSseFrame[] {
+    if (chunk) this.buffer += this.decoder.decode(chunk, { stream: !final });
+    else if (final) this.buffer += this.decoder.decode();
+    this.buffer = this.buffer.replaceAll("\r\n", "\n");
+    if (final) this.buffer = this.buffer.replaceAll("\r", "\n");
+
+    const frames: ParsedSseFrame[] = [];
+    let boundary = this.buffer.indexOf("\n\n");
+    while (boundary >= 0) {
+      const block = this.buffer.slice(0, boundary);
+      this.buffer = this.buffer.slice(boundary + 2);
+      frames.push(this.parse(block));
+      boundary = this.buffer.indexOf("\n\n");
+    }
+    if (final && this.buffer.trim()) {
+      frames.push(this.parse(this.buffer));
+      this.buffer = "";
+    }
+    return frames;
+  }
+
+  private parse(block: string): ParsedSseFrame {
+    let event = "message";
+    const dataLines: string[] = [];
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event:")) event = line.slice(6).trim();
+      else if (line.startsWith("data:"))
+        dataLines.push(line.slice(5).trimStart());
+    }
+    let payload: Record<string, unknown> | undefined;
+    if (dataLines.length > 0) {
+      try {
+        const parsed: unknown = JSON.parse(dataLines.join("\n"));
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          payload = parsed as Record<string, unknown>;
+        }
+      } catch {
+        // Preserve malformed/forward-compatible frames for the browser.
+      }
+    }
+    return { event, payload, bytes: encoder.encode(`${block}\n\n`) };
+  }
+}
+
 const activeStreams = new Map<string, ActiveSessionStream>();
+
+const stringValue = (value: unknown): string =>
+  typeof value === "string" ? value : "";
+
+const terminalReasoning = (payload: Record<string, unknown>): string =>
+  Array.isArray(payload.messages)
+    ? payload.messages
+        .flatMap((message) => {
+          if (!message || typeof message !== "object") return [];
+          const record = message as Record<string, unknown>;
+          if (record.role !== "assistant") return [];
+          const reasoning = stringValue(
+            record.reasoning_content ?? record.reasoning,
+          );
+          return reasoning ? [reasoning] : [];
+        })
+        .join("\n\n")
+    : "";
+
+const broadcast = (active: ActiveSessionStream, chunk: Uint8Array): void => {
+  for (const subscriber of [...active.subscribers]) {
+    try {
+      subscriber.controller.enqueue(chunk);
+    } catch {
+      active.subscribers.delete(subscriber);
+    }
+  }
+};
+
+const closeSubscribers = (active: ActiveSessionStream): void => {
+  for (const subscriber of [...active.subscribers]) {
+    try {
+      subscriber.controller.close();
+    } catch {
+      // The browser may already have disconnected.
+    }
+  }
+  active.subscribers.clear();
+};
+
+const generationSnapshotFrame = (active: ActiveSessionStream): Uint8Array =>
+  encoder.encode(
+    `event: generation.snapshot\ndata: ${JSON.stringify(active.snapshot)}\n\n`,
+  );
+
+const streamResponse = (
+  active: ActiveSessionStream,
+  options: { includeSnapshot: boolean; sessionId: string },
+): Response => {
+  let subscriber!: StreamSubscriber;
+  const readable = new ReadableStream<Uint8Array>({
+    start(controller) {
+      subscriber = { controller };
+      active.subscribers.add(subscriber);
+      if (options.includeSnapshot) {
+        controller.enqueue(generationSnapshotFrame(active));
+      }
+    },
+    cancel() {
+      active.subscribers.delete(subscriber);
+    },
+  });
+  return new Response(readable, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
+      "X-Hermes-Session-Id": options.sessionId,
+      "X-Hermes-Generation-Id": active.snapshot.message_id,
+    },
+  });
+};
+
+const updateToolSnapshot = (
+  active: ActiveSessionStream,
+  event: string,
+  payload: Record<string, unknown>,
+): void => {
+  const name = stringValue(payload.tool_name ?? payload.tool) || "tool";
+  const suppliedId = stringValue(payload.tool_call_id ?? payload.toolCallId);
+  const existing = suppliedId
+    ? active.snapshot.tool_calls.find((tool) => tool.id === suppliedId)
+    : [...active.snapshot.tool_calls]
+        .reverse()
+        .find(
+          (tool) => tool.function.name === name && tool.status === "running",
+        );
+  const tool =
+    existing ??
+    ({
+      id:
+        suppliedId ||
+        `${stringValue(payload.message_id) || active.snapshot.message_id}_${active.snapshot.tool_calls.length}`,
+      type: "function",
+      function: { name, arguments: "" },
+      status: "running",
+      label: stringValue(payload.preview ?? payload.label) || name,
+    } satisfies GenerationToolSnapshot);
+  if (!existing) active.snapshot.tool_calls.push(tool);
+  tool.status =
+    event === "tool.started"
+      ? "running"
+      : event === "tool.failed"
+        ? "error"
+        : "completed";
+  if (payload.args !== undefined) {
+    tool.function.arguments =
+      typeof payload.args === "string"
+        ? payload.args
+        : JSON.stringify(payload.args);
+  }
+  const label = stringValue(payload.preview ?? payload.label);
+  if (label) tool.label = label;
+};
+
+const updateGenerationSnapshot = (
+  active: ActiveSessionStream,
+  frame: ParsedSseFrame,
+): void => {
+  const payload = frame.payload;
+  if (!payload) return;
+  if (
+    (frame.event === "assistant.delta" || frame.event === "message.delta") &&
+    typeof payload.delta === "string"
+  ) {
+    active.snapshot.content += payload.delta;
+  } else if (
+    frame.event === "assistant.completed" &&
+    typeof payload.content === "string"
+  ) {
+    active.snapshot.content = payload.content;
+    active.completedContent = payload.content;
+  } else if (frame.event === "reasoning.available") {
+    active.snapshot.reasoning_content += stringValue(
+      payload.text ?? payload.delta ?? payload.preview,
+    );
+  } else if (frame.event === "reasoning.snapshot") {
+    active.snapshot.reasoning_content = stringValue(payload.text);
+  } else if (frame.event === "tool.progress") {
+    const name = stringValue(payload.tool_name ?? payload.tool);
+    if (name === "_thinking") {
+      active.snapshot.reasoning_content += stringValue(
+        payload.delta ?? payload.text ?? payload.preview,
+      );
+    }
+  } else if (
+    frame.event === "tool.started" ||
+    frame.event === "tool.completed" ||
+    frame.event === "tool.failed"
+  ) {
+    updateToolSnapshot(active, frame.event, payload);
+  } else if (frame.event === "run.completed") {
+    const reasoning = terminalReasoning(payload);
+    if (reasoning) active.snapshot.reasoning_content = reasoning;
+    if (typeof payload.output === "string" && payload.output) {
+      active.snapshot.content = payload.output;
+      active.completedContent = payload.output;
+    }
+  }
+};
 
 export const sessionPath = (sessionId: string, suffix = ""): string =>
   `/api/sessions/${encodeURIComponent(sessionId)}${suffix}`;
@@ -48,6 +282,13 @@ export const cancelActiveStream = async (
   active.abortController.abort();
   await active.task.catch(() => undefined);
   return true;
+};
+
+export const resumeActiveStream = (sessionId: string): Response => {
+  const active = activeStreams.get(sessionId);
+  return active
+    ? streamResponse(active, { includeSnapshot: true, sessionId })
+    : new Response(null, { status: 204 });
 };
 
 export const extractCompletedContent = (
@@ -135,14 +376,14 @@ const queueReasoningSnapshot = async (
   sessionId: string,
   active: ActiveSessionStream,
   boundary: number,
-  enqueue: (chunk: Uint8Array) => void,
 ): Promise<void> => {
   const messages = await fetchMessageRows(config, sessionId);
   if (!messages) return;
   const snapshot = reasoningAfterBoundary(messages, boundary);
   if (!snapshot || snapshot === active.lastReasoningSnapshot) return;
   active.lastReasoningSnapshot = snapshot;
-  if (active.connected) enqueue(reasoningFrame(sessionId, snapshot));
+  active.snapshot.reasoning_content = snapshot;
+  broadcast(active, reasoningFrame(sessionId, snapshot));
 };
 
 const reconcileReasoning = async (
@@ -150,11 +391,10 @@ const reconcileReasoning = async (
   sessionId: string,
   active: ActiveSessionStream,
   boundary: number,
-  enqueue: (chunk: Uint8Array) => void,
 ): Promise<void> => {
   await delay(REASONING_INITIAL_DELAY_MS, active.abortController.signal);
   while (!active.abortController.signal.aborted) {
-    await queueReasoningSnapshot(config, sessionId, active, boundary, enqueue);
+    await queueReasoningSnapshot(config, sessionId, active, boundary);
     await delay(REASONING_POLL_INTERVAL_MS, active.abortController.signal);
   }
 };
@@ -263,59 +503,56 @@ export const streamSessionChat = async (
     );
   }
 
-  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const effectiveSessionId =
+    upstream.headers.get("X-Hermes-Session-Id") || sessionId;
   const active: ActiveSessionStream = {
     abortController,
-    connected: true,
+    subscribers: new Set(),
     lastReasoningSnapshot: "",
     task: Promise.resolve(),
+    snapshot: {
+      session_id: effectiveSessionId,
+      message_id: `generation_${randomUUID()}`,
+      content: "",
+      reasoning_content: "",
+      tool_calls: [],
+    },
+    completedContent: "",
   };
-  const readable = new ReadableStream<Uint8Array>({
-    start(nextController) {
-      controller = nextController;
-    },
-    cancel() {
-      active.connected = false;
-    },
+  activeStreams.set(sessionId, active);
+  const response = streamResponse(active, {
+    includeSnapshot: true,
+    sessionId: effectiveSessionId,
   });
-  const enqueue = (chunk: Uint8Array) => {
-    if (!active.connected) return;
-    try {
-      controller.enqueue(chunk);
-    } catch {
-      active.connected = false;
-    }
-  };
 
   active.task = (async () => {
-    let eventBuffer = "";
-    let completedContent = "";
     let cancelled = false;
+    const terminalFrame = { sent: false };
+    const parser = new SessionSseParser();
     const reasoningTask =
       reasoningBoundary === undefined
         ? undefined
-        : reconcileReasoning(
-            config,
-            sessionId,
-            active,
-            reasoningBoundary,
-            enqueue,
-          );
+        : reconcileReasoning(config, sessionId, active, reasoningBoundary);
+    const forwardFrames = (frames: ParsedSseFrame[]) => {
+      for (const frame of frames) {
+        updateGenerationSnapshot(active, frame);
+        broadcast(active, frame.bytes);
+        if (frame.event === "done") terminalFrame.sent = true;
+      }
+    };
     try {
       const reader = upstreamBody.getReader();
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        enqueue(value);
-        eventBuffer += new TextDecoder().decode(value, { stream: true });
-        const parsed = extractCompletedContent(eventBuffer);
-        eventBuffer = parsed.remainder;
-        if (parsed.completed) completedContent = parsed.completed;
+        forwardFrames(parser.push(value));
       }
+      forwardFrames(parser.push(undefined, true));
     } catch (error) {
       cancelled = abortController.signal.aborted;
       if (!cancelled) {
-        enqueue(
+        broadcast(
+          active,
           encoder.encode(
             `event: error\ndata: ${JSON.stringify({ message: error instanceof Error ? error.message : String(error) })}\n\n`,
           ),
@@ -324,41 +561,37 @@ export const streamSessionChat = async (
     } finally {
       abortController.abort();
       await reasoningTask?.catch(() => undefined);
-      if (reasoningBoundary !== undefined && active.connected && !cancelled) {
+      if (reasoningBoundary !== undefined && !cancelled) {
         await queueReasoningSnapshot(
           config,
           sessionId,
           active,
           reasoningBoundary,
-          enqueue,
         );
       }
-      if (active.connected) controller.close();
+      if (!terminalFrame.sent) {
+        broadcast(
+          active,
+          encoder.encode(
+            `event: done\ndata: ${JSON.stringify({ session_id: sessionId, cancelled })}\n\n`,
+          ),
+        );
+      }
+      closeSubscribers(active);
       if (activeStreams.get(sessionId) === active)
         activeStreams.delete(sessionId);
-      if (completedContent) {
+      if (active.completedContent) {
         await sendCompletionNotification(
           config,
           sessionId,
-          completedContent,
+          active.completedContent,
         ).catch((error) =>
           console.error("[push] Completion notification failed:", error),
         );
       }
     }
   })();
-  activeStreams.set(sessionId, active);
-
-  return new Response(readable, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache",
-      "X-Accel-Buffering": "no",
-      "X-Hermes-Session-Id":
-        upstream.headers.get("X-Hermes-Session-Id") || sessionId,
-    },
-  });
+  return response;
 };
 
 export const proxySessionRequest = (

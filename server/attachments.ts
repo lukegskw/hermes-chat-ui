@@ -18,6 +18,7 @@ type AttachmentRecord = {
   sessionId: string;
   messageId: string | null;
   groupId: string;
+  originalText?: string;
   mimeType: string;
   size: number;
   position: number;
@@ -42,6 +43,7 @@ const AttachmentRecordSchema = z.object({
   sessionId: z.string(),
   messageId: z.string().nullable(),
   groupId: z.string().regex(BLOB_ID_PATTERN),
+  originalText: z.string().optional(),
   mimeType: z.enum(["image/jpeg", "image/png", "image/gif", "image/webp"]),
   size: z.number().int().nonnegative().max(MAX_ATTACHMENT_BYTES),
   position: z.number().int().nonnegative(),
@@ -224,6 +226,7 @@ export class AttachmentStore {
             sessionId,
             messageId: null,
             groupId,
+            originalText: extracted.text,
             mimeType: image.mimeType,
             size: image.bytes.length,
             position,
@@ -309,10 +312,7 @@ export class AttachmentStore {
     });
   }
 
-  async enrichMessages(
-    sessionId: string,
-    payload: unknown,
-  ): Promise<unknown> {
+  async enrichMessages(sessionId: string, payload: unknown): Promise<unknown> {
     const record = asObject(payload);
     if (!record || !Array.isArray(record.data)) return payload;
     const rows = record.data.filter((row): row is MessageRow =>
@@ -339,10 +339,32 @@ export class AttachmentStore {
           : typeof row.content === "string" && row.content
             ? [{ type: "text", text: row.content }]
             : [];
+        const retainedText = attachments.find(
+          (attachment) => attachment.originalText !== undefined,
+        )?.originalText;
+        const textParts =
+          retainedText !== undefined
+            ? retainedText
+              ? [{ type: "text", text: retainedText }]
+              : []
+            : contentWithoutImages.flatMap((part) => {
+                const item = asObject(part);
+                if (item?.type !== "text" || typeof item.text !== "string") {
+                  return [part];
+                }
+                const text = item.text
+                  .split(/\r?\n/)
+                  .filter(
+                    (line) => line.trim().toLowerCase() !== "[screenshot]",
+                  )
+                  .join("\n")
+                  .trim();
+                return text ? [{ ...item, text }] : [];
+              });
         return {
           ...row,
           content: [
-            ...contentWithoutImages,
+            ...textParts,
             ...attachments.map((attachment) => ({
               type: "image_url",
               image_url: {

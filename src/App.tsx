@@ -101,6 +101,7 @@ export const App = () => {
 
   const {
     isGenerating,
+    isCheckingGeneration,
     handleSendMessage,
     handleStopGeneration,
     handleCleanupConversation,
@@ -110,6 +111,7 @@ export const App = () => {
     conversations,
     setConversations,
     activeConversationId,
+    Boolean(activeConversation?.historyLoaded) && !isLoadingMessages,
     reloadConversation,
   );
 
@@ -243,7 +245,11 @@ export const App = () => {
           messageLoadError={messageLoadError}
           onLoadOlderMessages={handleLoadOlderMessages}
           onRetryMessages={retryConversationMessages}
-          interactionLocked={isUpdatingConversationModel || isLoadingMessages}
+          interactionLocked={
+            isUpdatingConversationModel ||
+            isLoadingMessages ||
+            isCheckingGeneration
+          }
         />
         <SettingsSheet
           isOpen={isSettingsSheetOpen}

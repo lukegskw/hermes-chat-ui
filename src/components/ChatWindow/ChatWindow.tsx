@@ -22,7 +22,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import styles from "./ChatWindow.module.scss";
-import { decideChatScroll, restorePrependScrollTop } from "./scrollPolicy";
+import {
+  decideChatScroll,
+  isWaitingForInitialHistory,
+  restorePrependScrollTop,
+} from "./scrollPolicy";
 
 export type ChatWindowMessage = ChatMessage & {
   id: string;
@@ -232,8 +236,12 @@ export const ChatWindow = ({
     }
 
     const hasPersistedMessages = (activeConversation?.messageCount ?? 0) > 0;
-    const waitingForHistory =
-      messages.length === 0 && (isLoadingMessages || hasPersistedMessages);
+    const waitingForHistory = isWaitingForInitialHistory({
+      sessionChanged,
+      isLoadingMessages,
+      hasPersistedMessages,
+      historyLoaded: Boolean(activeConversation?.historyLoaded),
+    });
     const decision = decideChatScroll({
       sessionChanged,
       hasActiveSession: Boolean(activeSessionId),
@@ -251,6 +259,7 @@ export const ChatWindow = ({
     wasGeneratingRef.current = isGenerating;
   }, [
     activeConversation?.messageCount,
+    activeConversation?.historyLoaded,
     activeSessionId,
     isGenerating,
     isLoadingMessages,
