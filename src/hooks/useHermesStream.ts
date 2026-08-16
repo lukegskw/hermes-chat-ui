@@ -1,10 +1,17 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import i18n from "../i18n";
-import { ChatMessage, ContentPart, Conversation, ToolCall } from "../types";
+import {
+  ChatMessage,
+  ContentPart,
+  Conversation,
+  GenerationSnapshot,
+  ToolCall,
+} from "../types";
 import {
   cancelSessionChat,
   logger,
   prepareImageContent,
+  resumeChatMessageStream,
   sendChatMessageStream,
   updateConversationTitle,
 } from "../utils";
@@ -15,6 +22,7 @@ export const useHermesStream = (
   conversations: Conversation[],
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
   activeConversationId: string,
+  conversationHistoryReady: boolean,
   reloadConversation: (id: string, signal?: AbortSignal) => Promise<void>,
 ) => {
   const [generatingStates, setGeneratingStates] = useState<
@@ -23,8 +31,15 @@ export const useHermesStream = (
   const abortControllersRef = useRef<
     Record<string, AbortController | undefined>
   >({});
+  const [checkedGenerationFor, setCheckedGenerationFor] = useState("");
 
   const isGenerating = generatingStates[activeConversationId] || false;
+  const isCheckingGeneration = Boolean(
+    activeConversationId &&
+    !isGenerating &&
+    (!conversationHistoryReady ||
+      checkedGenerationFor !== activeConversationId),
+  );
 
   const handleCleanupConversation = (id: string) => {
     setGeneratingStates((previous) => {
@@ -34,26 +49,242 @@ export const useHermesStream = (
     });
     abortControllersRef.current[id]?.abort();
     delete abortControllersRef.current[id];
+    setCheckedGenerationFor((previous) => (previous === id ? "" : previous));
   };
 
-  const updateAssistantMessage = (
-    conversationId: string,
-    messageId: string,
-    update: (message: ChatMessage) => ChatMessage,
-  ) => {
-    setConversations((previous) =>
-      previous.map((conversation) =>
-        conversation.id === conversationId
+  const updateAssistantMessage = useCallback(
+    (
+      conversationId: string,
+      messageId: string,
+      update: (message: ChatMessage) => ChatMessage,
+    ) => {
+      setConversations((previous) =>
+        previous.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: conversation.messages.map((message) =>
+                  message.id === messageId ? update(message) : message,
+                ),
+              }
+            : conversation,
+        ),
+      );
+    },
+    [setConversations],
+  );
+
+  const applyToolCallChunk = useCallback(
+    (conversationId: string, messageId: string, value: unknown) => {
+      const delta = value as {
+        index?: number;
+        id: string;
+        type: string;
+        function?: { name?: string; arguments?: string };
+        status?: "running" | "completed" | "error";
+        label?: string;
+      };
+      updateAssistantMessage(conversationId, messageId, (message) => {
+        const index = delta.index ?? 0;
+        const current = message.tool_calls ?? [];
+        const next = current.map((tool) => ({
+          ...tool,
+          function: { ...tool.function },
+        }));
+        const existing = next[index] as ToolCall | undefined;
+        next[index] = existing
           ? {
-              ...conversation,
-              messages: conversation.messages.map((message) =>
-                message.id === messageId ? update(message) : message,
-              ),
+              ...existing,
+              function: {
+                ...existing.function,
+                arguments:
+                  delta.function?.arguments || existing.function.arguments,
+              },
+              status: delta.status || existing.status,
+              label: delta.label || existing.label,
             }
-          : conversation,
-      ),
-    );
-  };
+          : {
+              id: delta.id,
+              type: delta.type,
+              function: {
+                name: delta.function?.name || "",
+                arguments: delta.function?.arguments || "",
+              },
+              status: delta.status || "running",
+              label: delta.label || "",
+            };
+        return { ...message, tool_calls: next };
+      });
+    },
+    [updateAssistantMessage],
+  );
+
+  const restoreGenerationSnapshot = useCallback(
+    (conversationId: string, snapshot: GenerationSnapshot): string => {
+      const messageId = `active_${snapshot.messageId}`;
+      const assistantMessage: ChatMessage = {
+        id: messageId,
+        role: "assistant",
+        content: snapshot.content,
+        reasoning_content: snapshot.reasoningContent,
+        tool_calls: snapshot.toolCalls,
+        isGenerating: true,
+        timestamp: new Date().toISOString(),
+      };
+      setConversations((previous) =>
+        previous.map((conversation) => {
+          if (conversation.id !== conversationId) return conversation;
+          const existingIndex = conversation.messages.findIndex(
+            (message) => message.id === messageId,
+          );
+          if (existingIndex >= 0) {
+            const messages = [...conversation.messages];
+            messages[existingIndex] = assistantMessage;
+            return { ...conversation, messages };
+          }
+          let lastUserIndex = -1;
+          for (
+            let index = conversation.messages.length - 1;
+            index >= 0;
+            index -= 1
+          ) {
+            if (conversation.messages[index].role === "user") {
+              lastUserIndex = index;
+              break;
+            }
+          }
+          return {
+            ...conversation,
+            messages: [
+              ...conversation.messages.slice(0, lastUserIndex + 1),
+              assistantMessage,
+            ],
+          };
+        }),
+      );
+      return messageId;
+    },
+    [setConversations],
+  );
+
+  useEffect(() => {
+    const conversationId = activeConversationId;
+    if (!conversationId) return;
+    if (!conversationHistoryReady) return;
+    const controllers = abortControllersRef.current;
+    if (controllers[conversationId]) return;
+
+    const controller = new AbortController();
+    controllers[conversationId] = controller;
+    let assistantMessageId = "";
+    const finishRecoveredGeneration = () => {
+      if (assistantMessageId) {
+        updateAssistantMessage(
+          conversationId,
+          assistantMessageId,
+          (message) => ({ ...message, isGenerating: false }),
+        );
+      }
+      setGeneratingStates((previous) => ({
+        ...previous,
+        [conversationId]: false,
+      }));
+      setCheckedGenerationFor(conversationId);
+      if (controllers[conversationId] === controller) {
+        delete controllers[conversationId];
+      }
+      if (document.visibilityState === "visible") {
+        void reloadConversation(conversationId);
+      }
+    };
+
+    const recover = async () => {
+      while (!controller.signal.aborted) {
+        try {
+          const active = await resumeChatMessageStream({
+            endpoint,
+            conversationId,
+            message: "",
+            signal: controller.signal,
+            onGenerationSnapshot: (snapshot) => {
+              assistantMessageId = restoreGenerationSnapshot(
+                conversationId,
+                snapshot,
+              );
+              setGeneratingStates((previous) => ({
+                ...previous,
+                [conversationId]: true,
+              }));
+              setCheckedGenerationFor(conversationId);
+            },
+            onChunk: (chunk) => {
+              if (!assistantMessageId) return;
+              updateAssistantMessage(
+                conversationId,
+                assistantMessageId,
+                (message) => ({
+                  ...message,
+                  content: `${typeof message.content === "string" ? message.content : ""}${chunk}`,
+                }),
+              );
+            },
+            onReasoningChunk: (chunk) => {
+              if (!assistantMessageId) return;
+              updateAssistantMessage(
+                conversationId,
+                assistantMessageId,
+                (message) => ({
+                  ...message,
+                  reasoning_content: `${message.reasoning_content || ""}${chunk}`,
+                }),
+              );
+            },
+            onReasoningSnapshot: (content) => {
+              if (!assistantMessageId) return;
+              updateAssistantMessage(
+                conversationId,
+                assistantMessageId,
+                (message) => ({ ...message, reasoning_content: content }),
+              );
+            },
+            onToolCallChunk: (value) => {
+              if (assistantMessageId) {
+                applyToolCallChunk(conversationId, assistantMessageId, value);
+              }
+            },
+            onDone: finishRecoveredGeneration,
+            onError: (error) => {
+              logger.error({ error }, "Failed to resume Hermes session stream");
+            },
+          });
+          if (!active) {
+            setCheckedGenerationFor(conversationId);
+            if (controllers[conversationId] === controller) {
+              delete controllers[conversationId];
+            }
+          }
+          return;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 750));
+        }
+      }
+    };
+    void recover();
+    return () => {
+      controller.abort();
+      if (controllers[conversationId] === controller) {
+        delete controllers[conversationId];
+      }
+    };
+  }, [
+    activeConversationId,
+    applyToolCallChunk,
+    conversationHistoryReady,
+    endpoint,
+    reloadConversation,
+    restoreGenerationSnapshot,
+    updateAssistantMessage,
+  ]);
 
   const handleSendMessage = async (
     text: string,
@@ -66,7 +297,8 @@ export const useHermesStream = (
     if (
       !target ||
       (!text.trim() && (!attachments || attachments.length === 0)) ||
-      generatingStates[conversationId]
+      generatingStates[conversationId] ||
+      checkedGenerationFor !== conversationId
     ) {
       return false;
     }
@@ -119,6 +351,7 @@ export const useHermesStream = (
       ...previous,
       [conversationId]: true,
     }));
+    setCheckedGenerationFor(conversationId);
 
     const controller = new AbortController();
     abortControllersRef.current[conversationId] = controller;
@@ -137,6 +370,18 @@ export const useHermesStream = (
       instructions,
       conversationId,
       signal: controller.signal,
+      onGenerationSnapshot: (snapshot) => {
+        updateAssistantMessage(
+          conversationId,
+          assistantMessageId,
+          (message) => ({
+            ...message,
+            content: snapshot.content,
+            reasoning_content: snapshot.reasoningContent,
+            tool_calls: snapshot.toolCalls,
+          }),
+        );
+      },
       onChunk: (chunk) => {
         updateAssistantMessage(
           conversationId,
@@ -164,51 +409,8 @@ export const useHermesStream = (
           (message) => ({ ...message, reasoning_content: content }),
         );
       },
-      onToolCallChunk: (value) => {
-        const delta = value as {
-          index?: number;
-          id: string;
-          type: string;
-          function?: { name?: string; arguments?: string };
-          status?: "running" | "completed" | "error";
-          label?: string;
-        };
-        updateAssistantMessage(
-          conversationId,
-          assistantMessageId,
-          (message) => {
-            const index = delta.index ?? 0;
-            const current = message.tool_calls ?? [];
-            const next = current.map((tool) => ({
-              ...tool,
-              function: { ...tool.function },
-            }));
-            const existing = next[index] as ToolCall | undefined;
-            next[index] = existing
-              ? {
-                  ...existing,
-                  function: {
-                    ...existing.function,
-                    arguments:
-                      delta.function?.arguments || existing.function.arguments,
-                  },
-                  status: delta.status || existing.status,
-                  label: delta.label || existing.label,
-                }
-              : {
-                  id: delta.id,
-                  type: delta.type,
-                  function: {
-                    name: delta.function?.name || "",
-                    arguments: delta.function?.arguments || "",
-                  },
-                  status: delta.status || "running",
-                  label: delta.label || "",
-                };
-            return { ...message, tool_calls: next };
-          },
-        );
-      },
+      onToolCallChunk: (value) =>
+        applyToolCallChunk(conversationId, assistantMessageId, value),
       onDone: () => {
         updateAssistantMessage(
           conversationId,
@@ -222,6 +424,7 @@ export const useHermesStream = (
           ...previous,
           [conversationId]: false,
         }));
+        setCheckedGenerationFor(conversationId);
         delete abortControllersRef.current[conversationId];
         if (document.visibilityState === "visible") {
           void reloadConversation(conversationId);
@@ -241,6 +444,7 @@ export const useHermesStream = (
           ...previous,
           [conversationId]: false,
         }));
+        setCheckedGenerationFor(conversationId);
         delete abortControllersRef.current[conversationId];
       },
     }).catch((error: unknown) => {
@@ -252,8 +456,7 @@ export const useHermesStream = (
   const handleStopGeneration = async () => {
     const conversationId = activeConversationId;
     const controller = abortControllersRef.current[conversationId];
-    if (!controller) return;
-    controller.abort();
+    controller?.abort();
     setConversations((previous) =>
       previous.map((conversation) =>
         conversation.id === conversationId
@@ -272,9 +475,13 @@ export const useHermesStream = (
       ...previous,
       [conversationId]: false,
     }));
+    setCheckedGenerationFor(conversationId);
     delete abortControllersRef.current[conversationId];
     try {
       await cancelSessionChat(endpoint, conversationId);
+      if (document.visibilityState === "visible") {
+        await reloadConversation(conversationId);
+      }
     } catch (error) {
       logger.error({ error }, "Failed to stop Hermes session stream");
     }
@@ -282,6 +489,7 @@ export const useHermesStream = (
 
   return {
     isGenerating,
+    isCheckingGeneration,
     handleSendMessage,
     handleStopGeneration,
     handleCleanupConversation,

@@ -79,4 +79,42 @@ describe("Hermes SSE normalization", () => {
       text: "Persisted so far",
     });
   });
+
+  it("normalizes a resumable generation snapshot", () => {
+    expect(
+      normalizeHermesEvent({
+        event: "generation.snapshot",
+        payload: {
+          session_id: "session-1",
+          message_id: "generation-1",
+          content: "Partial",
+          reasoning_content: "Plan",
+          tool_calls: [
+            {
+              id: "tool-1",
+              type: "function",
+              function: { name: "terminal", arguments: "{}" },
+              status: "running",
+              label: "Terminal",
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({
+      kind: "generation_snapshot",
+      snapshot: {
+        sessionId: "session-1",
+        messageId: "generation-1",
+        content: "Partial",
+        reasoningContent: "Plan",
+        toolCalls: [
+          {
+            id: "tool-1",
+            function: { name: "terminal", arguments: "{}" },
+            status: "running",
+          },
+        ],
+      },
+    });
+  });
 });

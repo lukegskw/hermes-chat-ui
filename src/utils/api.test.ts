@@ -5,6 +5,7 @@ import {
   fetchConversationMessagesPage,
   fetchModels,
   normalizeSessionMessages,
+  resumeChatMessageStream,
   sendChatMessageStream,
   updateConversationModel,
   updateConversationPinned,
@@ -270,6 +271,78 @@ describe("session stream parsing", () => {
       "First persisted block",
       "First persisted block plus more",
     ]);
+  });
+
+  it("restores a generation snapshot before applying resumed deltas", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            [
+              "event: generation.snapshot",
+              'data: {"session_id":"session-1","message_id":"generation-1","content":"Partial","reasoning_content":"Plan","tool_calls":[]}',
+              "",
+              "event: assistant.delta",
+              'data: {"delta":" answer"}',
+              "",
+              "event: done",
+              "data: {}",
+              "",
+            ].join("\n"),
+          ),
+        );
+        controller.close();
+      },
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(stream, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const snapshots: unknown[] = [];
+    const deltas: string[] = [];
+
+    await expect(
+      resumeChatMessageStream({
+        endpoint: "http://hermes.test",
+        conversationId: "session-1",
+        message: "",
+        onGenerationSnapshot: (snapshot) => snapshots.push(snapshot),
+        onChunk: (chunk) => deltas.push(chunk),
+        onDone: vi.fn(),
+        onError: (error) => {
+          throw error;
+        },
+      }),
+    ).resolves.toBe(true);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "GET" });
+    expect(snapshots).toEqual([
+      {
+        sessionId: "session-1",
+        messageId: "generation-1",
+        content: "Partial",
+        reasoningContent: "Plan",
+        toolCalls: [],
+      },
+    ]);
+    expect(deltas).toEqual([" answer"]);
+  });
+
+  it("reports that no generation is active on a 204 recovery probe", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
+    );
+
+    await expect(
+      resumeChatMessageStream({
+        endpoint: "http://hermes.test",
+        conversationId: "session-1",
+        message: "",
+        onChunk: vi.fn(),
+        onDone: vi.fn(),
+        onError: vi.fn(),
+      }),
+    ).resolves.toBe(false);
   });
 });
 

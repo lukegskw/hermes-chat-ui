@@ -14,6 +14,7 @@ import {
   deleteSession,
   getSessionMessages,
   proxySessionRequest,
+  resumeActiveStream,
   sessionPath,
   streamSessionChat,
 } from "./sessions.js";
@@ -108,6 +109,9 @@ export const createApp = (config: ServerConfig): Hono => {
       context.req.raw,
       attachments,
     ),
+  );
+  app.get("/api/sessions/:sessionId/chat/stream", (context) =>
+    resumeActiveStream(context.req.param("sessionId")),
   );
   app.post("/api/sessions/:sessionId/chat/cancel", async (context) =>
     context.json({

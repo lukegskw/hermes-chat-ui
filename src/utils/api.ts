@@ -532,19 +532,23 @@ export const updateConversationModel = async (
   );
 };
 
-export const sendChatMessageStream = async ({
-  endpoint,
-  message,
-  instructions,
-  conversationId,
-  onChunk,
-  onReasoningChunk,
-  onReasoningSnapshot,
-  onToolCallChunk,
-  onDone,
-  onError,
-  signal,
-}: SendChatMessageStreamOptions): Promise<void> => {
+const streamChatMessage = async (
+  {
+    endpoint,
+    message,
+    instructions,
+    conversationId,
+    onChunk,
+    onReasoningChunk,
+    onReasoningSnapshot,
+    onToolCallChunk,
+    onGenerationSnapshot,
+    onDone,
+    onError,
+    signal,
+  }: SendChatMessageStreamOptions,
+  method: "POST" | "GET",
+): Promise<boolean> => {
   let finished = false;
   const finish = () => {
     if (finished) return;
@@ -558,23 +562,29 @@ export const sendChatMessageStream = async ({
     status: "running" | "completed" | "error";
   }> = [];
   try {
-    const response = await assertOk(
-      await fetch(
-        `${apiBase(endpoint)}/api/sessions/${encodeURIComponent(conversationId)}/chat/stream`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "text/event-stream",
-          },
-          body: JSON.stringify({
-            message,
-            ...(instructions ? { instructions } : {}),
-          }),
-          signal,
-        },
-      ),
+    const rawResponse = await fetch(
+      `${apiBase(endpoint)}/api/sessions/${encodeURIComponent(conversationId)}/chat/stream`,
+      {
+        method,
+        headers:
+          method === "POST"
+            ? {
+                "Content-Type": "application/json",
+                Accept: "text/event-stream",
+              }
+            : { Accept: "text/event-stream" },
+        body:
+          method === "POST"
+            ? JSON.stringify({
+                message,
+                ...(instructions ? { instructions } : {}),
+              })
+            : undefined,
+        signal,
+      },
     );
+    if (method === "GET" && rawResponse.status === 204) return false;
+    const response = await assertOk(rawResponse);
     if (!response.body)
       throw new Error("Hermes returned an empty event stream");
 
@@ -586,7 +596,19 @@ export const sendChatMessageStream = async ({
       parsed: ReturnType<HermesSseParser["push"]>[number],
     ): boolean => {
       const normalized = normalizeHermesEvent(parsed);
-      if (normalized.kind === "assistant_delta") {
+      if (normalized.kind === "generation_snapshot") {
+        activeTools.splice(
+          0,
+          activeTools.length,
+          ...normalized.snapshot.toolCalls.map((tool, index) => ({
+            id: tool.id,
+            name: tool.function.name,
+            index,
+            status: tool.status ?? "running",
+          })),
+        );
+        onGenerationSnapshot?.(normalized.snapshot);
+      } else if (normalized.kind === "assistant_delta") {
         onChunk(normalized.text);
       } else if (normalized.kind === "reasoning_delta") {
         onReasoningChunk?.(normalized.text);
@@ -645,17 +667,19 @@ export const sendChatMessageStream = async ({
       for (const parsed of parser.push(
         decoder.decode(value, { stream: true }),
       )) {
-        if (handleEvent(parsed)) return;
+        if (handleEvent(parsed)) return true;
       }
     }
     for (const parsed of parser.push(decoder.decode(), true)) {
-      if (handleEvent(parsed)) return;
+      if (handleEvent(parsed)) return true;
     }
     finish();
+    return true;
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
-      finish();
+      if (method === "POST") finish();
     } else if (
+      method === "POST" &&
       typeof document !== "undefined" &&
       document.visibilityState === "hidden"
     ) {
@@ -665,9 +689,21 @@ export const sendChatMessageStream = async ({
         error instanceof Error ? error : new Error(String(error));
       logger.error({ error: normalized }, "Streaming connection error");
       onError(normalized);
+      if (method === "GET") throw normalized;
     }
+    return method === "POST";
   }
 };
+
+export const sendChatMessageStream = async (
+  options: SendChatMessageStreamOptions,
+): Promise<void> => {
+  await streamChatMessage(options, "POST");
+};
+
+export const resumeChatMessageStream = (
+  options: SendChatMessageStreamOptions,
+): Promise<boolean> => streamChatMessage(options, "GET");
 
 export const cancelSessionChat = async (
   endpoint: string,

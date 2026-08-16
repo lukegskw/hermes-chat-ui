@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -55,7 +55,7 @@ describe("durable attachment store", () => {
     ).toEqual([groupId]);
     const enriched = (await restarted.enrichMessages("session-1", {
       session_id: "session-1",
-      data: [{ id: 2, role: "user", content: "look" }],
+      data: [{ id: 2, role: "user", content: "look\n[screenshot]" }],
     })) as { data: Array<{ content: unknown[] }> };
     expect(enriched.data[0].content).toEqual([
       { type: "text", text: "look" },
@@ -77,6 +77,82 @@ describe("durable attachment store", () => {
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     await restarted.deleteSession("session-1");
     await expect(restarted.readBlob(blobId)).resolves.toBeUndefined();
+  });
+
+  it("preserves a literal screenshot marker from the original user text", async () => {
+    const { config, store } = await setup();
+    await store.createPending(
+      "session-1",
+      {
+        message: [
+          { type: "text", text: "[screenshot]" },
+          { type: "image_url", image_url: { url: pngDataUrl } },
+        ],
+      },
+      [],
+    );
+    await store.reconcileSession("session-1", [
+      { id: 1, role: "user", content: "[screenshot]\n[screenshot]" },
+    ]);
+
+    const index = JSON.parse(
+      await readFile(config.attachmentsIndexFile, "utf8"),
+    );
+    const blobId = Object.keys(index.attachments)[0];
+    const enriched = (await store.enrichMessages("session-1", {
+      session_id: "session-1",
+      data: [{ id: 1, role: "user", content: "[screenshot]\n[screenshot]" }],
+    })) as { data: Array<{ content: unknown[] }> };
+
+    expect(enriched.data[0].content).toEqual([
+      { type: "text", text: "[screenshot]" },
+      {
+        type: "image_url",
+        image_url: { url: `/api/attachments/${blobId}` },
+      },
+    ]);
+  });
+
+  it("removes standalone screenshot placeholders from legacy indexes", async () => {
+    const { config, store } = await setup();
+    await store.createPending(
+      "session-1",
+      {
+        message: [
+          { type: "text", text: "keep [screenshot] inline" },
+          { type: "image_url", image_url: { url: pngDataUrl } },
+        ],
+      },
+      [],
+    );
+    await store.reconcileSession("session-1", [
+      { id: 1, role: "user", content: "keep [screenshot] inline" },
+    ]);
+    const index = JSON.parse(
+      await readFile(config.attachmentsIndexFile, "utf8"),
+    );
+    for (const attachment of Object.values(index.attachments) as Array<
+      Record<string, unknown>
+    >) {
+      delete attachment.originalText;
+    }
+    await writeFile(config.attachmentsIndexFile, JSON.stringify(index));
+
+    const enriched = (await store.enrichMessages("session-1", {
+      session_id: "session-1",
+      data: [
+        {
+          id: 1,
+          role: "user",
+          content: "keep [screenshot] inline\n[screenshot]",
+        },
+      ],
+    })) as { data: Array<{ content: unknown[] }> };
+
+    expect(enriched.data[0].content[0]).toEqual({
+      type: "text",
+      text: "keep [screenshot] inline",
+    });
   });
 
   it("rejects invalid content and never accepts a path as a blob ID", async () => {

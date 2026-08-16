@@ -300,10 +300,11 @@ export const useChatState = () => {
         }
         setConversations((previous) =>
           sortSessions([
-            requested,
+            { ...requested, historyLoaded: false },
             ...previous.filter((session) => session.id !== requested.id),
           ]),
         );
+        setLoadingMessagesFor(requested.id);
         setActiveConversationId(requested.id);
         setSessionError("");
         return "selected";
@@ -647,6 +648,17 @@ export const useChatState = () => {
 
   const handleSaveSettings = (newSettings: Settings) =>
     setSettings(newSettings);
+  const handleSelectConversation = useCallback((id: string) => {
+    if (!id || id === activeIdRef.current) return;
+    setConversations((previous) =>
+      previous.map((session) =>
+        session.id === id ? { ...session, historyLoaded: false } : session,
+      ),
+    );
+    setLoadingMessagesFor(id);
+    setMessageLoadError("");
+    setActiveConversationId(id);
+  }, []);
   const activeConversation =
     conversations.find((session) => session.id === activeConversationId) ||
     null;
@@ -671,7 +683,7 @@ export const useChatState = () => {
     hasMoreConversations,
     sessionError,
     handleNewChat,
-    handleSelectConversation: setActiveConversationId,
+    handleSelectConversation,
     handleDeleteConversation,
     handleRenameConversation,
     handlePinConversation,
