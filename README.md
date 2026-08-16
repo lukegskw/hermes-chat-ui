@@ -266,13 +266,15 @@ Install the app on the Home Screen, allow notifications, and verify the iOS vers
 Prerequisites:
 
 - Node.js 24
+- pnpm 11.22.0 (the project pin can be activated with Corepack)
 - A current Hermes Agent API exposing the Sessions API
 
 Install dependencies and start the frontend:
 
 ```bash
-npm ci
-npm run dev
+corepack enable
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 In another terminal, start the TypeScript BFF:
@@ -281,11 +283,11 @@ In another terminal, start the TypeScript BFF:
 API_SERVER_KEY=your-key \
 HERMES_API_URL=http://127.0.0.1:8642 \
 HERMES_PROXY_PORT=8643 \
-npm run dev:server
+pnpm run dev:server
 ```
 
 The Vite app connects to the BFF on port `8643` during development. Run
-`npm test`, `npm run type-check`, `npm run lint`, and `npm run build` before
+`pnpm test`, `pnpm run type-check`, `pnpm run lint`, and `pnpm run build` before
 submitting a change. The production image contains only Node.js, the compiled
 TypeScript server, and the built SPA; Python is not installed.
 
