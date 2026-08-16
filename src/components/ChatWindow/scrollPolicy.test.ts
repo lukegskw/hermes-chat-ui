@@ -41,7 +41,6 @@ describe("chat scroll policy", () => {
       isWaitingForInitialHistory({
         sessionChanged: true,
         isLoadingMessages: false,
-        hasPersistedMessages: true,
         historyLoaded: false,
       }),
     ).toBe(true);
@@ -49,9 +48,18 @@ describe("chat scroll policy", () => {
       isWaitingForInitialHistory({
         sessionChanged: false,
         isLoadingMessages: false,
-        hasPersistedMessages: true,
         historyLoaded: true,
       }),
     ).toBe(false);
+  });
+
+  it("waits for the first history load even when session metadata says zero messages", () => {
+    expect(
+      isWaitingForInitialHistory({
+        sessionChanged: true,
+        isLoadingMessages: false,
+        historyLoaded: false,
+      }),
+    ).toBe(true);
   });
 });

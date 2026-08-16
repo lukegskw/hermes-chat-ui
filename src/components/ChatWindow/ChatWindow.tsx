@@ -235,11 +235,9 @@ export const ChatWindow = ({
       activeSessionRef.current = activeSessionId;
     }
 
-    const hasPersistedMessages = (activeConversation?.messageCount ?? 0) > 0;
     const waitingForHistory = isWaitingForInitialHistory({
       sessionChanged,
       isLoadingMessages,
-      hasPersistedMessages,
       historyLoaded: Boolean(activeConversation?.historyLoaded),
     });
     const decision = decideChatScroll({
@@ -258,7 +256,6 @@ export const ChatWindow = ({
     }
     wasGeneratingRef.current = isGenerating;
   }, [
-    activeConversation?.messageCount,
     activeConversation?.historyLoaded,
     activeSessionId,
     isGenerating,
