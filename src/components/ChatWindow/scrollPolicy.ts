@@ -17,16 +17,12 @@ export type ChatScrollDecision = {
 export const isWaitingForInitialHistory = ({
   sessionChanged,
   isLoadingMessages,
-  hasPersistedMessages,
   historyLoaded,
 }: {
   sessionChanged: boolean;
   isLoadingMessages: boolean;
-  hasPersistedMessages: boolean;
   historyLoaded: boolean;
-}): boolean =>
-  isLoadingMessages ||
-  (sessionChanged && hasPersistedMessages && !historyLoaded);
+}): boolean => isLoadingMessages || (sessionChanged && !historyLoaded);
 
 export const restorePrependScrollTop = (
   previousScrollTop: number,
