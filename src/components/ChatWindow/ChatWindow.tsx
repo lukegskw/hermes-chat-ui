@@ -190,7 +190,8 @@ export const ChatWindow = ({
     const handleScroll = () => {
       const distanceFromBottom =
         viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-      isNearBottomRef.current = distanceFromBottom <= 64;
+      isNearBottomRef.current =
+        distanceFromBottom <= Math.max(150, viewport.clientHeight * 0.15);
       if (
         viewport.scrollTop <= 80 &&
         hasOlderMessages &&
@@ -251,10 +252,32 @@ export const ChatWindow = ({
     });
     pendingInitialScrollRef.current = decision.pendingInitialScroll;
     isNearBottomRef.current = decision.isNearBottom;
+
+    let resizeObserver: ResizeObserver | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     if (decision.scrollToBottom) {
       viewport.scrollTop = viewport.scrollHeight;
+
+      // Observe the content container for height changes (e.g. images loading, syntax highlighting)
+      const contentContainer = viewport.firstElementChild;
+      if (contentContainer) {
+        resizeObserver = new ResizeObserver(() => {
+          viewport.scrollTop = viewport.scrollHeight;
+        });
+        resizeObserver.observe(contentContainer);
+
+        timeoutId = setTimeout(() => {
+          if (resizeObserver) resizeObserver.disconnect();
+        }, 1500);
+      }
     }
     wasGeneratingRef.current = isGenerating;
+
+    return () => {
+      if (resizeObserver) resizeObserver.disconnect();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [
     activeConversation?.historyLoaded,
     activeSessionId,
