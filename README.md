@@ -12,9 +12,7 @@
 
 ## Why this project exists
 
-Hermes Chat UI provides a customizable interface that can run entirely on private infrastructure. It is deployed separately from the official Hermes Agent image: Hermes owns the runtime, tools, dashboard and canonical session data; this project owns the web/PWA and a minimal browser-facing backend.
-
-The original deployment runs on a UGREEN NAS and is accessed through [Tailscale](https://tailscale.com/). That private-network model is also the recommended way to run the project.
+Hermes Chat UI provides a customizable interface that can run entirely on private infrastructure (e.g. NAS). It is deployed separately from the official Hermes Agent image: Hermes owns the runtime, tools, dashboard and canonical session data; this project owns the web/PWA and a minimal browser-facing backend.
 
 <div align="center">
   <img src="docs/assets/screenshot-1.png" alt="Hermes Chat UI in action" width="800" />
@@ -27,7 +25,6 @@ The original deployment runs on a UGREEN NAS and is accessed through [Tailscale]
 - Real-time answer, reasoning, and tool-activity streaming.
 - Multiple inline images, automatically resized before submission, preserved across refreshes/restarts, and expandable in a responsive lightbox.
 - Model selection and per-session model persistence.
-- English and Brazilian Portuguese interfaces.
 - Canonical Hermes history: sessions created by this UI, the CLI, dashboard, cron, and other integrations appear together.
 - Multiple pinned chats with desktop and touch-friendly rename/delete actions.
 - Paginated session list suitable for long-lived installations.
@@ -45,11 +42,6 @@ This has two important consequences:
 
 Bulk deletion is intentionally unavailable.
 
-Versions of Hermes Chat UI before this architecture stored UI conversations in `/opt/data/hermes_chats.db`. That file is no longer opened and is not migrated automatically. An upgrade leaves the file untouched for manual recovery or rollback.
-
-> [!IMPORTANT]
-> Back up the Hermes `/opt/data` volume and the UI `/app/data` volume before upgrading. Hermes owns its current session database and schema migrations; the UI volume owns push state and retained image files.
-
 ## Architecture
 
 ```mermaid
@@ -64,7 +56,7 @@ graph LR
     Agent <--> Tools[Tools and integrations]
 ```
 
-The browser communicates only with the proxy on the UI origin. The proxy injects `API_SERVER_KEY` server-side, so the Hermes bearer token is never included in browser JavaScript. At startup, the UI checks `/v1/capabilities` and requires Hermes session resources, session chat, and streaming support. There is no legacy database fallback.
+The browser communicates only with the proxy on the UI origin. The proxy injects `API_SERVER_KEY` server-side, so the Hermes bearer token is never included in browser JavaScript. At startup, the UI checks `/v1/capabilities` and requires Hermes session resources, session chat, and streaming support.
 
 ### Media limits
 
@@ -176,9 +168,7 @@ canonical state.
 
 Proactive automation creates a new canonical Hermes conversation containing
 the supplied final assistant text, then sends Web Push. The script talks to the
-separate UI container over Docker DNS; `localhost:8643` is incorrect after the
-split deployment, and dashboard port `9119` does not own the push route.
-
+separate UI container over Docker DNS;
 Generate a dedicated internal key:
 
 ```bash
