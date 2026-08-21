@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -44,6 +45,7 @@ export const ConversationListItem = ({
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const pressTimerRef = useRef<number | null>(null);
   const pressOriginRef = useRef({ x: 0, y: 0 });
   const suppressClickRef = useRef(false);
@@ -70,13 +72,17 @@ export const ConversationListItem = ({
         closeMenu();
       }
     };
+    const closeOnScroll = () => {
+      if (menuRef.current?.contains(document.activeElement)) return;
+      closeMenu();
+    };
     document.addEventListener("pointerdown", closeOnOutsidePointer);
     window.addEventListener("resize", closeMenu);
-    window.addEventListener("scroll", closeMenu, true);
+    window.addEventListener("scroll", closeOnScroll, true);
     return () => {
       document.removeEventListener("pointerdown", closeOnOutsidePointer);
       window.removeEventListener("resize", closeMenu);
-      window.removeEventListener("scroll", closeMenu, true);
+      window.removeEventListener("scroll", closeOnScroll, true);
     };
   }, [menu]);
 
@@ -88,6 +94,10 @@ export const ConversationListItem = ({
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [menu]);
+
+  useLayoutEffect(() => {
+    if (isRenaming) renameInputRef.current?.focus({ preventScroll: true });
+  }, [isRenaming]);
 
   useEffect(() => clearPressTimer, []);
 
@@ -162,10 +172,10 @@ export const ConversationListItem = ({
       {isRenaming ? (
         <form className={styles.renameForm} onSubmit={submitRename}>
           <input
+            ref={renameInputRef}
             value={renameValue}
             onChange={(event) => setRenameValue(event.target.value)}
             aria-label={t("chat.conversationName")}
-            autoFocus
           />
           <button type="submit" disabled={!renameValue.trim()}>
             {t("chat.saveRename")}
@@ -284,7 +294,11 @@ export const ConversationListItem = ({
       {menu === "desktop" && createPortal(actions, document.body)}
       {menu === "mobile" &&
         createPortal(
-          <div className={styles.actionSheetBackdrop} onPointerDown={closeMenu}>
+          <div
+            className={styles.actionSheetBackdrop}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={closeMenu}
+          >
             <div onPointerDown={(event) => event.stopPropagation()}>
               {actions}
             </div>

@@ -46,9 +46,10 @@ const setup = () => {
     <ConversationListItem
       conversation={{
         id: "session-1",
-        title: "Pinned chat",
+        title: "Unpinned chat",
         source: "hermes_browser",
         messages: [],
+        pinned: false,
       }}
       active={false}
       disabled={false}
@@ -64,13 +65,14 @@ const setup = () => {
 beforeEach(() => setTouchLayout(false));
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
   cleanup();
 });
 
 describe("conversation actions", () => {
   it("opens the desktop popover, pins, and closes after selection", () => {
     const { onPin } = setup();
-    fireEvent.click(screen.getByLabelText("Options for Pinned chat"));
+    fireEvent.click(screen.getByLabelText("Options for Unpinned chat"));
     fireEvent.click(screen.getByRole("menuitem", { name: "Pin" }));
     expect(onPin).toHaveBeenCalledWith(true);
     expect(screen.queryByRole("menu")).toBeNull();
@@ -78,7 +80,7 @@ describe("conversation actions", () => {
 
   it("closes the desktop popover on outside pointer or Escape", () => {
     setup();
-    const trigger = screen.getByLabelText("Options for Pinned chat");
+    const trigger = screen.getByLabelText("Options for Unpinned chat");
     fireEvent.click(trigger);
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("menu")).toBeNull();
@@ -89,12 +91,55 @@ describe("conversation actions", () => {
 
   it("renames from the shared action surface", () => {
     const { onRename } = setup();
-    fireEvent.click(screen.getByLabelText("Options for Pinned chat"));
+    fireEvent.click(screen.getByLabelText("Options for Unpinned chat"));
     fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
     const input = screen.getByLabelText("Conversation name");
     fireEvent.change(input, { target: { value: "New name" } });
     fireEvent.submit(input.closest("form")!);
     expect(onRename).toHaveBeenCalledWith("New name");
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("keeps the desktop rename form open when autofocus scrolls", () => {
+    setup();
+    const nativeFocus = HTMLInputElement.prototype.focus;
+    const focus = vi
+      .spyOn(HTMLInputElement.prototype, "focus")
+      .mockImplementation(function (this: HTMLInputElement) {
+        nativeFocus.call(this);
+        window.dispatchEvent(new Event("scroll"));
+      });
+
+    fireEvent.click(screen.getByLabelText("Options for Unpinned chat"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(document.activeElement).toBe(
+      screen.getByLabelText("Conversation name"),
+    );
+  });
+
+  it("does not restart the mobile long press when dismissing the sheet", () => {
+    vi.useFakeTimers();
+    setTouchLayout(true);
+    const { item } = setup();
+    fireEvent.pointerDown(item, { clientX: 10, clientY: 10 });
+    act(() => vi.advanceTimersByTime(500));
+    fireEvent.pointerUp(item);
+    fireEvent.click(item);
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const menu = screen.getByRole("menu");
+    const backdrop = menu.parentElement?.parentElement;
+    if (!(backdrop instanceof HTMLElement)) {
+      throw new Error("action sheet backdrop missing");
+    }
+
+    fireEvent.pointerDown(backdrop);
+    fireEvent.pointerUp(backdrop);
+    fireEvent.click(backdrop);
+    act(() => vi.advanceTimersByTime(500));
+
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
