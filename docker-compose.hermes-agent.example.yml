@@ -2,7 +2,7 @@ services:
   hermes-agent:
     # Pin a tested official image digest before deploying. See the contract
     # smoke test in docs/plans/pure-client-implementation-plan.md.
-    image: nousresearch/hermes-agent:latest@sha256:85e114f9edca6fd3b9b377a624ab0d0fa4919a0ac86b5e4e4144b43eb7355f00
+    image: nousresearch/hermes-agent:latest@sha256:5ec9f5ae078f52daabc3c0f91b96010da199c07e75c1a5463469242b144524b0
     container_name: hermes-agent
     restart: unless-stopped
     tty: true
