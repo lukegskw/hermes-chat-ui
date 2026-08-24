@@ -5,7 +5,6 @@
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "module": "ESNext",
     "skipLibCheck": true,
-    "baseUrl": ".",
     "paths": {
       "@styles": ["./src/styles/_index.scss"]
     },
