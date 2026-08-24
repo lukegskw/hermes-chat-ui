@@ -1,7 +1,43 @@
-@use 'variables' as v;
-@use 'mixins' as m;
+@use "variables" as v;
+@use "mixins" as m;
 
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap");
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseStatus {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 :root {
   /* Neo-brutalist Design Tokens */
@@ -133,37 +169,5 @@ body {
         opacity: 1;
       }
     }
-  }
-}
-
-/* Tooltips */
-[data-tooltip] {
-  position: relative;
-
-  &::before {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-6px);
-    background: v.$color-white;
-    color: v.$color-black;
-    padding: 4px 8px;
-    @include m.label-style;
-    border-radius: 0;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.2s ease;
-    pointer-events: none;
-    border: v.$border-width solid v.$color-black;
-    box-shadow: v.$shadow-offset v.$shadow-offset 0 v.$color-black;
-    z-index: 100;
-  }
-
-  &:hover::before {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) translateY(-2px);
   }
 }

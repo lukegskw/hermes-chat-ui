@@ -13,12 +13,6 @@ export type ModelProvider = {
   capabilities?: Record<string, { reasoning?: boolean }>;
 };
 
-export type RuntimeSelection = {
-  providerId?: string;
-  modelId?: string;
-  reasoningEffort?: string;
-};
-
 export type NewConversationModelSelection = {
   providerId: string;
   modelId: string;

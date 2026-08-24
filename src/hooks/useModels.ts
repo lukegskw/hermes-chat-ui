@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { fetchModels, logger, updateConversationModel } from "../utils";
 import {
   Conversation,
-  Model,
   ModelProvider,
   NewConversationModelSelection,
 } from "../types";
@@ -134,7 +133,6 @@ export const useModels = (
 ) => {
   const { t } = useTranslation();
   const [providers, setProviders] = useState<ModelProvider[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
   const [selectedProvider, setSelectedProvider] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [reasoningEfforts, setReasoningEfforts] = useState<string[]>([]);
@@ -160,11 +158,45 @@ export const useModels = (
   const [isConnected, setIsConnected] = useState(false);
   const [isFetchingModels, setIsFetchingModels] = useState(true);
   const [connectionError, setConnectionError] = useState("");
+  const catalogCacheRef = useRef<{
+    endpoint: string;
+    catalog: Awaited<ReturnType<typeof fetchModels>>;
+  } | null>(null);
+  const catalogRequestRef = useRef<{
+    endpoint: string;
+    promise: Promise<Awaited<ReturnType<typeof fetchModels>>>;
+  } | null>(null);
+  const selectionRequestRef = useRef(0);
 
   const checkConnectionAndFetchModels = async () => {
+    const requestId = ++selectionRequestRef.current;
+    const cached = catalogCacheRef.current;
     try {
-      setIsFetchingModels(true);
-      const fetched = await fetchModels(endpoint);
+      if (cached?.endpoint !== endpoint) setIsFetchingModels(true);
+      const fetched =
+        cached?.endpoint === endpoint
+          ? cached.catalog
+          : await (() => {
+              const inFlight = catalogRequestRef.current;
+              if (inFlight?.endpoint === endpoint) return inFlight.promise;
+              const promise = fetchModels(endpoint);
+              catalogRequestRef.current = { endpoint, promise };
+              void promise.then(
+                () => {
+                  if (catalogRequestRef.current?.promise === promise) {
+                    catalogRequestRef.current = null;
+                  }
+                },
+                () => {
+                  if (catalogRequestRef.current?.promise === promise) {
+                    catalogRequestRef.current = null;
+                  }
+                },
+              );
+              return promise;
+            })();
+      if (requestId !== selectionRequestRef.current) return;
+      catalogCacheRef.current = { endpoint, catalog: fetched };
       const fetchedProviders = fetched.providers;
       const matchingDefaultProviders = fetchedProviders.filter((provider) =>
         provider.models.some((model) => model.id === fetched.defaultModel),
@@ -237,6 +269,7 @@ export const useModels = (
             modelId: activeModel,
             providerId: activeProvider,
           });
+          if (requestId !== selectionRequestRef.current) return;
           confirmedRuntime = {
             modelId: activeModel,
             providerId: activeProvider,
@@ -252,11 +285,11 @@ export const useModels = (
           toast.error(t("errors.sessionModelUpdateFailed"));
         }
       }
+      if (requestId !== selectionRequestRef.current) return;
       const activeModels =
         fetchedProviders.find((provider) => provider.id === activeProvider)
           ?.models || [];
       setSelectedProvider(activeProvider);
-      setModels(activeModels);
       setSelectedModel(activeModel || activeModels[0]?.id || "");
       if (
         activeConversationId &&
@@ -298,18 +331,20 @@ export const useModels = (
         localStorage.removeItem(NEW_CONVERSATION_MODEL_STORAGE_KEY);
       }
     } catch (err: unknown) {
+      if (requestId !== selectionRequestRef.current) return;
       logger.error({ error: err }, "Failed to connect to Hermes API server");
       setIsConnected(false);
       setConnectionError(err instanceof Error ? err.message : "Falha de rede.");
       setProviders([]);
-      setModels([]);
       setReasoningEfforts([]);
       setUnconfirmedReasoningEfforts([]);
       setReasoningDefaults({});
       setModelOptionGroups([]);
       setHermesDefaultSelection(null);
     } finally {
-      setIsFetchingModels(false);
+      if (requestId === selectionRequestRef.current) {
+        setIsFetchingModels(false);
+      }
     }
   };
 
@@ -345,9 +380,6 @@ export const useModels = (
       localStorage.setItem(RUNTIME_STORAGE_KEY, JSON.stringify(runtimes));
       setSelectedProvider(providerId);
       setSelectedModel(modelId);
-      setModels(
-        providers.find((provider) => provider.id === providerId)?.models || [],
-      );
       setConversations((previous) =>
         previous.map((conversation) =>
           conversation.id === activeConversationId
@@ -419,10 +451,6 @@ export const useModels = (
     localStorage.setItem(RUNTIME_STORAGE_KEY, JSON.stringify(runtimes));
     setSelectedProvider(selection.providerId);
     setSelectedModel(selection.modelId);
-    setModels(
-      providers.find((provider) => provider.id === selection.providerId)
-        ?.models || [],
-    );
     setConversations((previous) =>
       previous.map((conversation) =>
         conversation.id === conversationId
@@ -449,7 +477,6 @@ export const useModels = (
       : "";
 
   return {
-    models,
     providers,
     selectedProvider,
     selectedModel,

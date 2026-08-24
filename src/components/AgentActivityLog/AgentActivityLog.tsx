@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -19,92 +19,94 @@ export type AgentActivityLogProps = {
   isGenerating?: boolean;
 };
 
-const ToolItem = ({
-  tc,
-  isGenerating,
-  isDelegate,
-}: {
-  tc: ToolCall;
-  isGenerating: boolean;
-  isDelegate: boolean;
-}) => {
-  const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const Icon = isDelegate ? GitMerge : Wrench;
+const ToolItem = memo(
+  ({
+    tc,
+    isGenerating,
+    isDelegate,
+  }: {
+    tc: ToolCall;
+    isGenerating: boolean;
+    isDelegate: boolean;
+  }) => {
+    const { t } = useTranslation();
+    const [isExpanded, setIsExpanded] = useState(false);
+    const Icon = isDelegate ? GitMerge : Wrench;
 
-  let formattedArgs = "";
-  const args = tc.function.arguments || tc.label || "";
-  if (args) {
-    if (
-      tc.function.name === "execute_code" ||
-      tc.function.name === "run_python"
-    ) {
-      try {
-        const parsed = JSON.parse(args);
-        const code = parsed.code || parsed.content || args;
-        const lang = tc.function.name === "run_python" ? "python" : "code";
-        formattedArgs = `\`\`\`${lang}\n${code}\n\`\`\``;
-      } catch {
-        const cleanedArgs = args.replace(/\\n/g, "\n");
-        formattedArgs = `\`\`\`code\n${cleanedArgs}\n\`\`\``;
-      }
-    } else {
-      try {
-        const parsed = JSON.parse(args);
-        formattedArgs = `\`\`\`json\n${JSON.stringify(parsed, null, 2)}\n\`\`\``;
-      } catch {
-        const cleanedArgs = args.replace(/\\n/g, "\n");
-        formattedArgs = `\`\`\`json\n${cleanedArgs}\n\`\`\``;
+    let formattedArgs = "";
+    const args = tc.function.arguments || tc.label || "";
+    if (args) {
+      if (
+        tc.function.name === "execute_code" ||
+        tc.function.name === "run_python"
+      ) {
+        try {
+          const parsed = JSON.parse(args);
+          const code = parsed.code || parsed.content || args;
+          const lang = tc.function.name === "run_python" ? "python" : "code";
+          formattedArgs = `\`\`\`${lang}\n${code}\n\`\`\``;
+        } catch {
+          const cleanedArgs = args.replace(/\\n/g, "\n");
+          formattedArgs = `\`\`\`code\n${cleanedArgs}\n\`\`\``;
+        }
+      } else {
+        try {
+          const parsed = JSON.parse(args);
+          formattedArgs = `\`\`\`json\n${JSON.stringify(parsed, null, 2)}\n\`\`\``;
+        } catch {
+          const cleanedArgs = args.replace(/\\n/g, "\n");
+          formattedArgs = `\`\`\`json\n${cleanedArgs}\n\`\`\``;
+        }
       }
     }
-  }
 
-  const isRunning = tc.status === "running" || (isGenerating && !tc.status);
-  const isError = tc.status === "error";
+    const isRunning = tc.status === "running" || (isGenerating && !tc.status);
+    const isError = tc.status === "error";
 
-  return (
-    <div className={styles.node}>
-      <div
-        className={`${styles.icon} ${isDelegate ? styles.delegate : styles.default}`}
-      >
-        <Icon size={12} />
-      </div>
-      <div className={styles.content}>
+    return (
+      <div className={styles.node}>
         <div
-          className={styles.toolItem}
-          onClick={() => setIsExpanded(!isExpanded)}
+          className={`${styles.icon} ${isDelegate ? styles.delegate : styles.default}`}
         >
-          <div className={styles.toolHeader}>
-            <div className={styles.title}>{tc.function.name}</div>
-            <div className={styles.toolStatus}>
-              {isRunning ? (
-                <div className={styles.spinner} />
-              ) : isError ? (
-                <span style={{ color: "red", fontWeight: "bold" }}>!</span>
-              ) : (
-                <Check size={14} />
-              )}
+          <Icon size={12} />
+        </div>
+        <div className={styles.content}>
+          <div
+            className={styles.toolItem}
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            <div className={styles.toolHeader}>
+              <div className={styles.title}>{tc.function.name}</div>
+              <div className={styles.toolStatus}>
+                {isRunning ? (
+                  <div className={styles.spinner} />
+                ) : isError ? (
+                  <span style={{ color: "red", fontWeight: "bold" }}>!</span>
+                ) : (
+                  <Check size={14} />
+                )}
+              </div>
+            </div>
+            <div className={styles.description}>
+              {isRunning
+                ? isDelegate
+                  ? t("activity.delegatingTask")
+                  : t("activity.executingTool")
+                : isDelegate
+                  ? t("activity.taskDelegated")
+                  : t("activity.toolExecuted")}
             </div>
           </div>
-          <div className={styles.description}>
-            {isRunning
-              ? isDelegate
-                ? t("activity.delegatingTask")
-                : t("activity.executingTool")
-              : isDelegate
-                ? t("activity.taskDelegated")
-                : t("activity.toolExecuted")}
-          </div>
+          {isExpanded && formattedArgs && (
+            <div className={styles.toolArgs}>
+              <MarkdownRenderer content={formattedArgs} />
+            </div>
+          )}
         </div>
-        {isExpanded && formattedArgs && (
-          <div className={styles.toolArgs}>
-            <MarkdownRenderer content={formattedArgs} />
-          </div>
-        )}
       </div>
-    </div>
-  );
-};
+    );
+  },
+);
 
 const AgentLog = ({
   icon,
@@ -126,16 +128,17 @@ const AgentLog = ({
 
   useEffect(() => {
     // Auto scroll to bottom during streaming
-    if (isStreaming && timelineRef.current) {
+    if (isStreaming && isExpanded && timelineRef.current) {
       // Use requestAnimationFrame to ensure DOM has updated before scrolling
-      requestAnimationFrame(() => {
+      const animationFrame = requestAnimationFrame(() => {
         if (timelineRef.current) {
           const el = timelineRef.current;
           el.scrollTop = el.scrollHeight;
         }
       });
+      return () => cancelAnimationFrame(animationFrame);
     }
-  }, [expandedElement, isStreaming]);
+  }, [expandedElement, isExpanded, isStreaming]);
 
   return (
     <div className={styles.log}>

@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
-import {
-  ChatWindow,
-  ErrorBoundary,
-  SettingsSheet,
-  Sidebar,
-} from "./components";
+import { ChatWindow } from "./components/ChatWindow";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Sidebar } from "./components/Sidebar";
 import {
   useChatState,
   useClientPresence,
@@ -18,6 +22,9 @@ import { getApiUrl } from "./config";
 import { clearPwaBadge } from "./utils";
 
 const HERMES_ENDPOINT = getApiUrl();
+const SettingsSheet = lazy(async () => ({
+  default: (await import("./components/SettingsSheet")).SettingsSheet,
+}));
 
 export const App = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -38,10 +45,17 @@ export const App = () => {
       document.removeEventListener("visibilitychange", clearWhenVisible);
   }, []);
 
+  const openSidebar = useCallback(() => setIsSidebarOpen(true), []);
+  const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
+  const toggleSidebar = useCallback(
+    () => setIsSidebarOpen((previous) => !previous),
+    [],
+  );
+
   useSwipeDrawer(sidebarRef, backdropRef, {
     isOpen: isSidebarOpen,
-    onOpen: () => setIsSidebarOpen(true),
-    onClose: () => setIsSidebarOpen(false),
+    onOpen: openSidebar,
+    onClose: closeSidebar,
   });
 
   const {
@@ -154,18 +168,18 @@ export const App = () => {
           ref={backdropRef}
           className="sidebar-backdrop"
           style={{ display: isSidebarOpen ? "block" : "none" }}
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={closeSidebar}
         />
 
         <Sidebar
           ref={sidebarRef}
           isSidebarOpen={isSidebarOpen}
-          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+          onToggleSidebar={toggleSidebar}
           conversations={filteredConversations}
           activeConversationId={activeConversationId}
           onSelectConversation={(id) => {
             handleSelectConversation(id);
-            setIsSidebarOpen(false);
+            closeSidebar();
           }}
           onPinConversation={handlePinConversation}
           onRenameConversation={handleRenameConversation}
@@ -186,7 +200,7 @@ export const App = () => {
                 );
               }
             });
-            setIsSidebarOpen(false);
+            closeSidebar();
           }}
           canCreateConversation={Boolean(newConversationSelection)}
           isCreatingChat={isCreatingChat}
@@ -204,11 +218,11 @@ export const App = () => {
           connectionError={connectionError}
           onOpenSettings={() => {
             setIsSettingsSheetOpen(true);
-            setIsSidebarOpen(false);
+            closeSidebar();
           }}
         />
         <ChatWindow
-          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+          onToggleSidebar={toggleSidebar}
           messages={activeMessages}
           activeConversation={activeConversation}
           onRenameConversation={handleRenameConversation}
@@ -251,12 +265,16 @@ export const App = () => {
             isCheckingGeneration
           }
         />
-        <SettingsSheet
-          isOpen={isSettingsSheetOpen}
-          onClose={() => setIsSettingsSheetOpen(false)}
-          settings={settings}
-          onSaveSettings={handleSaveSettings}
-        />
+        {isSettingsSheetOpen && (
+          <Suspense fallback={null}>
+            <SettingsSheet
+              isOpen
+              onClose={() => setIsSettingsSheetOpen(false)}
+              settings={settings}
+              onSaveSettings={handleSaveSettings}
+            />
+          </Suspense>
+        )}
       </div>
     </ErrorBoundary>
   );

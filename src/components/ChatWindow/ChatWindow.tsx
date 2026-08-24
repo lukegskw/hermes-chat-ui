@@ -6,7 +6,7 @@ import React, {
   useMemo,
 } from "react";
 import { Send, Square, Sparkles, Menu, Paperclip, X as XIcon } from "../Icons";
-import { MessageBubble } from "..";
+import { MessageBubble } from "../MessageBubble";
 import { ConversationActionMenu } from "../ConversationActionMenu";
 import type {
   SelectFieldGroup,
@@ -14,11 +14,7 @@ import type {
   SelectFieldOption,
 } from "../SelectField";
 import { ChatMessage, ConversationAPI } from "../../types";
-import {
-  ImagePreparationError,
-  validateImageFile,
-  fileToBase64,
-} from "../../utils";
+import { ImagePreparationError, validateImageFile } from "../../utils";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import styles from "./ChatWindow.module.scss";
@@ -31,6 +27,11 @@ import {
 export type ChatWindowMessage = ChatMessage & {
   id: string;
   isGenerating?: boolean;
+};
+
+type PendingAttachment = {
+  file: File;
+  previewUrl: string;
 };
 
 export type ChatWindowProps = {
@@ -98,14 +99,16 @@ export const ChatWindow = ({
   const [input, setInput] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleText, setEditTitleText] = useState("");
-  const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<
+    PendingAttachment[]
+  >([]);
   const [isDragging, setIsDragging] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const messagesViewRef = useRef<HTMLDivElement>(null);
   const activeSessionRef = useRef("");
   const pendingInitialScrollRef = useRef(false);
   const isNearBottomRef = useRef(true);
+  const shouldFollowResizeRef = useRef(true);
   const wasGeneratingRef = useRef(false);
   const prependAnchorRef = useRef<{
     scrollHeight: number;
@@ -114,6 +117,7 @@ export const ChatWindow = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const attachmentUrlsRef = useRef(new Set<string>());
   const isInteractionLocked = interactionLocked;
   const reasoningAvailable = reasoningSupported && reasoningEfforts.length > 0;
   const defaultReasoningLabel =
@@ -169,6 +173,16 @@ export const ChatWindow = ({
     }
   }, [isEditingTitle]);
 
+  useEffect(
+    () => () => {
+      for (const url of attachmentUrlsRef.current) {
+        URL.revokeObjectURL(url);
+      }
+      attachmentUrlsRef.current.clear();
+    },
+    [],
+  );
+
   const handleSaveTitle = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (isInteractionLocked) return;
@@ -192,6 +206,7 @@ export const ChatWindow = ({
         viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
       isNearBottomRef.current =
         distanceFromBottom <= Math.max(150, viewport.clientHeight * 0.15);
+      shouldFollowResizeRef.current = isNearBottomRef.current;
       if (
         viewport.scrollTop <= 80 &&
         hasOlderMessages &&
@@ -253,31 +268,11 @@ export const ChatWindow = ({
     pendingInitialScrollRef.current = decision.pendingInitialScroll;
     isNearBottomRef.current = decision.isNearBottom;
 
-    let resizeObserver: ResizeObserver | null = null;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
     if (decision.scrollToBottom) {
       viewport.scrollTop = viewport.scrollHeight;
-
-      // Observe the content container for height changes (e.g. images loading, syntax highlighting)
-      const contentContainer = viewport.firstElementChild;
-      if (contentContainer) {
-        resizeObserver = new ResizeObserver(() => {
-          viewport.scrollTop = viewport.scrollHeight;
-        });
-        resizeObserver.observe(contentContainer);
-
-        timeoutId = setTimeout(() => {
-          if (resizeObserver) resizeObserver.disconnect();
-        }, 1500);
-      }
+      shouldFollowResizeRef.current = true;
     }
     wasGeneratingRef.current = isGenerating;
-
-    return () => {
-      if (resizeObserver) resizeObserver.disconnect();
-      if (timeoutId) clearTimeout(timeoutId);
-    };
   }, [
     activeConversation?.historyLoaded,
     activeSessionId,
@@ -285,6 +280,25 @@ export const ChatWindow = ({
     isLoadingMessages,
     messages,
   ]);
+
+  useEffect(() => {
+    const viewport = messagesViewRef.current;
+    const contentContainer = viewport?.firstElementChild;
+    if (
+      !viewport ||
+      !contentContainer ||
+      typeof ResizeObserver === "undefined"
+    ) {
+      return;
+    }
+    const resizeObserver = new ResizeObserver(() => {
+      if (shouldFollowResizeRef.current) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
+    });
+    resizeObserver.observe(contentContainer);
+    return () => resizeObserver.disconnect();
+  }, [activeSessionId, isLoadingMessages, messages.length]);
 
   // Handle textarea height auto-grow
   useEffect(() => {
@@ -294,21 +308,17 @@ export const ChatWindow = ({
     }
   }, [input]);
 
-  const addAttachments = async (files: File[]) => {
+  const addAttachments = (files: File[]) => {
     if (isInteractionLocked) return;
     const validFiles = files.filter((f) => validateImageFile(f).valid);
     if (validFiles.length === 0) return;
 
-    setPendingAttachments((prev) => [...prev, ...validFiles]);
-
-    for (const file of validFiles) {
-      try {
-        const dataUrl = await fileToBase64(file);
-        setPreviewUrls((prev) => [...prev, dataUrl]);
-      } catch (e) {
-        console.error("Failed to parse image", e);
-      }
-    }
+    const attachments = validFiles.map((file) => {
+      const previewUrl = URL.createObjectURL(file);
+      attachmentUrlsRef.current.add(previewUrl);
+      return { file, previewUrl };
+    });
+    setPendingAttachments((previous) => [...previous, ...attachments]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -316,12 +326,15 @@ export const ChatWindow = ({
     if (e.target.files) {
       addAttachments(Array.from(e.target.files));
     }
+    e.target.value = "";
   };
 
   const removeAttachment = (index: number) => {
     if (isInteractionLocked) return;
+    const attachment = pendingAttachments[index];
+    attachmentUrlsRef.current.delete(attachment.previewUrl);
+    URL.revokeObjectURL(attachment.previewUrl);
     setPendingAttachments((prev) => prev.filter((_, i) => i !== index));
-    setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -330,11 +343,17 @@ export const ChatWindow = ({
     if (!input.trim() && pendingAttachments.length === 0) return;
 
     try {
-      const accepted = await onSendMessage(input.trim(), pendingAttachments);
+      const accepted = await onSendMessage(
+        input.trim(),
+        pendingAttachments.map(({ file }) => file),
+      );
       if (!accepted) return;
+      for (const { previewUrl } of pendingAttachments) {
+        attachmentUrlsRef.current.delete(previewUrl);
+        URL.revokeObjectURL(previewUrl);
+      }
       setInput("");
       setPendingAttachments([]);
-      setPreviewUrls([]);
       setHistoryIndex(-1);
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -559,34 +578,9 @@ export const ChatWindow = ({
                     (msg.tool_calls && msg.tool_calls.length > 0) ||
                     msg.isGenerating,
                 )
-                .map((msg) => {
-                  let filteredMsg = msg;
-                  if (
-                    msg.role === "assistant" &&
-                    typeof msg.content === "string"
-                  ) {
-                    let cleanContent = msg.content;
-
-                    // Handle proper tags or tags missing the opening tag
-                    cleanContent = cleanContent
-                      .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
-                      .replace(/^[\s\S]*?<\/TITLE>\n*/i, "");
-
-                    // Handle partial stream (missing closing tag)
-                    if (cleanContent.includes("<TITLE>")) {
-                      cleanContent = cleanContent.replace(
-                        /<TITLE>[\s\S]*$/i,
-                        "",
-                      );
-                    }
-
-                    filteredMsg = {
-                      ...msg,
-                      content: cleanContent.trim(),
-                    };
-                  }
-                  return <MessageBubble key={msg.id} message={filteredMsg} />;
-                })}
+                .map((message) => (
+                  <MessageBubble key={message.id} message={message} />
+                ))}
             </div>
           ) : (
             /* High-Fidelity Welcome & Suggestions Dashboard */
@@ -606,11 +600,14 @@ export const ChatWindow = ({
 
         {/* Input controls Container */}
         <div className={styles.inputControlsContainer}>
-          {previewUrls.length > 0 && (
+          {pendingAttachments.length > 0 && (
             <div className={styles.attachmentPreviewStrip}>
-              {previewUrls.map((url, i) => (
+              {pendingAttachments.map(({ previewUrl }, i) => (
                 <div key={i} className={styles.attachmentThumbnail}>
-                  <img src={url} alt={`${t("messages.attachment")} ${i}`} />
+                  <img
+                    src={previewUrl}
+                    alt={`${t("messages.attachment")} ${i}`}
+                  />
                   <button
                     type="button"
                     onClick={() => removeAttachment(i)}

@@ -14,7 +14,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format": "prettier --write \"{src,server,server-tests}/**/*.{ts,tsx,scss,css,md}\" \"*.{ts,tsx,scss,css,md}\"",
     "type-check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.tests.json",
     "prepare": "husky"
   },
@@ -34,13 +34,10 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.4",
     "@types/node": "^25.9.5",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@types/web-push": "^3.6.4",
-    "@typescript-eslint/eslint-plugin": "^8.65.0",
-    "@typescript-eslint/parser": "^8.65.0",
     "@vitejs/plugin-react": "^6.0.5",
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -58,7 +55,7 @@
     "vitest": "^4.1.10"
   },
   "lint-staged": {
-    "src/**/*.{ts,tsx,css,md}": [
+    "{src,server,server-tests}/**/*.{ts,tsx,scss,css,md}": [
       "prettier --write"
     ]
   }

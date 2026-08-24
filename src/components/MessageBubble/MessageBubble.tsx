@@ -1,10 +1,8 @@
+import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  AgentActivityLog,
-  ReasoningLog,
-  ChatWindowMessage,
-  MarkdownRenderer,
-} from "..";
+import { AgentActivityLog, ReasoningLog } from "../AgentActivityLog";
+import type { ChatWindowMessage } from "../ChatWindow";
+import { MarkdownRenderer } from "../MarkdownRenderer";
 import { linkifyParts } from "../../utils";
 import { useClipboard } from "../../hooks";
 import { Bot, Check, Copy, Sparkles, User } from "../Icons";
@@ -16,23 +14,32 @@ export type MessageBubbleProps = {
   message: ChatWindowMessage;
 };
 
-export const MessageBubble = ({ message }: MessageBubbleProps) => {
+export const MessageBubble = memo(({ message }: MessageBubbleProps) => {
   const { t } = useTranslation();
   const { role, content, timestamp } = message;
   const isUser = role === "user";
   const { copied, copyToClipboard } = useClipboard();
+  const displayedContent = useMemo(() => {
+    if (isUser || typeof content !== "string") return content;
+    const withoutCompleteTitle = content
+      .replace(/<TITLE>[\s\S]*?<\/TITLE>\n*/gi, "")
+      .replace(/^[\s\S]*?<\/TITLE>\n*/i, "");
+    return withoutCompleteTitle.includes("<TITLE>")
+      ? withoutCompleteTitle.replace(/<TITLE>[\s\S]*$/i, "").trim()
+      : withoutCompleteTitle.trim();
+  }, [content, isUser]);
   const imageUrls =
-    typeof content === "string"
+    typeof displayedContent === "string"
       ? []
-      : content.flatMap((part) =>
+      : displayedContent.flatMap((part) =>
           part.type === "image_url" ? [part.image_url.url] : [],
         );
 
   const handleCopy = () => {
     let textContent =
-      typeof content === "string"
-        ? content
-        : content
+      typeof displayedContent === "string"
+        ? displayedContent
+        : displayedContent
             .filter((c) => c.type === "text")
             .map((c) => c.text)
             .join("\n");
@@ -122,10 +129,10 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
         <div className={styles.body}>
           {isUser ? (
             <div className={styles.bodyUser}>
-              {typeof content === "string" ? (
-                <span>{linkifyParts([content])}</span>
+              {typeof displayedContent === "string" ? (
+                <span>{linkifyParts([displayedContent])}</span>
               ) : (
-                content
+                displayedContent
                   .filter((part) => part.type === "text")
                   .map((part, index) => (
                     <p key={index}>{linkifyParts([part.text])}</p>
@@ -134,9 +141,9 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
             </div>
           ) : (
             <MarkdownRenderer
-              content={(typeof content === "string"
-                ? content
-                : content
+              content={(typeof displayedContent === "string"
+                ? displayedContent
+                : displayedContent
                     .filter((p) => p.type === "text")
                     .map((p) => p.text)
                     .join("\n")
@@ -154,4 +161,4 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
       </div>
     </div>
   );
-};
+});

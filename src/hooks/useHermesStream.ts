@@ -16,6 +16,8 @@ import {
   updateConversationTitle,
 } from "../utils";
 
+const MAX_STREAM_RECOVERY_ATTEMPTS = 3;
+
 export const useHermesStream = (
   endpoint: string,
   settings: { systemPrompt?: string; enableXmlCodeBlocks?: boolean },
@@ -31,6 +33,14 @@ export const useHermesStream = (
   const abortControllersRef = useRef<
     Record<string, AbortController | undefined>
   >({});
+  const pendingMessageUpdatesRef = useRef<
+    Array<{
+      conversationId: string;
+      messageId: string;
+      update: (message: ChatMessage) => ChatMessage;
+    }>
+  >([]);
+  const animationFrameRef = useRef<number | null>(null);
   const [checkedGenerationFor, setCheckedGenerationFor] = useState("");
 
   const isGenerating = generatingStates[activeConversationId] || false;
@@ -52,26 +62,71 @@ export const useHermesStream = (
     setCheckedGenerationFor((previous) => (previous === id ? "" : previous));
   };
 
+  const flushPendingMessageUpdates = useCallback(() => {
+    animationFrameRef.current = null;
+    const updates = pendingMessageUpdatesRef.current.splice(0);
+    if (updates.length === 0) return;
+
+    const byConversation = new Map<
+      string,
+      Map<string, Array<(message: ChatMessage) => ChatMessage>>
+    >();
+    for (const { conversationId, messageId, update } of updates) {
+      const byMessage = byConversation.get(conversationId) ?? new Map();
+      const messageUpdates = byMessage.get(messageId) ?? [];
+      messageUpdates.push(update);
+      byMessage.set(messageId, messageUpdates);
+      byConversation.set(conversationId, byMessage);
+    }
+
+    setConversations((previous) =>
+      previous.map((conversation) => {
+        const byMessage = byConversation.get(conversation.id);
+        if (!byMessage) return conversation;
+        return {
+          ...conversation,
+          messages: conversation.messages.map((message) => {
+            const messageUpdates = byMessage.get(message.id);
+            return messageUpdates
+              ? messageUpdates.reduce(
+                  (current, update) => update(current),
+                  message,
+                )
+              : message;
+          }),
+        };
+      }),
+    );
+  }, [setConversations]);
+
   const updateAssistantMessage = useCallback(
     (
       conversationId: string,
       messageId: string,
       update: (message: ChatMessage) => ChatMessage,
     ) => {
-      setConversations((previous) =>
-        previous.map((conversation) =>
-          conversation.id === conversationId
-            ? {
-                ...conversation,
-                messages: conversation.messages.map((message) =>
-                  message.id === messageId ? update(message) : message,
-                ),
-              }
-            : conversation,
-        ),
-      );
+      pendingMessageUpdatesRef.current.push({
+        conversationId,
+        messageId,
+        update,
+      });
+      if (animationFrameRef.current === null) {
+        animationFrameRef.current = requestAnimationFrame(
+          flushPendingMessageUpdates,
+        );
+      }
     },
-    [setConversations],
+    [flushPendingMessageUpdates],
+  );
+
+  useEffect(
+    () => () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      pendingMessageUpdatesRef.current = [];
+    },
+    [],
   );
 
   const applyToolCallChunk = useCallback(
@@ -87,11 +142,8 @@ export const useHermesStream = (
       updateAssistantMessage(conversationId, messageId, (message) => {
         const index = delta.index ?? 0;
         const current = message.tool_calls ?? [];
-        const next = current.map((tool) => ({
-          ...tool,
-          function: { ...tool.function },
-        }));
-        const existing = next[index] as ToolCall | undefined;
+        const existing = current[index] as ToolCall | undefined;
+        const next = [...current];
         next[index] = existing
           ? {
               ...existing,
@@ -199,7 +251,11 @@ export const useHermesStream = (
     };
 
     const recover = async () => {
-      while (!controller.signal.aborted) {
+      for (
+        let attempt = 0;
+        attempt < MAX_STREAM_RECOVERY_ATTEMPTS && !controller.signal.aborted;
+        attempt += 1
+      ) {
         try {
           const active = await resumeChatMessageStream({
             endpoint,
@@ -264,8 +320,33 @@ export const useHermesStream = (
             }
           }
           return;
-        } catch {
-          await new Promise((resolve) => setTimeout(resolve, 750));
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") return;
+          if (attempt === MAX_STREAM_RECOVERY_ATTEMPTS - 1) {
+            logger.error(
+              { error, conversationId },
+              "Unable to recover Hermes session stream after retries",
+            );
+            if (assistantMessageId) {
+              updateAssistantMessage(
+                conversationId,
+                assistantMessageId,
+                (message) => ({ ...message, isGenerating: false }),
+              );
+            }
+            setGeneratingStates((previous) => ({
+              ...previous,
+              [conversationId]: false,
+            }));
+            setCheckedGenerationFor(conversationId);
+            if (controllers[conversationId] === controller) {
+              delete controllers[conversationId];
+            }
+            return;
+          }
+          await new Promise((resolve) =>
+            setTimeout(resolve, 750 * 2 ** attempt),
+          );
         }
       }
     };

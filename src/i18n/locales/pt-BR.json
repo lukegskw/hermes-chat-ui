@@ -10,7 +10,6 @@
     "newConversationModel": "Iniciar com...",
     "hermesDefaultModel": "{{model}} (Padrão do Hermes)",
     "fetchingModels": "Buscando Modelos...",
-    "noModels": "Sem Modelos",
     "disconnected": "Hermes desconectado",
     "recentChats": "Chats Recentes",
     "noChats": "Nenhuma conversa iniciada",
@@ -40,13 +39,11 @@
     "attachImage": "Anexar imagem",
     "stopGeneration": "Parar geração",
     "sendMessage": "Enviar mensagem",
-    "runningWith": "RODANDO COM:",
     "loading": "Carregando...",
     "loadingOlder": "Carregando mensagens anteriores...",
     "scrollForOlder": "Role para cima para carregar mensagens anteriores",
     "retryHistory": "Tentar novamente",
     "noModels": "Sem modelos",
-    "provider": "Provedor",
     "model": "Modelo",
     "selectModelProvider": "Selecione o modelo e provider",
     "reasoningEffort": "Raciocínio",
@@ -74,23 +71,8 @@
     "imagePreview": "Imagem ampliada",
     "closeImage": "Fechar imagem"
   },
-  "approval": {
-    "title": "Ação Requer Aprovação",
-    "description": "O agente solicitou permissão para executar uma ferramenta.",
-    "tool": "Ferramenta:",
-    "command": "Comando:",
-    "allowOnce": "Permitir 1x",
-    "allowOnceTitle": "Permitir execução apenas desta vez",
-    "thisSession": "Esta Sessão",
-    "thisSessionTitle": "Permitir automaticamente durante esta sessão",
-    "always": "Sempre",
-    "alwaysTitle": "Lembrar permissão e não perguntar novamente para este comando",
-    "deny": "Negar",
-    "denyTitle": "Negar e cancelar execução"
-  },
   "settings": {
     "title": "Configurações",
-    "notifications": "Notificações",
     "push": {
       "label": "Notificações Push",
       "status": {
@@ -113,27 +95,16 @@
   },
   "activity": {
     "agentActivity": "Atividade do Agente:",
-    "reasoning": "Raciocínio",
     "tools": "ferramentas",
     "subAgents": "sub-agentes",
-    "thoughtProcess": "Processo de Pensamento",
     "delegatingTask": "Delegando tarefa...",
     "executingTool": "Executando ferramenta...",
     "taskDelegated": "Tarefa delegada.",
     "toolExecuted": "Ferramenta executada."
   },
   "errors": {
-    "interfaceError": "Algo deu errado na interface.",
-    "reloadPage": "Recarregar Página",
     "connectionError": "**Erro de conexão**: {{message}}. Certifique-se de que o container do Hermes está ativo e acessível na porta configurada.",
-    "compressingContext": "⏳ Compactando contexto da sessão...",
-    "compressSuccess": "✅ Contexto compactado com sucesso pelo agente.",
-    "compressFailed": "❌ Falha ao compactar o contexto da sessão.",
-    "approvalRequired": "⚠️ O comando acima requer aprovação manual para prosseguir.",
-    "approvalDenied": "[APPROVAL_DENIED] Comando rejeitado pelo usuário. Não execute o comando.",
-    "approvalGranted": "[APPROVAL_GRANTED] Permissão concedida pelo usuário. Pode prosseguir com a execução do comando.",
     "unsupportedFormat": "Formato não suportado ({{type}}). Apenas JPEG, PNG, GIF e WebP são permitidos.",
-    "imageTooLarge": "Imagem muito grande. O limite é {{size}}MB.",
     "imagesTooLarge": "Essas imagens continuam grandes demais para serem enviadas juntas, mesmo após a compressão.",
     "imageProcessingFailed": "Não foi possível preparar essas imagens para envio.",
     "sessionLoadFailed": "Não foi possível carregar as sessões do Hermes.",
@@ -146,8 +117,5 @@
   },
   "loading": {
     "initializing": "Carregando o seu assistente inteligente..."
-  },
-  "systemPrompts": {
-    "titleInstruction": "\\n\\nAntes de responder, por favor comece sua resposta com um título curto para esta conversa (3-5 palavras) dentro de tags <TITLE></TITLE> na primeira linha, depois uma linha em branco, e então sua resposta real."
   }
 }

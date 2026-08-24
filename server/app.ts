@@ -25,6 +25,19 @@ const apiNotFound = (): Response =>
 export const createApp = (config: ServerConfig): Hono => {
   const app = new Hono();
   const attachments = new AttachmentStore(config);
+  let indexHtml: Promise<string> | undefined;
+  const loadIndexHtml = () => {
+    if (!indexHtml) {
+      indexHtml = readFile(
+        path.join(config.staticDir, "index.html"),
+        "utf8",
+      ).catch((error) => {
+        indexHtml = undefined;
+        throw error;
+      });
+    }
+    return indexHtml;
+  };
   void attachments
     .cleanupAbandonedPending()
     .catch((error) =>
@@ -36,7 +49,6 @@ export const createApp = (config: ServerConfig): Hono => {
       origin: "*",
       allowHeaders: ["Content-Type", "Authorization"],
       allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-      credentials: true,
     }),
   );
 
@@ -168,9 +180,7 @@ export const createApp = (config: ServerConfig): Hono => {
     const accept = context.req.header("Accept") ?? "";
     if (!accept.includes("text/html")) return context.notFound();
     try {
-      return context.html(
-        await readFile(path.join(config.staticDir, "index.html"), "utf8"),
-      );
+      return context.html(await loadIndexHtml());
     } catch {
       return context.text("UI assets are unavailable", 503);
     }

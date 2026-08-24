@@ -27,14 +27,6 @@ export class ApiError extends Error {
   }
 }
 
-export const ModelSchema = z.object({
-  id: z.string(),
-  object: z.string().nullish(),
-  created: z.number().nullish(),
-  owned_by: z.string().nullish(),
-  label: z.string().nullish(),
-});
-
 const ModelOptionsSchema = z.object({
   model: z.string().optional(),
   provider: z.string().optional(),
@@ -385,21 +377,6 @@ export const fetchConversation = async (
   );
   const parsed = SessionEnvelopeSchema.parse(await response.json());
   return toConversation(parsed.session);
-};
-
-export const fetchConversationMessages = async (
-  endpoint: string,
-  id: string,
-  signal?: AbortSignal,
-): Promise<ChatMessage[]> => {
-  const response = await assertOk(
-    await fetch(
-      `${apiBase(endpoint)}/api/sessions/${encodeURIComponent(id)}/messages`,
-      { signal },
-    ),
-  );
-  const parsed = SessionMessagesSchema.parse(await response.json());
-  return normalizeSessionMessages(parsed.session_id, parsed.data);
 };
 
 export const fetchConversationMessagesPage = async (

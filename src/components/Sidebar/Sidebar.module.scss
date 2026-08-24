@@ -442,11 +442,4 @@
     font-size: 0.85rem;
     width: 100%;
   }
-
-  .btnDanger {
-    @include s.neo-button(s.$color-danger, s.$color-white);
-    padding: 10px;
-    font-size: 0.85rem;
-    width: 100%;
-  }
 }

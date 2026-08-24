@@ -10,7 +10,6 @@
     "newConversationModel": "Start with...",
     "hermesDefaultModel": "{{model}} (Hermes Default)",
     "fetchingModels": "Fetching Models...",
-    "noModels": "No Models",
     "disconnected": "Hermes disconnected",
     "recentChats": "Recent Chats",
     "noChats": "No conversations started",
@@ -40,13 +39,11 @@
     "attachImage": "Attach image",
     "stopGeneration": "Stop generation",
     "sendMessage": "Send message",
-    "runningWith": "RUNNING WITH:",
     "loading": "Loading...",
     "loadingOlder": "Loading older messages...",
     "scrollForOlder": "Scroll up to load older messages",
     "retryHistory": "Try again",
     "noModels": "No models",
-    "provider": "Provider",
     "model": "Model",
     "selectModelProvider": "Select model and provider",
     "reasoningEffort": "Reasoning",
@@ -74,23 +71,8 @@
     "imagePreview": "Enlarged image",
     "closeImage": "Close image"
   },
-  "approval": {
-    "title": "Action Requires Approval",
-    "description": "The agent requested permission to execute a tool.",
-    "tool": "Tool:",
-    "command": "Command:",
-    "allowOnce": "Allow 1x",
-    "allowOnceTitle": "Allow execution only this time",
-    "thisSession": "This Session",
-    "thisSessionTitle": "Allow automatically during this session",
-    "always": "Always",
-    "alwaysTitle": "Remember permission and never ask again for this command",
-    "deny": "Deny",
-    "denyTitle": "Deny and cancel execution"
-  },
   "settings": {
     "title": "Settings",
-    "notifications": "Notifications",
     "push": {
       "label": "Push Notifications",
       "status": {
@@ -113,27 +95,16 @@
   },
   "activity": {
     "agentActivity": "Agent Activity:",
-    "reasoning": "Reasoning",
     "tools": "tools",
     "subAgents": "sub-agents",
-    "thoughtProcess": "Thought Process",
     "delegatingTask": "Delegating task...",
     "executingTool": "Executing tool...",
     "taskDelegated": "Task delegated.",
     "toolExecuted": "Tool executed."
   },
   "errors": {
-    "interfaceError": "Something went wrong with the interface.",
-    "reloadPage": "Reload Page",
     "connectionError": "**Connection error**: {{message}}. Make sure the Hermes container is active and accessible on the configured port.",
-    "compressingContext": "⏳ Compressing session context...",
-    "compressSuccess": "✅ Context compressed successfully by the agent.",
-    "compressFailed": "❌ Failed to compress session context.",
-    "approvalRequired": "⚠️ The command above requires manual approval to proceed.",
-    "approvalDenied": "[APPROVAL_DENIED] Command rejected by user. Do not execute the command.",
-    "approvalGranted": "[APPROVAL_GRANTED] Permission granted by user. You may proceed with command execution.",
     "unsupportedFormat": "Unsupported format ({{type}}). Only JPEG, PNG, GIF, and WebP are allowed.",
-    "imageTooLarge": "Image too large. The limit is {{size}}MB.",
     "imagesTooLarge": "These images are still too large to send together after compression.",
     "imageProcessingFailed": "These images could not be prepared for sending.",
     "sessionLoadFailed": "Could not load Hermes sessions.",
@@ -146,8 +117,5 @@
   },
   "loading": {
     "initializing": "Loading your smart assistant..."
-  },
-  "systemPrompts": {
-    "titleInstruction": "\\n\\nBefore answering, please start your reply with a short title for this conversation (3-5 words) wrapped in <TITLE></TITLE> tags on the first line, then a blank line, then your actual response."
   }
 }

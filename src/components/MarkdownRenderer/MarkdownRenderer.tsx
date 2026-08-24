@@ -78,292 +78,294 @@ export type MarkdownRendererProps = {
   content?: string;
 };
 
-export const MarkdownRenderer = ({ content = "" }: MarkdownRendererProps) => {
-  if (!content) return null;
+export const MarkdownRenderer = React.memo(
+  ({ content = "" }: MarkdownRendererProps) => {
+    if (!content) return null;
 
-  // Split content by code blocks to separate code and text
-  const parts: Part[] = [];
-  const knownLangs =
-    "python|java|typescript|javascript|bash|sh|json|yaml|xml|html|css|sql|c|cpp|go|rust|ruby|php|swift|kotlin|dart|md|markdown|tsx|jsx|plaintext|text";
-  const codeBlockRegex = new RegExp(
-    `(?:\`\`\`(\\w*)\\n([\\s\\S]*?)(?:\`\`\`|$))|(?:<(${knownLangs})>\\n?([\\s\\S]*?)\\n?<\\/(${knownLangs})>)`,
-    "gi",
-  );
-
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = codeBlockRegex.exec(content)) !== null) {
-    const textBefore = content.substring(lastIndex, match.index);
-    if (textBefore) {
-      parts.push({ type: "markdown", value: textBefore });
-    }
-
-    const lang = match[1] || match[3] || "";
-    const code = match[2] || match[4] || "";
-
-    parts.push({
-      type: "code",
-      language: lang ? lang.toLowerCase() : "",
-      value: code.trimEnd(),
-    });
-    lastIndex = codeBlockRegex.lastIndex;
-  }
-
-  if (lastIndex < content.length) {
-    const textAfter = content.substring(lastIndex);
-    const unclosedTagMatch = new RegExp(`^<(${knownLangs})>`, "i").exec(
-      textAfter,
+    // Split content by code blocks to separate code and text
+    const parts: Part[] = [];
+    const knownLangs =
+      "python|java|typescript|javascript|bash|sh|json|yaml|xml|html|css|sql|c|cpp|go|rust|ruby|php|swift|kotlin|dart|md|markdown|tsx|jsx|plaintext|text";
+    const codeBlockRegex = new RegExp(
+      `(?:\`\`\`(\\w*)\\n([\\s\\S]*?)(?:\`\`\`|$))|(?:<(${knownLangs})>\\n?([\\s\\S]*?)\\n?<\\/(${knownLangs})>)`,
+      "gi",
     );
 
-    // If the last code block is unclosed (streaming), extract it as code
-    if (textAfter.startsWith("```")) {
-      const firstLineBreak = textAfter.indexOf("\n");
-      const lang =
-        firstLineBreak !== -1 ? textAfter.substring(3, firstLineBreak) : "";
-      const code =
-        firstLineBreak !== -1 ? textAfter.substring(firstLineBreak + 1) : "";
-      parts.push({
-        type: "code",
-        language: lang,
-        value: code,
-      });
-    } else if (unclosedTagMatch) {
-      const lang = unclosedTagMatch[1];
-      const codeStart = unclosedTagMatch[0].length;
-      let code = textAfter.substring(codeStart);
-      if (code.startsWith("\n")) code = code.substring(1);
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
 
-      parts.push({
-        type: "code",
-        language: lang.toLowerCase(),
-        value: code,
-      });
-    } else {
-      parts.push({ type: "markdown", value: textAfter });
-    }
-  }
-
-  const renderMarkdownText = (text: string) => {
-    // Process markdown line by line
-    const lines = text.split("\n");
-    let insideList = false;
-    let listType: "ul" | "ol" | null = null;
-    let listStartNumber: number | undefined = undefined;
-    let listItems: string[] = [];
-    const elements: React.ReactNode[] = [];
-
-    const flushList = (key: number) => {
-      if (listItems.length > 0) {
-        const Tag = listType === "ol" ? "ol" : "ul";
-        elements.push(
-          <Tag
-            key={`list-${key}`}
-            className={styles.list}
-            {...(listType === "ol" && listStartNumber !== undefined
-              ? { start: listStartNumber }
-              : {})}
-          >
-            {listItems.map((item, idx) => (
-              <li key={idx} className={styles.listItem}>
-                {renderInline(item)}
-              </li>
-            ))}
-          </Tag>,
-        );
-        listItems = [];
-        insideList = false;
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      const textBefore = content.substring(lastIndex, match.index);
+      if (textBefore) {
+        parts.push({ type: "markdown", value: textBefore });
       }
-    };
 
-    // Helper to render bold, italics, inline code, and links
-    const renderInline = (str: string): React.ReactNode[] => {
-      if (!str) return [];
+      const lang = match[1] || match[3] || "";
+      const code = match[2] || match[4] || "";
 
-      const parts: React.ReactNode[] = [];
-      let i = 0;
-      while (i < str.length) {
-        // Check for inline code
-        if (str[i] === "`") {
-          const closeIdx = str.indexOf("`", i + 1);
-          if (closeIdx !== -1) {
-            parts.push(
-              <code key={`code-${i}`} className={styles.inlineCode}>
-                {str.substring(i + 1, closeIdx)}
-              </code>,
-            );
-            i = closeIdx + 1;
-            continue;
-          }
+      parts.push({
+        type: "code",
+        language: lang ? lang.toLowerCase() : "",
+        value: code.trimEnd(),
+      });
+      lastIndex = codeBlockRegex.lastIndex;
+    }
+
+    if (lastIndex < content.length) {
+      const textAfter = content.substring(lastIndex);
+      const unclosedTagMatch = new RegExp(`^<(${knownLangs})>`, "i").exec(
+        textAfter,
+      );
+
+      // If the last code block is unclosed (streaming), extract it as code
+      if (textAfter.startsWith("```")) {
+        const firstLineBreak = textAfter.indexOf("\n");
+        const lang =
+          firstLineBreak !== -1 ? textAfter.substring(3, firstLineBreak) : "";
+        const code =
+          firstLineBreak !== -1 ? textAfter.substring(firstLineBreak + 1) : "";
+        parts.push({
+          type: "code",
+          language: lang,
+          value: code,
+        });
+      } else if (unclosedTagMatch) {
+        const lang = unclosedTagMatch[1];
+        const codeStart = unclosedTagMatch[0].length;
+        let code = textAfter.substring(codeStart);
+        if (code.startsWith("\n")) code = code.substring(1);
+
+        parts.push({
+          type: "code",
+          language: lang.toLowerCase(),
+          value: code,
+        });
+      } else {
+        parts.push({ type: "markdown", value: textAfter });
+      }
+    }
+
+    const renderMarkdownText = (text: string) => {
+      // Process markdown line by line
+      const lines = text.split("\n");
+      let insideList = false;
+      let listType: "ul" | "ol" | null = null;
+      let listStartNumber: number | undefined = undefined;
+      let listItems: string[] = [];
+      const elements: React.ReactNode[] = [];
+
+      const flushList = (key: number) => {
+        if (listItems.length > 0) {
+          const Tag = listType === "ol" ? "ol" : "ul";
+          elements.push(
+            <Tag
+              key={`list-${key}`}
+              className={styles.list}
+              {...(listType === "ol" && listStartNumber !== undefined
+                ? { start: listStartNumber }
+                : {})}
+            >
+              {listItems.map((item, idx) => (
+                <li key={idx} className={styles.listItem}>
+                  {renderInline(item)}
+                </li>
+              ))}
+            </Tag>,
+          );
+          listItems = [];
+          insideList = false;
         }
-        // Check for bold
-        if (str[i] === "*" && str[i + 1] === "*") {
-          const closeIdx = str.indexOf("**", i + 2);
-          if (closeIdx !== -1) {
-            parts.push(
-              <strong key={`bold-${i}`}>
-                {renderInline(str.substring(i + 2, closeIdx))}
-              </strong>,
-            );
-            i = closeIdx + 2;
-            continue;
-          }
-        }
-        // Check for link
-        if (str[i] === "[") {
-          const closeTextIdx = str.indexOf("]", i + 1);
-          if (closeTextIdx !== -1 && str[closeTextIdx + 1] === "(") {
-            const closeUrlIdx = str.indexOf(")", closeTextIdx + 2);
-            if (closeUrlIdx !== -1) {
-              const text = str.substring(i + 1, closeTextIdx);
-              const url = str.substring(closeTextIdx + 2, closeUrlIdx);
+      };
+
+      // Helper to render bold, italics, inline code, and links
+      const renderInline = (str: string): React.ReactNode[] => {
+        if (!str) return [];
+
+        const parts: React.ReactNode[] = [];
+        let i = 0;
+        while (i < str.length) {
+          // Check for inline code
+          if (str[i] === "`") {
+            const closeIdx = str.indexOf("`", i + 1);
+            if (closeIdx !== -1) {
               parts.push(
-                <a
-                  key={`link-${i}`}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.link}
-                >
-                  {text}
-                </a>,
+                <code key={`code-${i}`} className={styles.inlineCode}>
+                  {str.substring(i + 1, closeIdx)}
+                </code>,
               );
-              i = closeUrlIdx + 1;
+              i = closeIdx + 1;
               continue;
             }
           }
+          // Check for bold
+          if (str[i] === "*" && str[i + 1] === "*") {
+            const closeIdx = str.indexOf("**", i + 2);
+            if (closeIdx !== -1) {
+              parts.push(
+                <strong key={`bold-${i}`}>
+                  {renderInline(str.substring(i + 2, closeIdx))}
+                </strong>,
+              );
+              i = closeIdx + 2;
+              continue;
+            }
+          }
+          // Check for link
+          if (str[i] === "[") {
+            const closeTextIdx = str.indexOf("]", i + 1);
+            if (closeTextIdx !== -1 && str[closeTextIdx + 1] === "(") {
+              const closeUrlIdx = str.indexOf(")", closeTextIdx + 2);
+              if (closeUrlIdx !== -1) {
+                const text = str.substring(i + 1, closeTextIdx);
+                const url = str.substring(closeTextIdx + 2, closeUrlIdx);
+                parts.push(
+                  <a
+                    key={`link-${i}`}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.link}
+                  >
+                    {text}
+                  </a>,
+                );
+                i = closeUrlIdx + 1;
+                continue;
+              }
+            }
+          }
+
+          // Accumulate plain characters
+          const plainChar = str[i];
+          if (plainChar === "\n") {
+            parts.push(<br key={`br-${i}`} />);
+          } else {
+            const lastPart = parts[parts.length - 1];
+            if (parts.length > 0 && typeof lastPart === "string") {
+              parts[parts.length - 1] = lastPart + plainChar;
+            } else {
+              parts.push(plainChar);
+            }
+          }
+          i++;
+        }
+        return linkifyParts(parts);
+      };
+
+      lines.forEach((line, idx) => {
+        const trimmed = line.trim();
+
+        // Check for indented lines (sublists or continuations)
+        const isIndented = line.startsWith("  ") || line.startsWith("\t");
+        if (insideList && isIndented && trimmed !== "") {
+          if (listItems.length > 0) {
+            listItems[listItems.length - 1] += "\n" + trimmed;
+          }
+          return;
         }
 
-        // Accumulate plain characters
-        const plainChar = str[i];
-        if (plainChar === "\n") {
-          parts.push(<br key={`br-${i}`} />);
-        } else {
-          const lastPart = parts[parts.length - 1];
-          if (parts.length > 0 && typeof lastPart === "string") {
-            parts[parts.length - 1] = lastPart + plainChar;
-          } else {
-            parts.push(plainChar);
+        // Headers
+        if (trimmed.startsWith("# ")) {
+          flushList(idx);
+          elements.push(
+            <h1 key={idx} className={styles.h1}>
+              {renderInline(trimmed.substring(2))}
+            </h1>,
+          );
+        } else if (trimmed.startsWith("## ")) {
+          flushList(idx);
+          elements.push(
+            <h2 key={idx} className={styles.h2}>
+              {renderInline(trimmed.substring(3))}
+            </h2>,
+          );
+        } else if (trimmed.startsWith("### ")) {
+          flushList(idx);
+          elements.push(
+            <h3 key={idx} className={styles.h3}>
+              {renderInline(trimmed.substring(4))}
+            </h3>,
+          );
+        }
+        // Blockquote
+        else if (trimmed.startsWith(">")) {
+          flushList(idx);
+          elements.push(
+            <blockquote key={idx} className={styles.blockquote}>
+              {renderInline(trimmed.substring(1).trim())}
+            </blockquote>,
+          );
+        }
+        // Unordered List Items
+        else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+          if (!insideList || listType !== "ul") {
+            flushList(idx);
+            insideList = true;
+            listType = "ul";
+          }
+          listItems.push(trimmed.substring(2));
+        }
+        // Ordered List Items
+        else if (/^\d+\.\s/.test(trimmed)) {
+          if (!insideList || listType !== "ol") {
+            flushList(idx);
+            insideList = true;
+            listType = "ol";
+
+            // Extract the starting number from the text (e.g., "2" from "2. Item")
+            const match = trimmed.match(/^(\d+)\.\s/);
+            if (match) {
+              listStartNumber = parseInt(match[1], 10);
+            } else {
+              listStartNumber = 1;
+            }
+          }
+          const itemText = trimmed.replace(/^\d+\.\s/, "");
+          listItems.push(itemText);
+        }
+        // Empty Line
+        else if (trimmed === "") {
+          if (!insideList) {
+            flushList(idx);
           }
         }
-        i++;
-      }
-      return linkifyParts(parts);
+        // Regular Paragraph
+        else {
+          flushList(idx);
+          elements.push(
+            <p key={idx} className={styles.p}>
+              {renderInline(line)}
+            </p>,
+          );
+        }
+      });
+
+      // Flush any remaining list at the end
+      flushList(lines.length);
+
+      return elements;
     };
 
-    lines.forEach((line, idx) => {
-      const trimmed = line.trim();
-
-      // Check for indented lines (sublists or continuations)
-      const isIndented = line.startsWith("  ") || line.startsWith("\t");
-      if (insideList && isIndented && trimmed !== "") {
-        if (listItems.length > 0) {
-          listItems[listItems.length - 1] += "\n" + trimmed;
-        }
-        return;
-      }
-
-      // Headers
-      if (trimmed.startsWith("# ")) {
-        flushList(idx);
-        elements.push(
-          <h1 key={idx} className={styles.h1}>
-            {renderInline(trimmed.substring(2))}
-          </h1>,
-        );
-      } else if (trimmed.startsWith("## ")) {
-        flushList(idx);
-        elements.push(
-          <h2 key={idx} className={styles.h2}>
-            {renderInline(trimmed.substring(3))}
-          </h2>,
-        );
-      } else if (trimmed.startsWith("### ")) {
-        flushList(idx);
-        elements.push(
-          <h3 key={idx} className={styles.h3}>
-            {renderInline(trimmed.substring(4))}
-          </h3>,
-        );
-      }
-      // Blockquote
-      else if (trimmed.startsWith(">")) {
-        flushList(idx);
-        elements.push(
-          <blockquote key={idx} className={styles.blockquote}>
-            {renderInline(trimmed.substring(1).trim())}
-          </blockquote>,
-        );
-      }
-      // Unordered List Items
-      else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-        if (!insideList || listType !== "ul") {
-          flushList(idx);
-          insideList = true;
-          listType = "ul";
-        }
-        listItems.push(trimmed.substring(2));
-      }
-      // Ordered List Items
-      else if (/^\d+\.\s/.test(trimmed)) {
-        if (!insideList || listType !== "ol") {
-          flushList(idx);
-          insideList = true;
-          listType = "ol";
-
-          // Extract the starting number from the text (e.g., "2" from "2. Item")
-          const match = trimmed.match(/^(\d+)\.\s/);
-          if (match) {
-            listStartNumber = parseInt(match[1], 10);
+    return (
+      <div className={styles.prose}>
+        {parts.map((part, index) => {
+          if (part.type === "code") {
+            return (
+              <CodeBlock
+                key={index}
+                language={part.language || ""}
+                code={part.value}
+              />
+            );
           } else {
-            listStartNumber = 1;
+            return (
+              <React.Fragment key={index}>
+                {renderMarkdownText(part.value)}
+              </React.Fragment>
+            );
           }
-        }
-        const itemText = trimmed.replace(/^\d+\.\s/, "");
-        listItems.push(itemText);
-      }
-      // Empty Line
-      else if (trimmed === "") {
-        if (!insideList) {
-          flushList(idx);
-        }
-      }
-      // Regular Paragraph
-      else {
-        flushList(idx);
-        elements.push(
-          <p key={idx} className={styles.p}>
-            {renderInline(line)}
-          </p>,
-        );
-      }
-    });
-
-    // Flush any remaining list at the end
-    flushList(lines.length);
-
-    return elements;
-  };
-
-  return (
-    <div className={styles.prose}>
-      {parts.map((part, index) => {
-        if (part.type === "code") {
-          return (
-            <CodeBlock
-              key={index}
-              language={part.language || ""}
-              code={part.value}
-            />
-          );
-        } else {
-          return (
-            <React.Fragment key={index}>
-              {renderMarkdownText(part.value)}
-            </React.Fragment>
-          );
-        }
-      })}
-    </div>
-  );
-};
+        })}
+      </div>
+    );
+  },
+);

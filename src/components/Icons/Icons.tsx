@@ -42,14 +42,6 @@ export const MessageSquare = (props: IconProps) => (
   </SvgIcon>
 );
 
-export const Archive = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <polyline points="21 8 21 21 3 21 3 8" />
-    <rect x="1" y="3" width="22" height="5" />
-    <line x1="10" y1="12" x2="14" y2="12" />
-  </SvgIcon>
-);
-
 export const MoreVertical = (props: IconProps) => (
   <SvgIcon {...props}>
     <circle cx="12" cy="12" r="1" />
@@ -104,28 +96,6 @@ export const Save = (props: IconProps) => (
   </SvgIcon>
 );
 
-export const ArrowUp = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <line x1="12" y1="19" x2="12" y2="5" />
-    <polyline points="5 12 12 5 19 12" />
-  </SvgIcon>
-);
-
-export const StopCircle = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <circle cx="12" cy="12" r="10" />
-    <rect x="9" y="9" width="6" height="6" />
-  </SvgIcon>
-);
-
-export const Image = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-    <circle cx="8.5" cy="8.5" r="1.5" />
-    <polyline points="21 15 16 10 5 21" />
-  </SvgIcon>
-);
-
 export const Paperclip = (props: IconProps) => (
   <SvgIcon {...props}>
     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
@@ -147,12 +117,6 @@ export const ChevronRight = (props: IconProps) => (
 export const ChevronDown = (props: IconProps) => (
   <SvgIcon {...props}>
     <polyline points="6 9 12 15 18 9" />
-  </SvgIcon>
-);
-
-export const ChevronUp = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <polyline points="18 15 12 9 6 15" />
   </SvgIcon>
 );
 
@@ -183,50 +147,6 @@ export const Copy = (props: IconProps) => (
   </SvgIcon>
 );
 
-export const TerminalSquare = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-    <polyline points="8 10 12 14 8 18" />
-    <line x1="16" y1="18" x2="16" y2="18" />
-  </SvgIcon>
-);
-
-export const Code = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <polyline points="16 18 22 12 16 6" />
-    <polyline points="8 6 2 12 8 18" />
-  </SvgIcon>
-);
-
-export const CheckCircle2 = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="8 12 11 15 16 9" />
-  </SvgIcon>
-);
-
-export const XCircle = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <circle cx="12" cy="12" r="10" />
-    <line x1="15" y1="9" x2="9" y2="15" />
-    <line x1="9" y1="9" x2="15" y2="15" />
-  </SvgIcon>
-);
-
-export const Lock = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </SvgIcon>
-);
-
-export const Unlock = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-    <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-  </SvgIcon>
-);
-
 export const Bot = (props: IconProps) => (
   <SvgIcon {...props}>
     <rect x="3" y="11" width="18" height="10" rx="2" />
@@ -241,37 +161,6 @@ export const User = (props: IconProps) => (
   <SvgIcon {...props}>
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
-  </SvgIcon>
-);
-
-export const Play = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <polygon points="5 3 19 12 5 21 5 3" />
-  </SvgIcon>
-);
-
-export const Pause = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <rect x="6" y="4" width="4" height="16" />
-    <rect x="14" y="4" width="4" height="16" />
-  </SvgIcon>
-);
-
-export const Info = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="16" x2="12" y2="12" />
-    <line x1="12" y1="8" x2="12.01" y2="8" />
-  </SvgIcon>
-);
-
-export const FileText = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="16" y1="13" x2="8" y2="13" />
-    <line x1="16" y1="17" x2="8" y2="17" />
-    <polyline points="10 9 9 9 8 9" />
   </SvgIcon>
 );
 
@@ -304,22 +193,6 @@ export const Send = (props: IconProps) => (
 export const Square = (props: IconProps) => (
   <SvgIcon {...props}>
     <rect width="18" height="18" x="3" y="3" rx="2" />
-  </SvgIcon>
-);
-
-export const Terminal = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <polyline points="4 17 10 11 4 5" />
-    <line x1="12" x2="20" y1="19" y2="19" />
-  </SvgIcon>
-);
-
-export const DatabaseZap = (props: IconProps) => (
-  <SvgIcon {...props}>
-    <ellipse cx="12" cy="5" rx="9" ry="3" />
-    <path d="M3 5V19A9 3 0 0 0 15 21.84" />
-    <path d="M21 5V8.5" />
-    <path d="M21 12L18 17H22L19 22" />
   </SvgIcon>
 );
 

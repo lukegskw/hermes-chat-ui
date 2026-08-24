@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import type { ServerConfig } from "./config.js";
@@ -161,6 +161,8 @@ const parseIndex = (payload: unknown): AttachmentIndex => {
 
 export class AttachmentStore {
   private operationTail: Promise<void> = Promise.resolve();
+  private indexCache:
+    { index: AttachmentIndex; mtimeMs: number; size: number } | undefined;
 
   constructor(private readonly config: ServerConfig) {}
 
@@ -179,12 +181,42 @@ export class AttachmentStore {
   }
 
   private async loadIndex(): Promise<AttachmentIndex> {
-    return parseIndex(
-      await readJsonFile<unknown>(
-        this.config.attachmentsIndexFile,
-        emptyIndex(),
-      ),
-    );
+    try {
+      const metadata = await stat(this.config.attachmentsIndexFile);
+      if (
+        this.indexCache &&
+        this.indexCache.mtimeMs === metadata.mtimeMs &&
+        this.indexCache.size === metadata.size
+      ) {
+        return this.indexCache.index;
+      }
+      const index = parseIndex(
+        await readJsonFile<unknown>(
+          this.config.attachmentsIndexFile,
+          emptyIndex(),
+        ),
+      );
+      this.indexCache = {
+        index,
+        mtimeMs: metadata.mtimeMs,
+        size: metadata.size,
+      };
+      return index;
+    } catch {
+      const index = emptyIndex();
+      this.indexCache = { index, mtimeMs: 0, size: 0 };
+      return index;
+    }
+  }
+
+  private async writeIndex(index: AttachmentIndex): Promise<void> {
+    await writeJsonFileAtomic(this.config.attachmentsIndexFile, index);
+    const metadata = await stat(this.config.attachmentsIndexFile);
+    this.indexCache = {
+      index,
+      mtimeMs: metadata.mtimeMs,
+      size: metadata.size,
+    };
   }
 
   private blobPath(blobId: string): string {
@@ -243,7 +275,7 @@ export class AttachmentStore {
           text: extracted.text,
           createdAt,
         };
-        await writeJsonFileAtomic(this.config.attachmentsIndexFile, index);
+        await this.writeIndex(index);
         return groupId;
       } catch (error) {
         await Promise.all(
@@ -264,7 +296,7 @@ export class AttachmentStore {
       );
       for (const id of group.attachmentIds) delete index.attachments[id];
       delete index.pendingGroups[groupId];
-      await writeJsonFileAtomic(this.config.attachmentsIndexFile, index);
+      await this.writeIndex(index);
     });
   }
 
@@ -306,8 +338,7 @@ export class AttachmentStore {
         boundGroups.push(group.id);
         changed = true;
       }
-      if (changed)
-        await writeJsonFileAtomic(this.config.attachmentsIndexFile, index);
+      if (changed) await this.writeIndex(index);
       return boundGroups;
     });
   }
@@ -408,7 +439,7 @@ export class AttachmentStore {
       for (const group of Object.values(index.pendingGroups)) {
         if (group.sessionId === sessionId) delete index.pendingGroups[group.id];
       }
-      await writeJsonFileAtomic(this.config.attachmentsIndexFile, index);
+      await this.writeIndex(index);
     });
   }
 

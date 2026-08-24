@@ -101,7 +101,6 @@
   min-width: 0;
 }
 
-.messagesLoading,
 .historyError {
   margin: auto;
   color: s.$color-white;
@@ -255,12 +254,6 @@
   background-color: s.$color-bg;
   position: relative;
   z-index: 10;
-}
-
-.approvalCardWrapper {
-  max-width: 800px;
-  margin: 0 auto 16px;
-  width: 100%;
 }
 
 .attachmentPreviewStrip {

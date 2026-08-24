@@ -322,17 +322,16 @@ export const useChatState = () => {
     const controller = new AbortController();
     const initialize = async () => {
       const querySessionId = readSessionDeepLink(window.location.href);
-      let pendingSessionId = "";
       try {
-        pendingSessionId = (await readPendingSessionTarget())?.sessionId ?? "";
-      } catch {
-        // The URL remains a fallback when private browsing or an older WebKit
-        // implementation makes IndexedDB unavailable.
-      }
-      const requestedSessionId = querySessionId || pendingSessionId;
-      try {
-        await assertSessionCapabilities(endpoint);
-        const page = await loadFirstPage({ signal: controller.signal });
+        const pendingTarget = querySessionId
+          ? Promise.resolve(undefined)
+          : readPendingSessionTarget().catch(() => undefined);
+        const [, page, storedTarget] = await Promise.all([
+          assertSessionCapabilities(endpoint),
+          loadFirstPage({ signal: controller.signal }),
+          pendingTarget,
+        ]);
+        const requestedSessionId = querySessionId || storedTarget?.sessionId;
         if (requestedSessionId && !controller.signal.aborted) {
           let targetResolved = false;
           try {

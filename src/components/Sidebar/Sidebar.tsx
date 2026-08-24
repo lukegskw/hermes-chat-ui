@@ -7,10 +7,6 @@ import type { SelectFieldItem } from "../SelectField";
 import styles from "./Sidebar.module.scss";
 import { ConversationListItem } from "./ConversationListItem";
 
-export type Settings = {
-  systemPrompt?: string;
-};
-
 export type SidebarProps = {
   disabled?: boolean;
   isSidebarOpen: boolean;

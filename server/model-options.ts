@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import type { ServerConfig } from "./config.js";
 import { proxyHermes } from "./hermes-client.js";
@@ -33,6 +33,11 @@ const AGGREGATORS = ["openrouter", "opencode", "fireworks", "groq", "together"];
 
 type JsonObject = Record<string, unknown>;
 type ReasoningConfig = { enabled: boolean; effort?: string };
+
+const hermesConfigCache = new Map<
+  string,
+  { value: JsonObject; mtimeMs: number; size: number }
+>();
 
 const isObject = (value: unknown): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -122,11 +127,27 @@ export const effectiveReasoningDefault = (
 
 const loadHermesConfig = async (config: ServerConfig): Promise<JsonObject> => {
   try {
+    const metadata = await stat(config.hermesConfigPath);
+    const cached = hermesConfigCache.get(config.hermesConfigPath);
+    if (
+      cached &&
+      cached.mtimeMs === metadata.mtimeMs &&
+      cached.size === metadata.size
+    ) {
+      return cached.value;
+    }
     const payload: unknown = parseYaml(
       await readFile(config.hermesConfigPath, "utf8"),
     );
-    return isObject(payload) ? payload : {};
+    const value = isObject(payload) ? payload : {};
+    hermesConfigCache.set(config.hermesConfigPath, {
+      value,
+      mtimeMs: metadata.mtimeMs,
+      size: metadata.size,
+    });
+    return value;
   } catch {
+    hermesConfigCache.delete(config.hermesConfigPath);
     return {};
   }
 };
