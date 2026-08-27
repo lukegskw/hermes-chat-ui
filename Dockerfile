@@ -1,6 +1,6 @@
 # The UI is intentionally not derived from the Hermes image.  Hermes runs in
 # its own official container; this image contains only the SPA, BFF, and Push.
-FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS base
+FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH
 WORKDIR /app
@@ -17,7 +17,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 COPY . .
 RUN pnpm run build
 
-FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43
+FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
 ENV NODE_ENV=production \
     HERMES_STATIC_DIR=/app/static \
     HERMES_UI_DATA_DIR=/app/data \
