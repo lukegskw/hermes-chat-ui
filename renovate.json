@@ -11,5 +11,6 @@
     }
   ],
   "prHourlyLimit": 0,
-  "prConcurrentLimit": 0
+  "prConcurrentLimit": 0,
+  "minimumReleaseAge": "1 day"
 }
