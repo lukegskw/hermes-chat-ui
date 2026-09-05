@@ -336,7 +336,9 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
         run: |
-          INSTALLED_VERSION=$(npm exec --yes --package="${NPM_PACKAGE}@${RELEASE_VERSION}" -- hermes-chat-ui --version)
+          SMOKE_DIR=$(mktemp -d)
+          npm install --prefix "$SMOKE_DIR" "${NPM_PACKAGE}@${RELEASE_VERSION}"
+          INSTALLED_VERSION=$("$SMOKE_DIR/node_modules/.bin/hermes-chat-ui" --version)
           test "$INSTALLED_VERSION" = "$RELEASE_VERSION"
 
       - name: Create GitHub release
