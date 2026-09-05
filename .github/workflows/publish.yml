@@ -211,13 +211,54 @@ jobs:
           PUBLISHED_REVISION=$(docker image inspect "$IMAGE_REF" \
             --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')
           test "$PUBLISHED_REVISION" = "$RELEASE_COMMIT"
-          CONTAINER_DIGEST=$(docker buildx imagetools inspect "$IMAGE_REF" \
-            | awk '$1 == "Digest:" { print $2; exit }')
+          REGISTRY_TOKEN=$(curl --fail --silent --show-error --get \
+            "https://ghcr.io/token" \
+            --data-urlencode "scope=repository:${IMAGE_NAME}:pull" \
+            --data-urlencode "service=ghcr.io" \
+            | jq -r '.token')
+          CONTAINER_DIGEST=$(curl --fail --silent --show-error \
+            --dump-header - \
+            --output /dev/null \
+            --header "Authorization: Bearer $REGISTRY_TOKEN" \
+            --header "Accept: application/vnd.oci.image.index.v1+json" \
+            "https://ghcr.io/v2/${IMAGE_NAME}/manifests/${{ needs.release-check.outputs.release_version }}" \
+            | awk 'tolower($1) == "docker-content-digest:" { gsub("\\r", "", $2); print $2 }')
           test -n "$CONTAINER_DIGEST"
           echo "digest=$CONTAINER_DIGEST" >> "$GITHUB_OUTPUT"
 
+      - name: Check stable container aliases
+        id: aliases
+        if: ${{ !contains(needs.release-check.outputs.release_version, '-') }}
+        env:
+          EXPECTED_DIGEST: ${{ steps.verify_container.outputs.digest }}
+          RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
+        run: |
+          set -euo pipefail
+          REGISTRY_TOKEN=$(curl --fail --silent --show-error --get \
+            "https://ghcr.io/token" \
+            --data-urlencode "scope=repository:${IMAGE_NAME}:pull" \
+            --data-urlencode "service=ghcr.io" \
+            | jq -r '.token')
+          registry_digest() {
+            curl --fail --silent --show-error \
+              --dump-header - \
+              --output /dev/null \
+              --header "Authorization: Bearer $REGISTRY_TOKEN" \
+              --header "Accept: application/vnd.oci.image.index.v1+json" \
+              "https://ghcr.io/v2/${IMAGE_NAME}/manifests/$1" \
+              | awk 'tolower($1) == "docker-content-digest:" { gsub("\\r", "", $2); print $2 }'
+          }
+          MATCH=true
+          for tag in "${RELEASE_VERSION%.*}" latest; do
+            DIGEST=$(registry_digest "$tag") || DIGEST=""
+            if [ "$DIGEST" != "$EXPECTED_DIGEST" ]; then
+              MATCH=false
+            fi
+          done
+          echo "match=$MATCH" >> "$GITHUB_OUTPUT"
+
       - name: Restore stable container aliases
-        if: steps.container.outputs.exists == 'true' && !contains(needs.release-check.outputs.release_version, '-')
+        if: steps.container.outputs.exists == 'true' && !contains(needs.release-check.outputs.release_version, '-') && steps.aliases.outputs.match != 'true'
         env:
           RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
         run: |
@@ -231,15 +272,25 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
         run: |
-          VERSION_DIGEST=$(docker buildx imagetools inspect \
-            "${REGISTRY}/${IMAGE_NAME}:${RELEASE_VERSION}" \
-            | awk '$1 == "Digest:" { print $2; exit }')
-          MINOR_DIGEST=$(docker buildx imagetools inspect \
-            "${REGISTRY}/${IMAGE_NAME}:${RELEASE_VERSION%.*}" \
-            | awk '$1 == "Digest:" { print $2; exit }')
-          LATEST_DIGEST=$(docker buildx imagetools inspect \
-            "${REGISTRY}/${IMAGE_NAME}:latest" \
-            | awk '$1 == "Digest:" { print $2; exit }')
+          set -euo pipefail
+          REGISTRY_TOKEN=$(curl --fail --silent --show-error --get \
+            "https://ghcr.io/token" \
+            --data-urlencode "scope=repository:${IMAGE_NAME}:pull" \
+            --data-urlencode "service=ghcr.io" \
+            | jq -r '.token')
+          registry_digest() {
+            curl --fail --silent --show-error \
+              --dump-header - \
+              --output /dev/null \
+              --header "Authorization: Bearer $REGISTRY_TOKEN" \
+              --header "Accept: application/vnd.oci.image.index.v1+json" \
+              "https://ghcr.io/v2/${IMAGE_NAME}/manifests/$1" \
+              | awk 'tolower($1) == "docker-content-digest:" { gsub("\\r", "", $2); print $2 }'
+          }
+          VERSION_DIGEST=$(registry_digest "$RELEASE_VERSION")
+          MINOR_DIGEST=$(registry_digest "${RELEASE_VERSION%.*}")
+          LATEST_DIGEST=$(registry_digest latest)
+          test -n "$VERSION_DIGEST"
           test "$VERSION_DIGEST" = "$MINOR_DIGEST"
           test "$VERSION_DIGEST" = "$LATEST_DIGEST"
 
