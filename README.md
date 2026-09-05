@@ -1,290 +1,150 @@
 <div align="center">
   <img src="public/icon.png" alt="Hermes Chat UI Logo" width="150" />
   <h1>Hermes Chat UI</h1>
-  <p>A self-hosted web UI for <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>, packaged for Docker and NAS deployments.</p>
-
+  <p>Use the Hermes Agent on your NAS or server from your phone and browser.</p>
   <p>
-    <a href="https://github.com/lukegskw/hermes-chat-ui/pkgs/container/hermes-chat-ui"><img src="https://img.shields.io/badge/GHCR%20Image-Available-blue" alt="Docker Package" /></a>
-    <a href="https://github.com/NousResearch/hermes-agent"><img src="https://img.shields.io/badge/Powered%20by-Hermes%20Agent-FF8702.svg" alt="Powered by Hermes Agent" /></a>
-    <a href="https://github.com/lukegskw/hermes-chat-ui/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
+    <a href="https://github.com/lukegskw/hermes-chat-ui/pkgs/container/hermes-chat-ui">Docker image</a> ·
+    <a href="docs/mobile.md">Phone setup</a> ·
+    <a href="docs/demo.md">Try the workflow</a> ·
+    <a href="LICENSE">MIT license</a>
   </p>
 </div>
 
-## Why this project exists
+Send a task, leave the app, and return to the conversation from a completion
+notification. Hermes Chat UI is a self-hosted web/PWA client for one trusted
+user, with the same session history as the [official Hermes Agent](https://github.com/NousResearch/hermes-agent).
 
-Hermes Chat UI provides a customizable interface that can run entirely on private infrastructure (e.g. NAS). It is deployed separately from the official Hermes Agent image: Hermes owns the runtime, tools, dashboard and canonical session data; this project owns the web/PWA and a minimal browser-facing backend.
+The agent runs in its own container or existing installation. The UI connects
+to its official API; it does not install a modified Hermes runtime.
 
 <div align="center">
-  <img src="docs/assets/screenshot-1.png" alt="Hermes Chat UI in action" width="800" />
+  <img src="docs/assets/screenshot-1.png" alt="Hermes Chat UI showing a conversation, tool activity, and model selection" width="680" />
 </div>
 
-## Features
+## What you can do
 
-- Installable Progressive Web App for desktop and mobile.
-- Responsive, mobile-first interface.
-- Real-time answer, reasoning, and tool-activity streaming.
-- Multiple inline images, automatically resized before submission, preserved across refreshes/restarts, and expandable in a responsive lightbox.
-- Model selection and per-session model persistence.
-- Canonical Hermes history: sessions created by this UI, the CLI, dashboard, cron, and other integrations appear together.
-- Multiple pinned chats with desktop and touch-friendly rename/delete actions.
-- Paginated session list suitable for long-lived installations.
-- Lazy conversation history in 30-message visual pages with anchored upward scrolling.
-- Background completion and Web Push support.
+- Install the PWA on desktop or mobile and use a responsive chat interface.
+- Follow streamed answers, reasoning, and tool activity.
+- Send multiple images and reopen them after refreshing or restarting the UI.
+- Browse Hermes sessions from the UI, CLI, dashboard, cron, and other integrations.
+- Pin and rename chats, choose a model per session, and load older history in pages.
+- Leave the browser while a response runs, then receive Web Push and reopen that chat.
 
-## Session data and deletion
+Completion notifications require permission, HTTPS on your phone, and all UI
+windows to be in the background. UI and Hermes processes must remain running;
+a container restart can interrupt an unfinished response. See [phone setup](docs/mobile.md).
 
-Hermes Agent is the only source of truth for sessions and messages. The UI uses the official Hermes Sessions API and does not maintain a second chat database or access Hermes SQLite tables directly. Because Hermes may omit submitted image data from persisted history, the UI keeps only its own image blobs and a message-ID association index under `/app/data/attachments`.
+## Start with your existing Hermes
 
-This has two important consequences:
+You need Docker Compose v2 and a working Hermes API with the session and model
+capabilities listed in [compatibility](docs/installation.md#compatibility).
+The published image currently targets **Linux amd64**. For an ARM host, use the
+[source build](docs/installation.md#build-from-source) unless the selected
+published tag advertises your architecture.
 
-1. A session created outside this UI is visible here.
-2. Deleting a session here permanently deletes the canonical Hermes session, so it disappears from the CLI, dashboard, cron, and every other Hermes interface. After Hermes confirms the deletion, the UI also removes that session's locally retained images.
-
-Bulk deletion is intentionally unavailable.
-
-## Architecture
-
-```mermaid
-graph LR
-    Browser[Browser / PWA] -->|HTTP :8643| Proxy[Chat UI BFF]
-    Proxy -->|Bearer token, internal HTTP :8642| API[Official Hermes API]
-    Proxy -->|read-only model defaults| Config[Hermes config.yaml]
-    Proxy -->|image blobs and safe ID index| UIData[UI /app/data]
-    API --> DB[(Hermes state database)]
-    API <--> Agent[Hermes Agent]
-    Agent <--> LLM[Local or remote LLM]
-    Agent <--> Tools[Tools and integrations]
-```
-
-The browser communicates only with the proxy on the UI origin. The proxy injects `API_SERVER_KEY` server-side, so the Hermes bearer token is never included in browser JavaScript. At startup, the UI checks `/v1/capabilities` and requires Hermes session resources, session chat, and streaming support.
-
-### Media limits
-
-Images are compressed as a group. The final request is kept below the Hermes API's approximately 10 MB request limit. If all selected images cannot fit after compression, the UI sends none of them and keeps the draft intact. Images sent after this feature is deployed are copied into the mounted UI `/app/data` volume; already-lost historical images cannot be recovered.
-
-#### NAS permissions for the read-only Hermes configuration
-
-The UI image runs as UID `10001`. When the Hermes configuration directory is
-not traversable/readable by that UID, grant the UI process only the minimum
-read access it needs; this does **not** make the mount writable:
+Run these commands on the machine that will host the UI:
 
 ```bash
-sudo setfacl -m u:10001:rx /volume2/docker_ssd/hermes/config
-sudo setfacl -m u:10001:r /volume2/docker_ssd/hermes/config/config.yaml
+mkdir hermes-chat-ui-deploy
+cd hermes-chat-ui-deploy
+curl -fSLo docker-compose.ui.yml https://raw.githubusercontent.com/lukegskw/hermes-chat-ui/main/docker-compose.ui.example.yml
+curl -fSLo .env https://raw.githubusercontent.com/lukegskw/hermes-chat-ui/main/.env.example
+chmod 600 .env
 ```
 
-Use the file-only read-only mount in the UI Compose:
+Edit `.env`: set `API_SERVER_KEY` to your **existing Hermes API key** and
+`HERMES_API_URL` to a URL reachable from the UI container.
 
-```yaml
-- /volume2/docker_ssd/hermes/config/config.yaml:/hermes-config/config.yaml:ro
-```
-
-Repeat the file ACL command if Hermes replaces `config.yaml` during a
-configuration migration. Do not use `chmod 644` as a workaround: it would make
-the configuration readable by every local account.
-
-## Quick start with Docker Compose
-
-1. Download the examples:
+If Hermes already runs in Docker, join both services to a shared network. For
+example, with a Hermes container named `hermes-agent`:
 
 ```bash
-curl -O https://raw.githubusercontent.com/lukegskw/hermes-chat-ui/main/docker-compose.hermes-agent.example.yml
-curl -O https://raw.githubusercontent.com/lukegskw/hermes-chat-ui/main/docker-compose.ui.example.yml
-curl -O https://raw.githubusercontent.com/lukegskw/hermes-chat-ui/main/.env.example
+docker network inspect hermes-internal >/dev/null 2>&1 || docker network create hermes-internal
+# Only needed if the Hermes container is not already on this network:
+docker network connect hermes-internal hermes-agent
 ```
 
-2. Create local configuration files:
+With that container name, the default `HERMES_API_URL=http://hermes-agent:8642`
+is correct. Ensure its API is enabled, bound to `0.0.0.0` **inside the container**,
+and uses the same key. Add the external network to your Hermes Compose as shown
+in the [installation guide](docs/installation.md#existing-hermes-in-docker)
+so the connection survives container recreation.
+
+Start the UI using the published image; no source checkout or local build is needed:
 
 ```bash
-cp docker-compose.hermes-agent.example.yml docker-compose.hermes-agent.yml
-cp docker-compose.ui.example.yml docker-compose.ui.yml
-cp .env.example .env
+docker compose -f docker-compose.ui.yml pull
+docker compose -f docker-compose.ui.yml up -d
 ```
 
-3. Edit `.env`. At minimum, replace `API_SERVER_KEY=changeme` with a strong random value and configure Hermes/model credentials according to the [official Hermes Agent documentation](https://github.com/NousResearch/hermes-agent).
+Open **http://localhost:8643 on the Docker host**, send a message, and confirm
+that you can reopen its conversation. If Docker runs on a NAS or remote server,
+continue with [HTTPS access from your phone or laptop](docs/mobile.md).
 
-   Before production, test the selected Hermes image without changing it:
+- **No Hermes yet?** Follow [new Hermes installation](docs/installation.md#new-hermes-installation).
+- **Hermes runs outside Docker or on another host?** See [connection options](docs/installation.md#hermes-outside-docker).
+- **Connection failed?** Run the [read-only connection check](docs/installation.md#check-the-connection).
+- **Already installed an older example?** Read [upgrade existing deployments](docs/installation.md#upgrade-existing-deployments) before replacing mounts.
 
-   ```bash
-   HERMES_CONTRACT_URL=http://your-nas:8642 \
-   HERMES_CONTRACT_API_KEY="$API_SERVER_KEY" \
-   .venv/bin/python scripts/check-hermes-contract.py
-   ```
+## Try the everyday workflow
 
-4. Start Hermes first. It creates the shared private Docker network:
+1. Open the installed PWA and submit a task that takes long enough to leave the app.
+2. Put the app in the background; Hermes continues while the server processes stay running.
+3. Tap the completion notification to reopen the same conversation.
+4. Open the UI on your computer and find the conversation in Hermes history.
 
-```bash
-docker compose -f docker-compose.hermes-agent.yml up -d
-```
+The [demo walkthrough](docs/demo.md) includes a sample prompt and a short feedback
+checklist. It is a workflow to try on your installation, not a claim of verified
+push delivery on every phone.
 
-5. Start the UI separately:
+## Data and access
 
-```bash
-docker compose -f docker-compose.ui.yml up -d --build
-```
+The examples bind host ports to `127.0.0.1`. The UI has **no built-in login or
+multi-user isolation**. Use private access such as the [Tailscale Serve guide](docs/mobile.md)
+or an authenticated reverse proxy with TLS. Anyone allowed to access the UI
+can use the agent and read or delete its sessions; dashboard credentials do not
+protect the UI.
 
-6. Open `http://localhost:8643`. The native Hermes dashboard is available at `http://localhost:9119` when enabled.
+Hermes owns the session database. **Deleting a conversation here permanently
+deletes the canonical Hermes session**, including its history in other clients.
+The UI volume stores image attachments, push keys/subscriptions, and proactive
+request records. Keep both Hermes data and UI data when upgrading.
 
-The two Compose files start independent containers joined only by the private
-`hermes-internal` network. No file, plugin, startup hook, or project component
-is added to `hermes-agent`; its existing `/opt/data` volume remains the
-canonical state.
-
-## Configuration
-
-### Ports and API
-
-| Variable                | Description                                                            | Default   |
-| ----------------------- | ---------------------------------------------------------------------- | --------- |
-| `PROXY_PORT`            | Host port for the UI and TypeScript BFF                                | `8643`    |
-| `BACKEND_PORT`          | Host port for the native Hermes API                                    | `8642`    |
-| `DASHBOARD_PORT`        | Host and container port for the Hermes dashboard                       | `9119`    |
-| `API_SERVER_ENABLED`    | Enable the Hermes native API; must remain enabled                      | `true`    |
-| `API_SERVER_KEY`        | Required bearer key shared by Hermes and the UI BFF, never the browser | none      |
-| `API_SERVER_HOST`       | Hermes API bind address inside the container                           | `0.0.0.0` |
-| `API_SERVER_PORT`       | Hermes API port inside the container                                   | `8642`    |
-| `API_SERVER_MODEL_NAME` | Optional model name reported by the API                                | none      |
-
-### Dashboard
-
-| Variable                               | Description                          | Default |
-| -------------------------------------- | ------------------------------------ | ------- |
-| `HERMES_DASHBOARD`                     | Enable the official Hermes dashboard | `1`     |
-| `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` | Dashboard username                   | none    |
-| `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` | Dashboard password                   | none    |
-| `HERMES_DASHBOARD_BASIC_AUTH_SECRET`   | Stable dashboard auth secret         | none    |
-
-### Optional integrations
-
-| Variable              | Description                                                   | Default                   |
-| --------------------- | ------------------------------------------------------------- | ------------------------- |
-| `HASS_URL`            | Home Assistant URL                                            | none                      |
-| `HASS_TOKEN`          | Home Assistant long-lived access token                        | none                      |
-| `GITHUB_TOKEN`        | GitHub personal access token used by Hermes tools             | none                      |
-| `VAPID_SUBJECT`       | Contact URI used for Web Push                                 | `mailto:push@example.com` |
-| `HERMES_PUSH_API_KEY` | Required dedicated bearer key for proactive-message endpoints | none                      |
-
-### Proactive messages from Hermes
-
-Proactive automation creates a new canonical Hermes conversation containing
-the supplied final assistant text, then sends Web Push. The script talks to the
-separate UI container over Docker DNS;
-Generate a dedicated internal key:
-
-```bash
-openssl rand -hex 32
-```
-
-Set that value as `HERMES_PUSH_API_KEY` for both Compose projects. The UI also
-receives the same dashboard username/password already configured for Hermes,
-plus `HERMES_DASHBOARD_URL=http://hermes-agent:9119`. These credentials stay in
-the BFF and are used only to call the official session-import operation; they
-are never exposed to browser JavaScript.
-
-Keep the caller script with the Hermes-managed skill or automation that owns
-the notification. This repository intentionally does not install or maintain
-that script. The only required integration contract is one authenticated
-request to:
-
-```text
-http://hermes-chat-ui:8643/api/proactive/messages
-```
-
-Example from the Hermes container environment:
-
-```bash
-python3 /opt/data/skills/proactive-message/notify.py \
-  "Backup completed successfully." "NAS backup"
-```
-
-If session import fails, push is still attempted and its body explicitly says
-that the conversation was not saved. Successful notifications link directly
-to the newly imported Hermes session. The service worker persists that session
-target before opening or focusing the PWA, so iOS can recover it after either a
-suspended-app resume or a cold start. The UI keeps bounded request-id records in
-`/app/data/proactive_requests.json` so an ordinary retry cannot duplicate a
-completed import or push.
-
-## Security
-
-This project is designed for one trusted user on a private network. The UI proxy itself is not a multi-user authentication layer.
-
-> [!WARNING]
-> Do not expose ports `8642`, `8643`, or `9119` directly to the public internet. Use Tailscale, a VPN, or a properly configured authenticated reverse proxy with TLS. Set dashboard credentials whenever the dashboard is reachable by another machine.
-
-Keep `.env` out of version control, use a strong `API_SERVER_KEY`, and restrict access to the Hermes `/opt/data` and UI `/app/data` volumes. The example pins an image digest candidate; validate its capability contract and pin the tested digest before production.
-
-## Troubleshooting
-
-### “Sessions API unavailable”
-
-The bundled or externally configured Hermes instance is too old or does not advertise the required capability flags. Update Hermes; this UI does not fall back to its former database.
-
-### Sessions are missing
-
-Confirm that the UI proxy and the CLI/dashboard use the same `/opt/data` volume. The UI requests sessions from every source and includes child sessions. Use “Load more” when more than 50 sessions exist.
-
-### `401` or `403` from Hermes
-
-Confirm that `API_SERVER_KEY` is set once in `.env` and passed to the container. The browser should never be configured with this key.
-
-### The UI cannot reach Hermes
-
-Check container logs and verify that `API_SERVER_ENABLED=true` and `API_SERVER_PORT` matches the container-side API port. In the split Compose topology the UI connects to `http://hermes-agent:8642` on the private Docker network.
-
-### `Stored system prompt ... is null`
-
-This warning is emitted by Hermes itself, not by the UI BFF. A session row has
-messages but no cached assembled system prompt, so Hermes rebuilds that prompt,
-continues the turn, and attempts to persist it with `update_system_prompt`.
-The immediate effect is a prefix-cache miss for that turn, not lost chat
-history. The UI sends every message in a chat to the same canonical session and
-does not write Hermes' internal assembled prompt.
-
-One warning when an older session is first resumed can therefore self-heal. If
-the same session ID warns on every turn, inspect adjacent Hermes logs for
-`Session DB update_system_prompt failed`; that indicates an upstream database
-write/path problem. This client deliberately does not patch that private field
-or add code to the official Hermes container.
-
-### The PWA badge does not appear on iPhone
-
-Install the app on the Home Screen, allow notifications, and verify the iOS version supports Home Screen web-app badges. The app cannot override a system-level notification or badge preference.
+Self-hosting the interface does not make model or tool requests local. Web Push
+also uses the browser/OS push service. See [architecture and advanced operation](docs/advanced.md)
+for storage, media limits, optional configuration, and proactive automation.
 
 ## Local development
 
-Prerequisites:
-
-- Node.js 24
-- pnpm 11.22.0 (the project pin can be activated with Corepack)
-- A current Hermes Agent API exposing the Sessions API
-
-Install dependencies and start the frontend:
+Prerequisites: Node.js 24, pnpm 11.25.0 (pinned in `package.json`), and a compatible
+Hermes API.
 
 ```bash
 corepack enable
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --ignore-scripts
 pnpm run dev
 ```
 
-In another terminal, start the TypeScript BFF:
+In another terminal:
 
 ```bash
 API_SERVER_KEY=your-key \
 HERMES_API_URL=http://127.0.0.1:8642 \
 HERMES_PROXY_PORT=8643 \
+HERMES_UI_DATA_DIR=./hermes-ui.local \
 pnpm run dev:server
 ```
 
-The Vite app connects to the BFF on port `8643` during development. Run
-`pnpm test`, `pnpm run type-check`, `pnpm run lint`, and `pnpm run build` before
-submitting a change. The production image contains only Node.js, the compiled
-TypeScript server, and the built SPA; Python is not installed.
+Vite connects to the BFF on port `8643`. Before submitting changes, run:
 
-## Contributing
+```bash
+pnpm lint
+pnpm type-check
+pnpm test
+pnpm build
+```
 
-Contributions are welcome. Please preserve strict TypeScript safety, test UI changes in English and Portuguese, and avoid adding a second session persistence path.
+Contributions are welcome. Preserve TypeScript safety, check UI changes in
+English and Portuguese, and keep Hermes as the only session source of truth.
 
-## License
-
-Licensed under the MIT License. See [LICENSE](LICENSE).
+Licensed under the [MIT License](LICENSE).

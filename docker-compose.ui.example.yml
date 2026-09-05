@@ -1,32 +1,23 @@
 services:
   hermes-chat-ui:
-    build:
-      context: .
-    image: hermes-chat-ui:local
-    container_name: hermes-chat-ui
+    image: ${HERMES_UI_IMAGE:-ghcr.io/lukegskw/hermes-chat-ui:latest}
     restart: unless-stopped
     ports:
-      - "${PROXY_PORT:-8643}:8643"
+      - "${UI_BIND_ADDRESS:-127.0.0.1}:${PROXY_PORT:-8643}:8643"
     environment:
-      - HERMES_API_URL=http://hermes-agent:${API_SERVER_PORT:-8642}
-      - HERMES_API_KEY=${API_SERVER_KEY}
-      - HERMES_PROXY_PORT=8643
-      - HERMES_UI_DATA_DIR=/app/data
-      - HERMES_UI_HERMES_CONFIG=/hermes-config/config.yaml
-      - SUBSCRIPTIONS_FILE=/app/data/push_subscriptions.json
-      - VAPID_KEYS_FILE=/app/data/vapid_keys.json
-      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:push@example.com}
-      - HERMES_PUSH_API_KEY=${HERMES_PUSH_API_KEY}
-      - PROACTIVE_REQUESTS_FILE=/app/data/proactive_requests.json
-      - HERMES_DASHBOARD_URL=http://hermes-agent:${HERMES_DASHBOARD_PORT:-9119}
-      - HERMES_DASHBOARD_AUTH_PROVIDER=${HERMES_DASHBOARD_AUTH_PROVIDER:-basic}
-      - HERMES_DASHBOARD_BASIC_AUTH_USERNAME=${HERMES_DASHBOARD_BASIC_AUTH_USERNAME}
-      - HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=${HERMES_DASHBOARD_BASIC_AUTH_PASSWORD}
+      HERMES_API_URL: ${HERMES_API_URL:-http://hermes-agent:8642}
+      HERMES_API_KEY: ${API_SERVER_KEY:?Set API_SERVER_KEY in .env to your Hermes API key}
+      HERMES_PROXY_PORT: "8643"
+      HERMES_UI_DATA_DIR: /app/data
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:push@example.com}
+      # Optional: only needed for proactive automation, not chat completion push.
+      HERMES_PUSH_API_KEY: ${HERMES_PUSH_API_KEY:-}
+      HERMES_DASHBOARD_URL: ${HERMES_DASHBOARD_URL:-}
+      HERMES_DASHBOARD_AUTH_PROVIDER: ${HERMES_DASHBOARD_AUTH_PROVIDER:-basic}
+      HERMES_DASHBOARD_BASIC_AUTH_USERNAME: ${HERMES_DASHBOARD_BASIC_AUTH_USERNAME:-}
+      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: ${HERMES_DASHBOARD_BASIC_AUTH_PASSWORD:-}
     volumes:
-      # Only the non-secret model/reasoning projection is read from config.yaml.
-      # The file is never exposed directly to the browser.
-      - /volume2/docker_ssd/hermes/config/config.yaml:/hermes-config/config.yaml:ro
-      - /volume2/docker_ssd/hermes-chat-ui/data:/app/data
+      - ui-data:/app/data
     read_only: true
     tmpfs:
       - /tmp:uid=10001,gid=10001,mode=1777
@@ -35,8 +26,10 @@ services:
       - no-new-privileges:true
     networks: [hermes-internal]
 
-# Created by docker-compose.hermes-agent.example.yml.
+volumes:
+  ui-data:
+
 networks:
   hermes-internal:
     external: true
-    name: hermes-internal
+    name: ${HERMES_NETWORK:-hermes-internal}

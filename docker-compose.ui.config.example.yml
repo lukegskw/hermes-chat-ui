@@ -1,0 +1,11 @@
+# Optional overlay for displaying configured model/reasoning defaults.
+# Use together with docker-compose.ui.yml. The source must be an existing file.
+services:
+  hermes-chat-ui:
+    volumes:
+      - type: bind
+        source: ${HERMES_CONFIG_FILE:?Set HERMES_CONFIG_FILE to an existing config.yaml}
+        target: /hermes-config/config.yaml
+        read_only: true
+        bind:
+          create_host_path: false
