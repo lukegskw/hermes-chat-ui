@@ -4,9 +4,11 @@
 
 ## Compatibility
 
-Use Docker Engine with Compose v2. The published UI `latest` manifest inspected
-on 2026-09-05 contains `linux/amd64`. On ARM, use a [source build](#build-from-source)
-or a published tag that explicitly includes your architecture.
+Use Docker Engine with Compose v2. Builds from this revision publish the UI for
+`linux/amd64` and `linux/arm64`. The `latest` manifest inspected before this
+change on 2026-09-05 contained only amd64; older tags can remain single-platform.
+On an unsupported architecture, select a compatible tag or use a
+[source build](#build-from-source).
 
 Hermes must already be able to answer a message with your chosen model. Its
 `GET /v1/capabilities` response must include these `features` set to `true`:
@@ -24,11 +26,14 @@ The response must also advertise endpoint paths for `sessions`, `session_create`
 `session_model_lock`. The UI uses `/api/sessions` and `/api/model/options`; an
 OpenAI-compatible `/v1/chat/completions` endpoint alone is insufficient.
 
-There is no verified minimum Hermes release number in this repository. The
-optional Hermes Compose preserves the previous image digest as a candidate;
-run the check below against your selected image and verify a real conversation
-before treating it as a tested deployment. Set `HERMES_IMAGE` to a compatible
-tag/digest if the candidate fails. See the [official API documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server/).
+The Hermes image pinned in the optional Compose is Hermes **0.21.0** at digest
+`sha256:5d8b173e746ab53d0cbad44c1ea4c6d048f2d3a17ff5af1af0ae3033d29cb1b4`.
+On 2026-09-05 it passed the read-only diagnostic plus session creation, streamed
+chat, canonical history, and deletion through the UI on arm64. The chat test used
+a disposable local OpenAI-compatible model fixture, so it verifies the client
+contract without certifying an external model provider. Newer Hermes versions
+should be checked with the command below because this API can evolve. See the
+[official API documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server/).
 
 ## Existing Hermes in Docker
 
@@ -152,40 +157,18 @@ if you also want scheduled tasks to create notification conversations.
 
 ## Check the connection
 
-This check runs **inside the UI container**, uses its configured API key, reads
-only capabilities/models/session metadata, and prints no keys or conversations.
-It does not create sessions or call a model. Run it from the deployment directory:
+This command runs **inside the UI container**, uses its configured API key, and
+validates the exact capabilities, model catalog, and session-list response shapes
+used by the browser. It prints no keys or conversations, creates no sessions,
+and calls no model. Run it from the deployment directory:
 
 ```bash
-docker compose -f docker-compose.ui.yml exec -T hermes-chat-ui node --input-type=module <<'JS'
-const base = process.env.HERMES_API_URL.replace(/\/$/, '');
-const headers = { Authorization: `Bearer ${process.env.HERMES_API_KEY}` };
-try {
-  const read = async (path) => {
-    const response = await fetch(base + path, { headers, signal: AbortSignal.timeout(10000) });
-    if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
-    return response.json();
-  };
-  const capabilities = await read('/v1/capabilities');
-  const features = ['session_resources', 'session_chat', 'session_chat_streaming', 'model_options', 'session_model_lock'];
-  const endpoints = ['sessions', 'session_create', 'session_delete', 'session_messages', 'session_chat_stream', 'model_options', 'session_model_lock'];
-  const missing = [
-    ...features.filter(name => capabilities.features?.[name] !== true),
-    ...endpoints.filter(name => typeof capabilities.endpoints?.[name]?.path !== 'string'),
-  ];
-  if (missing.length) throw new Error(`Missing capabilities: ${missing.join(', ')}`);
-  await read('/api/model/options');
-  await read('/api/sessions?limit=1');
-  console.log('OK: Hermes API authentication, capabilities, models, and sessions are reachable.');
-} catch (error) {
-  console.error(`Connection check failed: ${error.message}`);
-  process.exitCode = 1;
-}
-JS
+docker compose -f docker-compose.ui.yml exec -T hermes-chat-ui \
+  node /app/dist-server/check-hermes.js
 ```
 
-An `OK` confirms these read operations. Send a message in the UI to verify the
-model and streaming; this check does not certify every API behavior. The UI's
+All four lines should report `PASS`. Send a message in the UI to verify the
+model and streaming; the command does not certify every API behavior. The UI's
 `/api/health` endpoint reports only that the UI server is alive, not that Hermes
 is ready.
 

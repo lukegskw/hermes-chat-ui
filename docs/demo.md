@@ -7,6 +7,12 @@ a recorded demonstration or a claim that every device combination has been teste
 You need a configured Hermes model, the installed PWA, and working notification
 permissions. Model requests use your configured provider and may incur usage costs.
 
+<div align="center">
+  <img src="assets/screenshot-2.jpg" alt="Hermes Chat Web Push test delivered on an iPhone lock screen" width="320" />
+  <br />
+  <sub>Web Push delivery verified on an iPhone; use the steps below to verify the complete task-to-conversation flow.</sub>
+</div>
+
 ## From a task to a notification
 
 1. Open the PWA on your phone and start a new conversation. Try this prompt:

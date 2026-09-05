@@ -1,7 +1,8 @@
 {
-  "name": "Hermes Agent Console",
+  "id": "/",
+  "name": "Hermes Chat UI",
   "short_name": "Hermes Chat",
-  "description": "Interface premium e segura para conversação e controle autônomo local com o seu Hermes Agent.",
+  "description": "A self-hosted phone and browser client for Hermes Agent.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

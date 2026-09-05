@@ -30,6 +30,12 @@ to its official API; it does not install a modified Hermes runtime.
 - Pin and rename chats, choose a model per session, and load older history in pages.
 - Leave the browser while a response runs, then receive Web Push and reopen that chat.
 
+<div align="center">
+  <img src="docs/assets/screenshot-2.jpg" alt="Hermes Chat Web Push test delivered on an iPhone lock screen" width="320" />
+  <br />
+  <sub>A Web Push test delivered by the self-hosted UI on iPhone.</sub>
+</div>
+
 Completion notifications require permission, HTTPS on your phone, and all UI
 windows to be in the background. UI and Hermes processes must remain running;
 a container restart can interrupt an unfinished response. See [phone setup](docs/mobile.md).
@@ -38,9 +44,10 @@ a container restart can interrupt an unfinished response. See [phone setup](docs
 
 You need Docker Compose v2 and a working Hermes API with the session and model
 capabilities listed in [compatibility](docs/installation.md#compatibility).
-The published image currently targets **Linux amd64**. For an ARM host, use the
-[source build](docs/installation.md#build-from-source) unless the selected
-published tag advertises your architecture.
+Builds from this revision target **Linux amd64 and arm64**. Older image tags may
+contain only amd64; inspect the selected tag or use the
+[source build](docs/installation.md#build-from-source) if Docker reports that no
+matching manifest exists.
 
 Run these commands on the machine that will host the UI:
 
@@ -75,10 +82,13 @@ Start the UI using the published image; no source checkout or local build is nee
 ```bash
 docker compose -f docker-compose.ui.yml pull
 docker compose -f docker-compose.ui.yml up -d
+docker compose -f docker-compose.ui.yml exec -T hermes-chat-ui \
+  node /app/dist-server/check-hermes.js
 ```
 
-Open **http://localhost:8643 on the Docker host**, send a message, and confirm
-that you can reopen its conversation. If Docker runs on a NAS or remote server,
+The diagnostic should report four `PASS` lines. Then open
+**http://localhost:8643 on the Docker host**, send a message, and confirm that
+you can reopen its conversation. If Docker runs on a NAS or remote server,
 continue with [HTTPS access from your phone or laptop](docs/mobile.md).
 
 - **No Hermes yet?** Follow [new Hermes installation](docs/installation.md#new-hermes-installation).

@@ -23,6 +23,9 @@ ENV NODE_ENV=production \
     HERMES_UI_DATA_DIR=/app/data \
     HERMES_UI_HERMES_CONFIG=/hermes-config/config.yaml \
     HERMES_PROXY_PORT=8643
+LABEL org.opencontainers.image.source="https://github.com/lukegskw/hermes-chat-ui" \
+      org.opencontainers.image.description="Self-hosted phone and browser client for Hermes Agent" \
+      org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 
 COPY package.json ./
@@ -34,4 +37,6 @@ RUN mkdir -p /app/data \
 
 USER 10001:10001
 EXPOSE 8643
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:8643/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 CMD ["node", "/app/dist-server/index.js"]
