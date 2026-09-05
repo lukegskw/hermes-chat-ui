@@ -44,3 +44,13 @@ also pulls the container without saved registry credentials, starts it, checks
 
 The repository needs an `NPM_TOKEN` Actions secret authorized to publish the
 scoped public package. The workflow uses npm provenance and GitHub's OIDC token.
+
+If a release stops after creating its tag, push the workflow fix to `main` and
+resume the immutable release from that existing tag:
+
+```bash
+gh workflow run publish.yml --ref main -f release_tag=vX.Y.Z
+```
+
+The resumed workflow checks out the tagged commit and refuses Docker or npm
+artifacts whose recorded commit does not match it.

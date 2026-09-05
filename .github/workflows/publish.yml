@@ -3,6 +3,12 @@ name: Publish release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to resume, for example v0.1.0
+        required: true
+        type: string
 
 concurrency:
   group: release-${{ github.repository }}
@@ -21,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       container_tags: ${{ steps.release.outputs.container_tags }}
+      release_commit: ${{ steps.release.outputs.release_commit }}
       release_version: ${{ steps.release.outputs.release_version }}
       release_tag: ${{ steps.release.outputs.release_tag }}
       should_publish: ${{ steps.release.outputs.should_publish }}
@@ -29,16 +36,26 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.sha }}
 
       - name: Validate version and detect release
         id: release
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
           node scripts/check-distribution.mjs
           PACKAGE_VERSION=$(jq -r '.version' package.json)
           RELEASE_TAG="v$PACKAGE_VERSION"
+          RELEASE_COMMIT=$(git rev-parse HEAD)
 
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$REQUESTED_TAG" = "$RELEASE_TAG"
+          fi
+
+          echo "release_commit=$RELEASE_COMMIT" >> "$GITHUB_OUTPUT"
           echo "release_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
           echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
           {
@@ -53,7 +70,7 @@ jobs:
 
           if git rev-parse --quiet --verify "refs/tags/$RELEASE_TAG" > /dev/null; then
             TAG_COMMIT=$(git rev-list -n 1 "$RELEASE_TAG")
-            if [ "$TAG_COMMIT" = "$GITHUB_SHA" ]; then
+            if [ "$TAG_COMMIT" = "$RELEASE_COMMIT" ]; then
               echo "Tag $RELEASE_TAG already identifies this commit; resuming release."
               echo "should_publish=true" >> "$GITHUB_OUTPUT"
             else
@@ -77,6 +94,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.release-check.outputs.release_commit }}
 
       - name: Set up pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
@@ -111,11 +130,12 @@ jobs:
 
       - name: Create release tag
         env:
+          RELEASE_COMMIT: ${{ needs.release-check.outputs.release_commit }}
           RELEASE_TAG: ${{ needs.release-check.outputs.release_tag }}
         run: |
           if git ls-remote --exit-code origin "refs/tags/$RELEASE_TAG" > /dev/null 2>&1; then
             git fetch --no-tags origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
-            test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$GITHUB_SHA"
+            test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$RELEASE_COMMIT"
           else
             git tag "$RELEASE_TAG"
             git push origin "$RELEASE_TAG"
@@ -154,7 +174,7 @@ jobs:
           tags: ${{ needs.release-check.outputs.container_tags }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ needs.release-check.outputs.release_commit }}
             org.opencontainers.image.version=${{ needs.release-check.outputs.release_version }}
             org.opencontainers.image.licenses=MIT
           provenance: mode=max
@@ -166,10 +186,11 @@ jobs:
         id: verify_container
         env:
           IMAGE_REF: ghcr.io/${{ github.repository }}:${{ needs.release-check.outputs.release_version }}
+          RELEASE_COMMIT: ${{ needs.release-check.outputs.release_commit }}
         run: |
           set -euo pipefail
-          export DOCKER_CONFIG="$(mktemp -d)"
-          docker pull "$IMAGE_REF"
+          ANONYMOUS_DOCKER_CONFIG="$(mktemp -d)"
+          DOCKER_CONFIG="$ANONYMOUS_DOCKER_CONFIG" docker pull "$IMAGE_REF"
           docker run -d --name hermes-chat-ui-smoke \
             -e HERMES_API_URL=http://127.0.0.1:1 \
             -e HERMES_API_KEY=ci-smoke-minimum-key \
@@ -189,7 +210,7 @@ jobs:
           fi
           PUBLISHED_REVISION=$(docker image inspect "$IMAGE_REF" \
             --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')
-          test "$PUBLISHED_REVISION" = "$GITHUB_SHA"
+          test "$PUBLISHED_REVISION" = "$RELEASE_COMMIT"
           CONTAINER_DIGEST=$(docker buildx imagetools inspect "$IMAGE_REF" \
             | awk '$1 == "Digest:" { print $2; exit }')
           test -n "$CONTAINER_DIGEST"
@@ -224,12 +245,14 @@ jobs:
 
       - name: Check existing npm package
         id: npm
+        env:
+          RELEASE_COMMIT: ${{ needs.release-check.outputs.release_commit }}
         run: |
           STATUS=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             "https://registry.npmjs.org/@lukegskw/hermes-chat-ui/${{ needs.release-check.outputs.release_version }}")
           if [ "$STATUS" = "200" ]; then
             PUBLISHED_GIT_HEAD=$(npm view "${NPM_PACKAGE}@${{ needs.release-check.outputs.release_version }}" gitHead)
-            test "$PUBLISHED_GIT_HEAD" = "$GITHUB_SHA"
+            test "$PUBLISHED_GIT_HEAD" = "$RELEASE_COMMIT"
             echo "exists=true" >> "$GITHUB_OUTPUT"
           elif [ "$STATUS" = "404" ]; then
             echo "exists=false" >> "$GITHUB_OUTPUT"
