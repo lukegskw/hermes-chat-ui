@@ -6,11 +6,13 @@ const config = loadServerConfig();
 const server = serve(
   {
     fetch: createApp(config).fetch,
-    hostname: "0.0.0.0",
+    hostname: config.host,
     port: config.port,
   },
   (info) => {
-    console.info(`Hermes Chat UI listening on http://0.0.0.0:${info.port}`);
+    console.info(
+      `Hermes Chat UI listening on http://${config.host}:${info.port}`,
+    );
   },
 );
 

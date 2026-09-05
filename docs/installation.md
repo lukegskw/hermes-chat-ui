@@ -4,10 +4,9 @@
 
 ## Compatibility
 
-Use Docker Engine with Compose v2. Builds from this revision publish the UI for
-`linux/amd64` and `linux/arm64`. The `latest` manifest inspected before this
-change on 2026-09-05 contained only amd64; older tags can remain single-platform.
-On an unsupported architecture, select a compatible tag or use a
+Use Docker Engine with Compose v2. Release images publish the UI for
+`linux/amd64` and `linux/arm64`; older tags can remain single-platform. On an
+unsupported architecture, select a compatible tag or use a
 [source build](#build-from-source).
 
 Hermes must already be able to answer a message with your chosen model. Its
@@ -225,7 +224,7 @@ docker compose -f docker-compose.ui.yml up -d
 
 Use the overlay on both commands if enabled. Set `HERMES_UI_IMAGE` to a published
 version tag or image digest to hold a known working release. `latest` follows
-the default branch. Updates do not require `down -v`; that option deletes named
+the newest stable release. Updates do not require `down -v`; that option deletes named
 volumes. Reverting the UI image does not restore deleted Hermes sessions.
 
 ## Build from source

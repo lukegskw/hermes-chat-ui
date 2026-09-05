@@ -1,0 +1,297 @@
+name: Publish release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  NPM_PACKAGE: "@lukegskw/hermes-chat-ui"
+
+jobs:
+  release-check:
+    runs-on: ubuntu-latest
+    outputs:
+      container_tags: ${{ steps.release.outputs.container_tags }}
+      release_version: ${{ steps.release.outputs.release_version }}
+      release_tag: ${{ steps.release.outputs.release_tag }}
+      should_publish: ${{ steps.release.outputs.should_publish }}
+    steps:
+      - name: Check out repository and tags
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate version and detect release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-distribution.mjs
+          PACKAGE_VERSION=$(jq -r '.version' package.json)
+          RELEASE_TAG="v$PACKAGE_VERSION"
+
+          echo "release_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          {
+            echo "container_tags<<EOF"
+            echo "${REGISTRY}/${IMAGE_NAME}:$PACKAGE_VERSION"
+            if [[ "$PACKAGE_VERSION" != *-* ]]; then
+              echo "${REGISTRY}/${IMAGE_NAME}:${PACKAGE_VERSION%.*}"
+              echo "${REGISTRY}/${IMAGE_NAME}:latest"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if git rev-parse --quiet --verify "refs/tags/$RELEASE_TAG" > /dev/null; then
+            TAG_COMMIT=$(git rev-list -n 1 "$RELEASE_TAG")
+            if [ "$TAG_COMMIT" = "$GITHUB_SHA" ]; then
+              echo "Tag $RELEASE_TAG already identifies this commit; resuming release."
+              echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "Version $PACKAGE_VERSION was already released from commit $TAG_COMMIT."
+              echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "Version $PACKAGE_VERSION has not been released yet."
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    needs: release-check
+    if: needs.release-check.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm type-check
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Validate distribution metadata
+        run: pnpm test:distribution
+
+      - name: Smoke-test npm package
+        run: pnpm test:package
+
+      - name: Create release tag
+        env:
+          RELEASE_TAG: ${{ needs.release-check.outputs.release_tag }}
+        run: |
+          if git ls-remote --exit-code origin "refs/tags/$RELEASE_TAG" > /dev/null 2>&1; then
+            git fetch --no-tags origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+            test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$GITHUB_SHA"
+          else
+            git tag "$RELEASE_TAG"
+            git push origin "$RELEASE_TAG"
+          fi
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check existing container image
+        id: container
+        run: |
+          if docker manifest inspect "${REGISTRY}/${IMAGE_NAME}:${{ needs.release-check.outputs.release_version }}" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up QEMU
+        if: steps.container.outputs.exists != 'true'
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+
+      - name: Build and publish versioned container
+        if: steps.container.outputs.exists != 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ needs.release-check.outputs.container_tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.release-check.outputs.release_version }}
+            org.opencontainers.image.licenses=MIT
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify published container anonymously
+        id: verify_container
+        env:
+          IMAGE_REF: ghcr.io/${{ github.repository }}:${{ needs.release-check.outputs.release_version }}
+        run: |
+          set -euo pipefail
+          export DOCKER_CONFIG="$(mktemp -d)"
+          docker pull "$IMAGE_REF"
+          docker run -d --name hermes-chat-ui-smoke \
+            -e HERMES_API_URL=http://127.0.0.1:1 \
+            -e HERMES_API_KEY=ci-smoke-minimum-key \
+            "$IMAGE_REF"
+          HEALTHY=false
+          for attempt in $(seq 1 20); do
+            if docker exec hermes-chat-ui-smoke node -e \
+              "fetch('http://127.0.0.1:8643/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"; then
+              HEALTHY=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$HEALTHY" != "true" ]; then
+            docker logs hermes-chat-ui-smoke
+            exit 1
+          fi
+          PUBLISHED_REVISION=$(docker image inspect "$IMAGE_REF" \
+            --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')
+          test "$PUBLISHED_REVISION" = "$GITHUB_SHA"
+          CONTAINER_DIGEST=$(docker buildx imagetools inspect "$IMAGE_REF" \
+            | awk '$1 == "Digest:" { print $2; exit }')
+          test -n "$CONTAINER_DIGEST"
+          echo "digest=$CONTAINER_DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Restore stable container aliases
+        if: steps.container.outputs.exists == 'true' && !contains(needs.release-check.outputs.release_version, '-')
+        env:
+          RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
+        run: |
+          docker buildx imagetools create \
+            --tag "${REGISTRY}/${IMAGE_NAME}:${RELEASE_VERSION%.*}" \
+            --tag "${REGISTRY}/${IMAGE_NAME}:latest" \
+            "${REGISTRY}/${IMAGE_NAME}:$RELEASE_VERSION"
+
+      - name: Verify stable container aliases
+        if: ${{ !contains(needs.release-check.outputs.release_version, '-') }}
+        env:
+          RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
+        run: |
+          VERSION_DIGEST=$(docker buildx imagetools inspect \
+            "${REGISTRY}/${IMAGE_NAME}:${RELEASE_VERSION}" \
+            | awk '$1 == "Digest:" { print $2; exit }')
+          MINOR_DIGEST=$(docker buildx imagetools inspect \
+            "${REGISTRY}/${IMAGE_NAME}:${RELEASE_VERSION%.*}" \
+            | awk '$1 == "Digest:" { print $2; exit }')
+          LATEST_DIGEST=$(docker buildx imagetools inspect \
+            "${REGISTRY}/${IMAGE_NAME}:latest" \
+            | awk '$1 == "Digest:" { print $2; exit }')
+          test "$VERSION_DIGEST" = "$MINOR_DIGEST"
+          test "$VERSION_DIGEST" = "$LATEST_DIGEST"
+
+      - name: Check existing npm package
+        id: npm
+        run: |
+          STATUS=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            "https://registry.npmjs.org/@lukegskw/hermes-chat-ui/${{ needs.release-check.outputs.release_version }}")
+          if [ "$STATUS" = "200" ]; then
+            PUBLISHED_GIT_HEAD=$(npm view "${NPM_PACKAGE}@${{ needs.release-check.outputs.release_version }}" gitHead)
+            test "$PUBLISHED_GIT_HEAD" = "$GITHUB_SHA"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif [ "$STATUS" = "404" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Unexpected npm registry response: $STATUS"
+            exit 1
+          fi
+
+      - name: Publish to npm
+        if: steps.npm.outputs.exists != 'true'
+        run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Wait for npm propagation
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent \
+              "https://registry.npmjs.org/@lukegskw/hermes-chat-ui/${{ needs.release-check.outputs.release_version }}" \
+              > /dev/null; then
+              exit 0
+            fi
+            echo "Waiting for npm propagation ($attempt/20)"
+            sleep 15
+          done
+          echo "Timed out waiting for npm propagation"
+          exit 1
+
+      - name: Smoke-test published npm package
+        env:
+          RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
+        run: |
+          INSTALLED_VERSION=$(npm exec --yes --package="${NPM_PACKAGE}@${RELEASE_VERSION}" -- hermes-chat-ui --version)
+          test "$INSTALLED_VERSION" = "$RELEASE_VERSION"
+
+      - name: Create GitHub release
+        env:
+          CONTAINER_DIGEST: ${{ steps.verify_container.outputs.digest }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release-check.outputs.release_tag }}
+          RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
+        run: |
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            exit 0
+          fi
+          RELEASE_NOTES=$(cat <<EOF
+          ## Install
+
+          - npm: \`npx ${NPM_PACKAGE}@${RELEASE_VERSION}\`
+          - Docker: \`${REGISTRY}/${IMAGE_NAME}:${RELEASE_VERSION}\`
+          - Container digest: \`${CONTAINER_DIGEST}\`
+
+          See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${RELEASE_TAG}/CHANGELOG.md) for the release summary.
+          EOF
+          )
+          RELEASE_FLAGS=()
+          if [[ "$RELEASE_VERSION" == *-* ]]; then
+            RELEASE_FLAGS+=(--prerelease --latest=false)
+          fi
+          gh release create "$RELEASE_TAG" \
+            --verify-tag \
+            --generate-notes \
+            --title "$RELEASE_TAG" \
+            --notes "$RELEASE_NOTES" \
+            "${RELEASE_FLAGS[@]}"

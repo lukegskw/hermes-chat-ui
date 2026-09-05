@@ -1,7 +1,41 @@
 {
-  "name": "hermes-chat-ui",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@lukegskw/hermes-chat-ui",
+  "version": "0.1.0",
+  "description": "A self-hosted phone and browser client for Hermes Agent.",
+  "license": "MIT",
+  "bin": {
+    "hermes-chat-ui": "bin/hermes-chat-ui.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "dist-server",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lukegskw/hermes-chat-ui.git"
+  },
+  "homepage": "https://github.com/lukegskw/hermes-chat-ui#readme",
+  "bugs": {
+    "url": "https://github.com/lukegskw/hermes-chat-ui/issues"
+  },
+  "keywords": [
+    "hermes-agent",
+    "hermes",
+    "agent",
+    "chat",
+    "pwa",
+    "self-hosted"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=24"
+  },
   "packageManager": "pnpm@11.25.0",
   "type": "module",
   "scripts": {
@@ -14,8 +48,11 @@
     "start": "node dist-server/index.js",
     "preview": "vite preview",
     "lint": "eslint .",
+    "release:prepare": "node scripts/prepare-release.mjs",
     "test": "vitest run",
-    "format": "prettier --write \"{src,server,server-tests}/**/*.{ts,tsx,scss,css,md}\" \"*.{ts,tsx,scss,css,md}\"",
+    "test:distribution": "node scripts/check-distribution.mjs",
+    "test:package": "node scripts/check-package.mjs",
+    "format": "prettier --write \"{src,server,server-tests}/**/*.{ts,tsx,scss,css,md}\" \"{bin,scripts}/**/*.{js,mjs}\" \".github/workflows/*.yml\" \"docs/**/*.md\" \"*.{ts,tsx,scss,css,md,json,yml}\"",
     "type-check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.tests.json",
     "prepare": "husky"
   },

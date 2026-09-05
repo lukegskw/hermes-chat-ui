@@ -1,6 +1,7 @@
 import path from "node:path";
 
 export type ServerConfig = {
+  host: string;
   port: number;
   staticDir: string;
   dataDir: string;
@@ -33,6 +34,7 @@ export const loadServerConfig = (
       8643,
   );
   return {
+    host: value(environment, "HERMES_PROXY_HOST") || "0.0.0.0",
     port: Number.isInteger(configuredPort) ? configuredPort : 8643,
     staticDir: value(environment, "HERMES_STATIC_DIR") || "/app/static",
     dataDir,

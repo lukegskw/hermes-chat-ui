@@ -1,9 +1,11 @@
 <div align="center">
   <img src="public/icon.png" alt="Hermes Chat UI Logo" width="150" />
   <h1>Hermes Chat UI</h1>
-  <p>Use the Hermes Agent on your NAS or server from your phone and browser.</p>
+  <p>Use Hermes Agent on your computer, NAS, or server from your phone and browser.</p>
   <p>
     <a href="https://github.com/lukegskw/hermes-chat-ui/pkgs/container/hermes-chat-ui">Docker image</a> ·
+    <a href="https://www.npmjs.com/package/@lukegskw/hermes-chat-ui">npm package</a> ·
+    <a href="https://github.com/lukegskw/hermes-chat-ui/releases">Releases</a> ·
     <a href="docs/mobile.md">Phone setup</a> ·
     <a href="docs/demo.md">Try the workflow</a> ·
     <a href="LICENSE">MIT license</a>
@@ -12,7 +14,9 @@
 
 Send a task, leave the app, and return to the conversation from a completion
 notification. Hermes Chat UI is a self-hosted web/PWA client for one trusted
-user, with the same session history as the [official Hermes Agent](https://github.com/NousResearch/hermes-agent).
+user. It can run beside Hermes on your computer or remain online on a NAS,
+private server, or VPS, with the same session history as the
+[official Hermes Agent](https://github.com/NousResearch/hermes-agent).
 
 The agent runs in its own container or existing installation. The UI connects
 to its official API; it does not install a modified Hermes runtime.
@@ -40,11 +44,33 @@ Completion notifications require permission, HTTPS on your phone, and all UI
 windows to be in the background. UI and Hermes processes must remain running;
 a container restart can interrupt an unfinished response. See [phone setup](docs/mobile.md).
 
-## Start with your existing Hermes
+## Run beside a local Hermes installation
+
+This option requires Node.js 24 or newer. Start Hermes in gateway mode with its
+API enabled, then run:
+
+```bash
+npx @lukegskw/hermes-chat-ui@latest
+```
+
+The CLI connects to `http://127.0.0.1:8642`, reads `API_SERVER_KEY` from the
+environment or your standard Hermes `.env`, stores UI data in
+`~/.hermes-chat-ui`, and serves the app at **http://127.0.0.1:8643**. Use
+`--hermes-env <file>` when your Hermes environment is elsewhere.
+
+```bash
+npx @lukegskw/hermes-chat-ui@latest --help
+```
+
+The process must remain running. Loopback access is the safe default; use
+`--host 0.0.0.0` only behind a private network or authenticated proxy because
+the UI has no built-in login.
+
+## Run with Docker and your existing Hermes
 
 You need Docker Compose v2 and a working Hermes API with the session and model
 capabilities listed in [compatibility](docs/installation.md#compatibility).
-Builds from this revision target **Linux amd64 and arm64**. Older image tags may
+Release images target **Linux amd64 and arm64**. Older image tags may
 contain only amd64; inspect the selected tag or use the
 [source build](docs/installation.md#build-from-source) if Docker reports that no
 matching manifest exists.
@@ -156,5 +182,7 @@ pnpm build
 
 Contributions are welcome. Preserve TypeScript safety, check UI changes in
 English and Portuguese, and keep Hermes as the only session source of truth.
+Maintainers can follow the [release process](docs/releasing.md) to publish the
+matching Docker image, npm package, and GitHub Release.
 
 Licensed under the [MIT License](LICENSE).

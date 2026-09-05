@@ -22,6 +22,7 @@ ENV NODE_ENV=production \
     HERMES_STATIC_DIR=/app/static \
     HERMES_UI_DATA_DIR=/app/data \
     HERMES_UI_HERMES_CONFIG=/hermes-config/config.yaml \
+    HERMES_PROXY_HOST=0.0.0.0 \
     HERMES_PROXY_PORT=8643
 LABEL org.opencontainers.image.source="https://github.com/lukegskw/hermes-chat-ui" \
       org.opencontainers.image.description="Self-hosted phone and browser client for Hermes Agent" \

@@ -24,6 +24,12 @@ export default defineConfig([
       "react-refresh/only-export-components": "warn",
     },
   },
+  {
+    files: ["bin/**/*.js", "scripts/**/*.mjs"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 
   {
     files: ["**/*.{ts,tsx}"],
