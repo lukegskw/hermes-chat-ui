@@ -1,6 +1,6 @@
 services:
   hermes-chat-ui:
-    image: ${HERMES_UI_IMAGE:-ghcr.io/lukegskw/hermes-chat-ui:latest}
+    image: ${HERMES_UI_IMAGE:-ghcr.io/lukegskw/hermes-chat-ui:latest@sha256:d6e428de16d625f4bca993aae106195c7a3d553b31a47dbda75ba5a3281e9ac4}
     restart: unless-stopped
     ports:
       - "${UI_BIND_ADDRESS:-127.0.0.1}:${PROXY_PORT:-8643}:8643"
