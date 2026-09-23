@@ -1,2 +1,6 @@
 minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true
+# These native builds provide Vite's esbuild binary and Sass's file watcher.
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
