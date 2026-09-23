@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.2 - 2026-09-23
+
+### Changed
+
+- Updated React, Vite, Vitest, and supporting runtime and development dependencies.
+- Updated the pinned Node.js base image and Docker build actions.
+- Approved the `esbuild` and `@parcel/watcher` build scripts required by pnpm 12.
+
 ## 0.1.1 - 2026-09-05
 
 ### Fixed
