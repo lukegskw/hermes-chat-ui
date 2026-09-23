@@ -319,14 +319,16 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Wait for npm propagation
+        env:
+          RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
         run: |
-          for attempt in {1..20}; do
-            if curl --fail --silent \
-              "https://registry.npmjs.org/@lukegskw/hermes-chat-ui/${{ needs.release-check.outputs.release_version }}" \
-              > /dev/null; then
+          for attempt in {1..40}; do
+            PUBLISHED_VERSION=$(npm view --prefer-online "${NPM_PACKAGE}@${RELEASE_VERSION}" version 2>/dev/null || true)
+            if [ "$PUBLISHED_VERSION" = "$RELEASE_VERSION" ]; then
+              echo "npm metadata is available for ${NPM_PACKAGE}@${RELEASE_VERSION}"
               exit 0
             fi
-            echo "Waiting for npm propagation ($attempt/20)"
+            echo "Waiting for npm metadata propagation ($attempt/40)"
             sleep 15
           done
           echo "Timed out waiting for npm propagation"
@@ -336,10 +338,20 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.release-check.outputs.release_version }}
         run: |
-          SMOKE_DIR=$(mktemp -d)
-          npm install --prefix "$SMOKE_DIR" "${NPM_PACKAGE}@${RELEASE_VERSION}"
-          INSTALLED_VERSION=$("$SMOKE_DIR/node_modules/.bin/hermes-chat-ui" --version)
-          test "$INSTALLED_VERSION" = "$RELEASE_VERSION"
+          set -euo pipefail
+          for attempt in {1..5}; do
+            SMOKE_DIR=$(mktemp -d)
+            if npm install --prefer-online --prefix "$SMOKE_DIR" "${NPM_PACKAGE}@${RELEASE_VERSION}"; then
+              INSTALLED_VERSION=$("$SMOKE_DIR/node_modules/.bin/hermes-chat-ui" --version)
+              test "$INSTALLED_VERSION" = "$RELEASE_VERSION"
+              exit 0
+            fi
+            rm -rf "$SMOKE_DIR"
+            echo "Retrying npm package smoke test ($attempt/5)"
+            sleep 15
+          done
+          echo "Published npm package smoke test failed after retries"
+          exit 1
 
       - name: Create GitHub release
         env:
